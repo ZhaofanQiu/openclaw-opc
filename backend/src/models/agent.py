@@ -62,6 +62,10 @@ class Agent(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
+    # Health monitoring (for Partner)
+    last_heartbeat = Column(DateTime, nullable=True)
+    is_online = Column(String, default="unknown")  # online, offline, unknown
+    
     @property
     def remaining_budget(self) -> float:
         """Calculate remaining budget."""

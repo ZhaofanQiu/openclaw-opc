@@ -286,6 +286,80 @@ async def list_agents(
     return service.list_agents()
 
 
+@router.post("/partner/heartbeat")
+async def partner_heartbeat(
+    partner_id: str,
+    db: Session = Depends(get_db),
+):
+    """
+    Partner Agent heartbeat - reports that it's still alive.
+    Should be called every 30 seconds by Partner Agent.
+    """
+    from datetime import datetime
+    
+    service = AgentService(db)
+    
+    # Verify partner
+    partner = service.get_agent(partner_id)
+    if not partner:
+        raise HTTPException(status_code=404, detail="Partner not found")
+    
+    if partner.position_level != PositionLevel.PARTNER.value:
+        raise HTTPException(status_code=403, detail="Only Partner can send heartbeat")
+    
+    # Update heartbeat
+    partner.last_heartbeat = datetime.utcnow()
+    partner.is_online = "online"
+    db.commit()
+    
+    return {
+        "success": True,
+        "message": "Heartbeat received",
+        "timestamp": partner.last_heartbeat.isoformat()
+    }
+
+
+@router.get("/partner/health")
+async def partner_health_status(
+    partner_id: str,
+    db: Session = Depends(get_db),
+):
+    """
+    Check Partner Agent health status.
+    Returns online/offline status based on last heartbeat.
+    """
+    from datetime import datetime, timedelta
+    
+    service = AgentService(db)
+    
+    partner = service.get_agent(partner_id)
+    if not partner:
+        raise HTTPException(status_code=404, detail="Partner not found")
+    
+    # Check if heartbeat is recent (within 60 seconds)
+    is_online = False
+    seconds_since_heartbeat = None
+    
+    if partner.last_heartbeat:
+        delta = datetime.utcnow() - partner.last_heartbeat
+        seconds_since_heartbeat = delta.total_seconds()
+        is_online = seconds_since_heartbeat < 60
+    
+    # Update is_online status
+    partner.is_online = "online" if is_online else "offline"
+    db.commit()
+    
+    return {
+        "partner_id": partner_id,
+        "name": partner.name,
+        "is_online": is_online,
+        "status": "online" if is_online else "offline",
+        "last_heartbeat": partner.last_heartbeat.isoformat() if partner.last_heartbeat else None,
+        "seconds_since_heartbeat": seconds_since_heartbeat,
+        "warning": not is_online and partner.last_heartbeat is not None
+    }
+
+
 @router.get("/{agent_id}")
 async def get_agent(
     agent_id: str,

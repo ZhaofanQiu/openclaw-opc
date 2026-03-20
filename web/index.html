@@ -486,6 +486,7 @@
 
         // Format number
         function formatNumber(num) {
+            if (num === undefined || num === null) return '0';
             return num.toLocaleString('zh-CN', { maximumFractionDigits: 0 });
         }
 
@@ -541,7 +542,8 @@
                 }
                 
                 container.innerHTML = agents.map(agent => {
-                    const budgetPercent = (agent.remaining_budget / agent.monthly_budget) * 100;
+                    const monthlyBudget = agent.monthly_budget || 10000; // Default if not provided
+                    const budgetPercent = monthlyBudget > 0 ? (agent.remaining_budget / monthlyBudget) * 100 : 0;
                     const budgetClass = getBudgetClass(budgetPercent);
                     
                     return `
@@ -555,7 +557,7 @@
                                 <div class="budget-bar">
                                     <div class="budget-fill ${budgetClass}" style="width: ${budgetPercent}%"></div>
                                 </div>
-                                <div class="budget-text">${formatNumber(agent.remaining_budget)} / ${formatNumber(agent.monthly_budget)} OC币</div>
+                                <div class="budget-text">${formatNumber(agent.remaining_budget)} / ${formatNumber(monthlyBudget)} OC币</div>
                             </div>
                             <div class="agent-mood">${agent.mood_emoji}</div>
                         </div>
@@ -638,11 +640,33 @@
             await Promise.all([
                 loadCompanyBudget(),
                 loadAgents(),
-                loadTasks()
+                loadTasks(),
+                loadPartnerHealth()
             ]);
             
             btn.disabled = false;
             btn.textContent = '🔄 刷新';
+        }
+
+        // Load Partner health status
+        async function loadPartnerHealth() {
+            try {
+                const response = await fetch(`${API_BASE}/api/agents/partner/health?partner_id=main`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const indicator = document.querySelector('.status-indicator');
+                    
+                    if (data.is_online) {
+                        indicator.innerHTML = '<span class="status-dot"></span>Partner 在线';
+                        indicator.style.color = '#4ade80';
+                    } else {
+                        indicator.innerHTML = '<span class="status-dot" style="background:#f87171"></span>Partner 离线';
+                        indicator.style.color = '#f87171';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading partner health:', error);
+            }
         }
 
         // Initial load
