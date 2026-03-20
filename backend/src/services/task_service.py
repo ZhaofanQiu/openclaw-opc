@@ -102,3 +102,31 @@ class TaskService:
         )
         
         return task
+    
+    def update_task(
+        self,
+        task_id: str,
+        title: Optional[str] = None,
+        description: Optional[str] = None,
+        priority: Optional[str] = None,
+        status: Optional[str] = None,
+    ) -> Task:
+        """Update task details."""
+        task = self.get_task(task_id)
+        if not task:
+            raise ValueError(f"Task '{task_id}' not found")
+        
+        # Update fields if provided
+        if title is not None:
+            task.title = title
+        if description is not None:
+            task.description = description
+        if priority is not None:
+            task.priority = priority
+        if status is not None:
+            task.status = status
+        
+        task.updated_at = datetime.utcnow()
+        self.db.commit()
+        self.db.refresh(task)
+        return task

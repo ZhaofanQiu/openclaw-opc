@@ -14,10 +14,12 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 
+from pydantic import ValidationError
+
 from src.database import init_db
 from src.routers import agents, budget, config, monitor, notifications, reports, skills, tasks
 from src.utils.logging_config import configure_logging, get_logger
-from src.utils.rate_limit import limiter
+from src.utils.rate_limit import limiter, RATE_LIMITS
 
 # Get project root (parent of backend/)
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -62,6 +64,39 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
     return JSONResponse(
         status_code=429,
         content={"detail": "Rate limit exceeded. Please try again later."},
+    )
+
+# Validation error handler
+@app.exception_handler(ValidationError)
+async def validation_error_handler(request: Request, exc: ValidationError):
+    """Handle Pydantic validation errors."""
+    logger.warning(
+        "validation_error",
+        path=request.url.path,
+        method=request.method,
+        errors=exc.errors(),
+    )
+    return JSONResponse(
+        status_code=422,
+        content={
+            "detail": "Validation error",
+            "errors": exc.errors(),
+        },
+    )
+
+# Value error handler
+@app.exception_handler(ValueError)
+async def value_error_handler(request: Request, exc: ValueError):
+    """Handle ValueError exceptions."""
+    logger.warning(
+        "value_error",
+        path=request.url.path,
+        method=request.method,
+        error=str(exc),
+    )
+    return JSONResponse(
+        status_code=400,
+        content={"detail": str(exc)},
     )
 
 # Exception handler
