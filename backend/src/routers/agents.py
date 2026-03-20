@@ -2,18 +2,19 @@
 Agent API routes.
 """
 
-from typing import List
-
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
+from typing import List
 
 from src.database import get_db
 from src.models import Agent, AgentStatus, PositionLevel
 from src.services.agent_service import AgentService
 from src.utils.openclaw_config import read_openclaw_agents, get_agent_details
-
 from src.services.partner_service import PartnerService
+from src.utils.rate_limit import limiter, RATE_LIMITS
 
 router = APIRouter()
 
@@ -63,7 +64,8 @@ class AgentResponse(BaseModel):
 
 
 @router.get("/openclaw/agents")
-async def list_openclaw_agents():
+@limiter.limit(RATE_LIMITS["default"])
+async def list_openclaw_agents(request: Request):
     """
     List existing agents from OpenClaw configuration.
     User selects one of these to be the Partner.
@@ -77,7 +79,9 @@ async def list_openclaw_agents():
 
 
 @router.post("/partner/setup")
+@limiter.limit(RATE_LIMITS["create"])
 async def setup_partner(
+    request: Request,
     setup: PartnerSetup,
     db: Session = Depends(get_db),
 ):
@@ -168,7 +172,9 @@ async def initialize_company(
 
 
 @router.post("/partner/hire")
+@limiter.limit(RATE_LIMITS["create"])
 async def partner_hire_employee(
+    request: Request,
     employee: AgentCreate,
     partner_id: str,
     db: Session = Depends(get_db),
@@ -213,7 +219,9 @@ async def partner_hire_employee(
 
 
 @router.post("/report")
+@limiter.limit(RATE_LIMITS["create"])
 async def report_task_completion(
+    request: Request,
     report: AgentReport,
     db: Session = Depends(get_db),
 ):

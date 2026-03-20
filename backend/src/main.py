@@ -6,27 +6,39 @@ FastAPI application for managing AI employees and tasks.
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi.util import get_remote_address
 
 from src.database import init_db
 from src.routers import agents, budget, config, monitor, notifications, reports, skills, tasks
-
+from src.utils.logging_config import configure_logging, get_logger
+from src.utils.rate_limit import limiter
 
 # Get project root (parent of backend/)
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Configure logging
+log_level = os.getenv("LOG_LEVEL", "INFO")
+json_format = os.getenv("LOG_FORMAT", "text").lower() == "json"
+configure_logging(log_level, json_format)
+logger = get_logger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan handler."""
     # Startup
+    logger.info("startup", event="application_starting")
     init_db()
-    print("✓ Database initialized")
+    logger.info("startup_complete", event="application_ready")
     yield
     # Shutdown
-    print("✓ Shutting down...")
+    logger.info("shutdown", event="application_stopping")
 
 
 app = FastAPI(
@@ -35,6 +47,41 @@ app = FastAPI(
     version="0.2.0-alpha",
     lifespan=lifespan,
 )
+app.state.limiter = limiter
+
+# Rate limit exception handler
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    """Handle rate limit exceeded."""
+    logger.warning(
+        "rate_limit_exceeded",
+        path=request.url.path,
+        method=request.method,
+        client=get_remote_address(request),
+    )
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "Rate limit exceeded. Please try again later."},
+    )
+
+# Exception handler
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Handle all unhandled exceptions."""
+    logger.error(
+        "unhandled_exception",
+        error=str(exc),
+        error_type=type(exc).__name__,
+        path=request.url.path,
+        method=request.method,
+    )
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+    )
+
+# Add rate limiting middleware
+app.add_middleware(SlowAPIMiddleware)
 
 # CORS middleware
 app.add_middleware(
@@ -59,6 +106,7 @@ app.include_router(reports.router, prefix="/api/reports", tags=["reports"])
 @app.get("/")
 async def root():
     """Root endpoint - redirect to dashboard."""
+    logger.info("root_endpoint_called")
     return {
         "name": "OpenClaw OPC",
         "version": "0.2.0-alpha",
@@ -78,5 +126,5 @@ async def health():
 web_dir = os.path.join(PROJECT_ROOT, "web")
 if os.path.exists(web_dir):
     app.mount("/dashboard", StaticFiles(directory=web_dir, html=True), name="dashboard")
-    print(f"✓ Dashboard mounted at /dashboard")
-    print(f"✓ Pixel Office at /dashboard/pixel-office")
+    logger.info("dashboard_mounted", path="/dashboard")
+    logger.info("pixel_office_mounted", path="/dashboard/pixel-office")
