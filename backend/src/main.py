@@ -17,7 +17,7 @@ from slowapi.util import get_remote_address
 from pydantic import ValidationError
 
 from src.database import init_db
-from src.routers import agents, budget, config, monitor, notifications, reports, skills, tasks
+from src.routers import agents, budget, config, monitor, notifications, reports, skills, tasks, api_keys
 from src.utils.logging_config import configure_logging, get_logger
 from src.utils.rate_limit import limiter, RATE_LIMITS
 
@@ -35,12 +35,12 @@ logger = get_logger(__name__)
 async def lifespan(app: FastAPI):
     """Application lifespan handler."""
     # Startup
-    logger.info("startup", event="application_starting")
+    logger.info("Application starting")
     init_db()
-    logger.info("startup_complete", event="application_ready")
+    logger.info("Application ready")
     yield
     # Shutdown
-    logger.info("shutdown", event="application_stopping")
+    logger.info("Application stopping")
 
 
 app = FastAPI(
@@ -136,6 +136,7 @@ app.include_router(monitor.router, prefix="/api/monitor", tags=["monitor"])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
 app.include_router(skills.router, prefix="/api/skills", tags=["skills"])
 app.include_router(reports.router, prefix="/api/reports", tags=["reports"])
+app.include_router(api_keys.router, tags=["API Keys"])
 
 
 @app.get("/")
