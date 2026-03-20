@@ -279,11 +279,23 @@ async def create_agent(
 
 @router.get("", response_model=List[AgentResponse])
 async def list_agents(
+    available_only: bool = False,
     db: Session = Depends(get_db),
 ):
-    """List all agents."""
+    """
+    List all agents.
+    
+    Args:
+        available_only: If true, only return agents that are IDLE (available for assignment)
+    """
     service = AgentService(db)
-    return service.list_agents()
+    agents = service.list_agents()
+    
+    if available_only:
+        # Filter for agents that are idle
+        agents = [a for a in agents if a.get("status") == AgentStatus.IDLE.value]
+    
+    return agents
 
 
 @router.post("/partner/heartbeat")

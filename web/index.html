@@ -380,21 +380,198 @@
             cursor: not-allowed;
         }
 
-        /* Status Indicator */
-        .status-indicator {
-            display: inline-flex;
+        /* Notification Center */
+        .notification-btn {
+            position: relative;
+            background: #2a2a4a;
+            border: none;
+            color: #888;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            display: flex;
             align-items: center;
             gap: 6px;
-            font-size: 12px;
-            color: #888;
         }
 
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #4ade80;
-            animation: pulse 2s infinite;
+        .notification-btn:hover {
+            background: #3a3a5a;
+            color: #fff;
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background: #f87171;
+            color: #fff;
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            min-width: 18px;
+            text-align: center;
+        }
+
+        .notification-panel {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            width: 360px;
+            max-height: 500px;
+            background: #1a1a2e;
+            border: 1px solid #2a2a4a;
+            border-radius: 12px;
+            padding: 16px;
+            z-index: 100;
+            display: none;
+            overflow-y: auto;
+        }
+
+        .notification-panel.visible {
+            display: block;
+        }
+
+        .notification-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #2a2a4a;
+        }
+
+        .notification-item {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .notification-item:hover {
+            background: #252542;
+        }
+
+        .notification-item.unread {
+            background: rgba(102, 126, 234, 0.1);
+            border-left: 3px solid #667eea;
+        }
+
+        .notification-title {
+            font-weight: 600;
+            font-size: 13px;
+            margin-bottom: 4px;
+        }
+
+        .notification-message {
+            font-size: 12px;
+            color: #888;
+            line-height: 1.4;
+        }
+
+        .notification-time {
+            font-size: 11px;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        /* Assign Button */
+        .assign-btn {
+            background: #667eea;
+            border: none;
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 8px;
+        }
+
+        .assign-btn:hover {
+            background: #5a6fd6;
+        }
+
+        .assign-btn:disabled {
+            background: #2a2a4a;
+            color: #666;
+            cursor: not-allowed;
+        }
+
+        /* Assign Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+
+        .modal-overlay.visible {
+            display: flex;
+        }
+
+        .modal {
+            background: #1a1a2e;
+            border: 1px solid #2a2a4a;
+            border-radius: 16px;
+            padding: 24px;
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .modal-content {
+            margin-bottom: 20px;
+        }
+
+        .agent-select {
+            width: 100%;
+            background: #252542;
+            border: 1px solid #2a2a4a;
+            color: #fff;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .agent-select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        .modal-btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .modal-btn.primary {
+            background: #667eea;
+            color: #fff;
+        }
+
+        .modal-btn.secondary {
+            background: #2a2a4a;
+            color: #888;
         }
 
         @keyframes pulse {
@@ -616,6 +793,41 @@
         </div>
     </div>
 
+    <!-- Notification Button -->
+    <button class="notification-btn" onclick="toggleNotifications()" style="position: fixed; top: 20px; right: 20px;">
+        <span>🔔</span>
+        <span id="notification-btn-text">通知</span>
+        <span class="notification-badge hidden" id="notification-badge">0</span>
+    </button>
+
+    <!-- Notification Panel -->
+    <div class="notification-panel" id="notification-panel">
+        <div class="notification-header">
+            <span style="font-weight: 600;">通知</span>
+            <button class="refresh-btn" onclick="markAllNotificationsRead()">全部已读</button>
+        </div>
+        <div id="notification-list">
+            <div class="empty">暂无通知</div>
+        </div>
+    </div>
+
+    <!-- Assign Modal -->
+    <div class="modal-overlay" id="assign-modal">
+        <div class="modal">
+            <div class="modal-title">手动分配任务</div>
+            <div class="modal-content">
+                <p style="color: #888; font-size: 13px; margin-bottom: 12px;">选择员工：</p>
+                <select class="agent-select" id="assign-agent-select">
+                    <option value="">加载中...</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn secondary" onclick="closeAssignModal()">取消</button>
+                <button class="modal-btn primary" onclick="confirmAssign()">确认分配</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Configuration
         const API_BASE = window.location.hostname === 'localhost' 
@@ -743,12 +955,14 @@
                     }[task.status] || task.status;
                     
                     const assignedTo = task.assigned_to ? `分配给: ${task.assigned_to}` : '未分配';
+                    const canAssign = task.status === 'pending';
                     
                     return `
                         <div class="task-item">
                             <div class="task-header">
                                 <div class="task-title">${task.title}</div>
                                 <span class="task-status ${statusClass}">${statusText}</span>
+                                ${canAssign ? `<button class="assign-btn" onclick="openAssignModal('${task.id}')">分配</button>` : ''}
                             </div>
                             <div class="task-desc">${task.description || '暂无描述'}</div>
                             <div class="task-meta">
@@ -896,12 +1110,146 @@
         loadData();
         loadConfig();
         checkOverdueTasks();
+        loadNotifications();
 
         // Auto refresh
         setInterval(() => {
             loadData();
             checkOverdueTasks();
+            loadNotifications();
         }, REFRESH_INTERVAL);
+
+        // Notification system
+        let currentNotifications = [];
+        let currentAssignTaskId = null;
+
+        async function loadNotifications() {
+            try {
+                const response = await fetch(`${API_BASE}/api/notifications`);
+                if (!response.ok) return;
+                
+                const data = await response.json();
+                currentNotifications = data.notifications;
+                
+                // Update badge
+                const badge = document.getElementById('notification-badge');
+                if (data.unread_count > 0) {
+                    badge.textContent = data.unread_count;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+                
+                // Update list
+                const list = document.getElementById('notification-list');
+                if (currentNotifications.length === 0) {
+                    list.innerHTML = '<div class="empty">暂无通知</div>';
+                    return;
+                }
+                
+                list.innerHTML = currentNotifications.map(n => `
+                    <div class="notification-item ${n.is_read ? '' : 'unread'}" onclick="markNotificationRead(${n.id})">
+                        <div class="notification-title">${n.title}</div>
+                        <div class="notification-message">${n.message}</div>
+                        <div class="notification-time">${new Date(n.created_at).toLocaleString('zh-CN')}</div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading notifications:', error);
+            }
+        }
+
+        function toggleNotifications() {
+            const panel = document.getElementById('notification-panel');
+            panel.classList.toggle('visible');
+            if (panel.classList.contains('visible')) {
+                loadNotifications();
+            }
+        }
+
+        async function markNotificationRead(id) {
+            try {
+                await fetch(`${API_BASE}/api/notifications/${id}/read`, { method: 'POST' });
+                loadNotifications();
+            } catch (error) {
+                console.error('Error marking notification read:', error);
+            }
+        }
+
+        async function markAllNotificationsRead() {
+            try {
+                await fetch(`${API_BASE}/api/notifications/read-all`, { method: 'POST' });
+                loadNotifications();
+            } catch (error) {
+                console.error('Error marking all notifications read:', error);
+            }
+        }
+
+        // Manual assignment
+        function openAssignModal(taskId) {
+            currentAssignTaskId = taskId;
+            loadAvailableAgents();
+            document.getElementById('assign-modal').classList.add('visible');
+        }
+
+        function closeAssignModal() {
+            document.getElementById('assign-modal').classList.remove('visible');
+            currentAssignTaskId = null;
+        }
+
+        async function loadAvailableAgents() {
+            const select = document.getElementById('assign-agent-select');
+            select.innerHTML = '<option value="">加载中...</option>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/agents?available_only=true`);
+                if (!response.ok) throw new Error('Failed to load agents');
+                
+                const agents = await response.json();
+                if (agents.length === 0) {
+                    select.innerHTML = '<option value="">暂无可用员工</option>';
+                    return;
+                }
+                
+                select.innerHTML = agents.map(a => 
+                    `<option value="${a.agent_id}">${a.name} (${a.position_title})</option>`
+                ).join('');
+            } catch (error) {
+                console.error('Error loading available agents:', error);
+                select.innerHTML = '<option value="">加载失败</option>';
+            }
+        }
+
+        async function confirmAssign() {
+            const select = document.getElementById('assign-agent-select');
+            const agentId = select.value;
+            
+            if (!agentId || !currentAssignTaskId) {
+                alert('请选择一个员工');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/tasks/${currentAssignTaskId}/assign`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ agent_id: agentId })
+                });
+                
+                if (response.ok) {
+                    closeAssignModal();
+                    loadData();
+                    loadNotifications();
+                    alert('任务分配成功！');
+                } else {
+                    const error = await response.json();
+                    alert('分配失败: ' + (error.detail || '未知错误'));
+                }
+            } catch (error) {
+                console.error('Error assigning task:', error);
+                alert('分配失败，请稍后重试');
+            }
+        }
     </script>
 </body>
 </html>

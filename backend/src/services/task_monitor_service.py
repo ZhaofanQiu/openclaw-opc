@@ -58,6 +58,23 @@ class TaskMonitorService:
             assigned_duration = datetime.utcnow() - task.assigned_at
             assigned_minutes = int(assigned_duration.total_seconds() / 60)
             
+            # Get agent name for notification
+            agent_name = "Unknown"
+            if task.agent_id:
+                from src.models import Agent
+                agent = self.db.query(Agent).filter(Agent.id == task.agent_id).first()
+                if agent:
+                    agent_name = agent.name
+            
+            # Create notification
+            from src.services.notification_service import NotificationService
+            notification_service = NotificationService(self.db)
+            notification_service.notify_task_overdue(
+                task_id=task.id,
+                task_title=task.title,
+                minutes_overdue=assigned_minutes
+            )
+            
             results.append({
                 "task_id": task.id,
                 "title": task.title,
@@ -65,6 +82,7 @@ class TaskMonitorService:
                 "assigned_minutes_ago": assigned_minutes,
                 "timeout_threshold": timeout_minutes,
                 "agent_id": task.agent_id,
+                "agent_name": agent_name,
             })
         
         if results:

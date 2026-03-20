@@ -91,4 +91,14 @@ class TaskService:
         
         self.db.commit()
         self.db.refresh(task)
+        
+        # Create notification
+        from src.services.notification_service import NotificationService
+        notification_service = NotificationService(self.db)
+        notification_service.notify_task_assigned(
+            task_id=task.id,
+            task_title=task.title,
+            agent_name=agent.name
+        )
+        
         return task

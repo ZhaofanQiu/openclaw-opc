@@ -121,6 +121,24 @@ class AgentService:
         
         self.db.commit()
         
+        # Create notification
+        from src.services.notification_service import NotificationService
+        notification_service = NotificationService(self.db)
+        
+        if task.status == TaskStatus.COMPLETED.value:
+            notification_service.notify_task_completed(
+                task_id=task.id,
+                task_title=task.title,
+                agent_name=agent.name
+            )
+        else:
+            notification_service.notify_task_failed(
+                task_id=task.id,
+                task_title=task.title,
+                agent_name=agent.name,
+                reason=result_summary
+            )
+        
         return {
             "success": True,
             "fused": False,
