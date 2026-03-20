@@ -6,6 +6,7 @@ from datetime import datetime
 from enum import Enum as PyEnum
 
 from sqlalchemy import Column, DateTime, Float, Integer, String, Text
+from sqlalchemy.orm import relationship
 
 from src.database import Base
 
@@ -66,10 +67,18 @@ class Agent(Base):
     last_heartbeat = Column(DateTime, nullable=True)
     is_online = Column(String, default="unknown")  # online, offline, unknown
     
+    # Relationships
+    skills = relationship("Skill", secondary="agent_skills", back_populates="agents")
+    
     @property
     def remaining_budget(self) -> float:
         """Calculate remaining budget."""
         return self.monthly_budget - self.used_budget
+    
+    @property
+    def total_budget(self) -> float:
+        """Total budget (alias for monthly_budget)."""
+        return self.monthly_budget
     
     @property
     def mood_percentage(self) -> float:

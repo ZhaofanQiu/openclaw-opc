@@ -51,6 +51,20 @@ class AssignmentStrategy:
             return 0.0
         
         return budget_score * 0.7 + workload_score * 0.3
+    
+    @staticmethod
+    def by_skill(agent: Agent, task, db: Session) -> float:
+        """
+        Score agent based on skill match with task requirements.
+        Uses SkillService to calculate match score.
+        """
+        from src.services.skill_service import SkillService
+        
+        skill_service = SkillService(db)
+        match_result = skill_service.calculate_agent_task_match_score(agent.id, task.id)
+        
+        # Return match score (0-100) normalized to 0-1
+        return match_result["score"] / 100.0
 
 
 class PartnerService:
@@ -70,7 +84,7 @@ class PartnerService:
         
         Args:
             task_id: Task ID to assign
-            strategy: Scoring strategy ("budget", "workload", "combined")
+            strategy: Scoring strategy ("budget", "workload", "combined", "skill")
         
         Returns:
             Best agent or None if no suitable agent found
@@ -94,18 +108,34 @@ class PartnerService:
             return None
         
         # Score each agent
-        strategy_fn = getattr(AssignmentStrategy, strategy, AssignmentStrategy.by_budget)
-        
-        best_agent = None
-        best_score = -1
-        
-        for agent in agents:
-            score = strategy_fn(agent, task)
-            if score > best_score:
-                best_score = score
-                best_agent = agent
-        
-        return best_agent if best_score > 0 else None
+        if strategy == "skill":
+            # Special handling for skill strategy
+            best_agent = None
+            best_score = -1
+            
+            for agent in agents:
+                score = AssignmentStrategy.by_skill(agent, task, self.db)
+                # Also check budget constraint
+                if agent.remaining_budget < task.estimated_cost:
+                    score = 0.0
+                if score > best_score:
+                    best_score = score
+                    best_agent = agent
+            
+            return best_agent if best_score > 0 else None
+        else:
+            strategy_fn = getattr(AssignmentStrategy, strategy, AssignmentStrategy.by_budget)
+            
+            best_agent = None
+            best_score = -1
+            
+            for agent in agents:
+                score = strategy_fn(agent, task)
+                if score > best_score:
+                    best_score = score
+                    best_agent = agent
+            
+            return best_agent if best_score > 0 else None
     
     def auto_assign(self, task_id: str, strategy: str = "budget") -> dict:
         """

@@ -6,6 +6,7 @@ from datetime import datetime
 from enum import Enum as PyEnum
 
 from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import relationship
 
 from src.database import Base
 
@@ -30,37 +31,41 @@ class TaskPriority(str, PyEnum):
 
 class Task(Base):
     """Task model."""
-    
+
     __tablename__ = "tasks"
-    
+
     id = Column(String, primary_key=True)
     title = Column(String, nullable=False)
     description = Column(Text, default="")
-    
+
     # Assignment
     agent_id = Column(String, ForeignKey("agents.id"), nullable=True)
-    
+
     # Status
     status = Column(String, default=TaskStatus.PENDING.value)
     priority = Column(String, default=TaskPriority.NORMAL.value)
-    
+
     # Budget
     estimated_cost = Column(Float, default=0.0)
     actual_cost = Column(Float, default=0.0)
-    
+
     # Timeline
     created_at = Column(DateTime, default=datetime.utcnow)
     assigned_at = Column(DateTime, nullable=True)
     started_at = Column(DateTime, nullable=True)  # When agent actually starts working
     completed_at = Column(DateTime, nullable=True)
-    
+
     # Timeout tracking
     is_overdue = Column(String, default="false")  # "true" or "false"
     overdue_notified_at = Column(DateTime, nullable=True)
-    
+
     # Result
     result_summary = Column(Text, default="")
-    
+
+    # Relationships
+    skill_requirements = relationship("TaskSkillRequirement", back_populates="task",
+                                      cascade="all, delete-orphan")
+
     @property
     def budget_usage_percentage(self) -> float:
         """Calculate budget usage percentage."""
