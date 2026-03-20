@@ -9,8 +9,9 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from src.database import get_db
-from src.models import Agent, AgentStatus
+from src.models import Agent, AgentStatus, PositionLevel
 from src.services.agent_service import AgentService
+from src.utils.openclaw_config import read_openclaw_agents, get_agent_details
 
 router = APIRouter()
 
@@ -21,6 +22,18 @@ class AgentCreate(BaseModel):
     agent_id: str = Field(..., description="OpenClaw agent ID")
     emoji: str = "🧑‍💻"
     monthly_budget: float = 2000.0
+
+
+class PartnerSetup(BaseModel):
+    """Setup partner from existing OpenClaw agent."""
+    openclaw_agent_id: str = Field(..., description="Existing OpenClaw agent ID")
+    monthly_budget: float = 10000.0
+
+
+class CompanyInit(BaseModel):
+    """Initialize company with partner and first employee."""
+    partner_agent_id: str
+    company_name: str = "My OPC"
 
 
 class AgentReport(BaseModel):
@@ -44,6 +57,156 @@ class AgentResponse(BaseModel):
     
     class Config:
         from_attributes = True
+
+
+@router.get("/openclaw/agents")
+async def list_openclaw_agents():
+    """
+    List existing agents from OpenClaw configuration.
+    User selects one of these to be the Partner.
+    """
+    agents = read_openclaw_agents()
+    return {
+        "agents": agents,
+        "count": len(agents),
+        "message": "Select one agent as your Partner" if agents else "No OpenClaw agents found"
+    }
+
+
+@router.post("/partner/setup")
+async def setup_partner(
+    setup: PartnerSetup,
+    db: Session = Depends(get_db),
+):
+    """
+    Setup Partner from existing OpenClaw agent.
+    This is the first step in company initialization.
+    """
+    # Verify the OpenClaw agent exists
+    oc_agent = get_agent_details(setup.openclaw_agent_id)
+    if not oc_agent:
+        raise HTTPException(
+            status_code=404,
+            detail=f"OpenClaw agent '{setup.openclaw_agent_id}' not found"
+        )
+    
+    service = AgentService(db)
+    
+    # Check if partner already exists
+    existing = service.get_agent(setup.openclaw_agent_id)
+    if existing:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Agent '{setup.openclaw_agent_id}' is already registered"
+        )
+    
+    # Create Partner agent
+    partner = service.create_agent(
+        name=f"{oc_agent['name']} (Partner)",
+        agent_id=setup.openclaw_agent_id,
+        emoji="👑",
+        monthly_budget=setup.monthly_budget,
+    )
+    
+    # Update to Partner level
+    partner.position_level = PositionLevel.PARTNER.value
+    partner.position_title = "合伙人"
+    db.commit()
+    db.refresh(partner)
+    
+    return {
+        "success": True,
+        "partner": {
+            "id": partner.id,
+            "name": partner.name,
+            "agent_id": partner.agent_id,
+            "position": "合伙人",
+            "monthly_budget": partner.monthly_budget,
+        },
+        "message": f"Partner '{partner.name}' is ready to help you build your company!"
+    }
+
+
+@router.post("/company/init")
+async def initialize_company(
+    init: CompanyInit,
+    db: Session = Depends(get_db),
+):
+    """
+    Initialize company with Partner.
+    Partner will assist in creating the first employee.
+    """
+    service = AgentService(db)
+    
+    # Verify partner exists
+    partner = service.get_agent(init.partner_agent_id)
+    if not partner:
+        raise HTTPException(
+            status_code=404,
+            detail="Partner not found. Please setup partner first."
+        )
+    
+    return {
+        "success": True,
+        "company_name": init.company_name,
+        "partner": {
+            "id": partner.id,
+            "name": partner.name,
+            "agent_id": partner.agent_id,
+        },
+        "next_steps": [
+            "1. Partner will help you hire your first employee",
+            "2. Define employee role and budget",
+            "3. Create first project",
+            "4. Start collaborating!"
+        ],
+        "message": f"Welcome to {init.company_name}! Your Partner '{partner.name}' is ready to assist you."
+    }
+
+
+@router.post("/partner/hire")
+async def partner_hire_employee(
+    employee: AgentCreate,
+    partner_id: str,
+    db: Session = Depends(get_db),
+):
+    """
+    Partner assists in hiring a new employee.
+    Validates partner permissions and creates employee.
+    """
+    service = AgentService(db)
+    
+    # Verify partner
+    partner = service.get_agent(partner_id)
+    if not partner:
+        raise HTTPException(status_code=404, detail="Partner not found")
+    
+    if partner.position_level != PositionLevel.PARTNER.value:
+        raise HTTPException(status_code=403, detail="Only Partner can hire employees")
+    
+    # Create employee
+    try:
+        new_employee = service.create_agent(
+            name=employee.name,
+            agent_id=employee.agent_id,
+            emoji=employee.emoji,
+            monthly_budget=employee.monthly_budget,
+        )
+        
+        return {
+            "success": True,
+            "employee": {
+                "id": new_employee.id,
+                "name": new_employee.name,
+                "agent_id": new_employee.agent_id,
+                "position": new_employee.position_title,
+                "monthly_budget": new_employee.monthly_budget,
+            },
+            "hired_by": partner.name,
+            "message": f"{partner.name} successfully hired {new_employee.name} as {new_employee.position_title}!"
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post("/report")
