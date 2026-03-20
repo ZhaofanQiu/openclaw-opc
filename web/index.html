@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>星际工作室 - OPC Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #0f0f1a;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            border: 1px solid #2a2a4a;
+        }
+
+        h1 {
+            font-size: 28px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: #888;
+            font-size: 14px;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: #1a1a2e;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #2a2a4a;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.1);
+        }
+
+        .stat-label {
+            color: #888;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .stat-unit {
+            font-size: 14px;
+            color: #888;
+            margin-left: 4px;
+        }
+
+        .stat-change {
+            font-size: 12px;
+            margin-top: 8px;
+        }
+
+        .stat-change.positive {
+            color: #4ade80;
+        }
+
+        .stat-change.negative {
+            color: #f87171;
+        }
+
+        /* Main Content */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 900px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Section Cards */
+        .section-card {
+            background: #1a1a2e;
+            border-radius: 16px;
+            border: 1px solid #2a2a4a;
+            overflow: hidden;
+        }
+
+        .section-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #2a2a4a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-icon {
+            font-size: 20px;
+        }
+
+        .badge {
+            background: #667eea;
+            color: #fff;
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        .section-content {
+            padding: 0;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        /* Agent List */
+        .agent-item {
+            padding: 16px 24px;
+            border-bottom: 1px solid #2a2a4a;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: background 0.2s;
+        }
+
+        .agent-item:last-child {
+            border-bottom: none;
+        }
+
+        .agent-item:hover {
+            background: #252542;
+        }
+
+        .agent-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            background: #2a2a4a;
+        }
+
+        .agent-info {
+            flex: 1;
+        }
+
+        .agent-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .agent-role {
+            font-size: 13px;
+            color: #888;
+        }
+
+        .agent-budget {
+            text-align: right;
+        }
+
+        .budget-bar {
+            width: 120px;
+            height: 6px;
+            background: #2a2a4a;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 6px;
+        }
+
+        .budget-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s;
+        }
+
+        .budget-fill.high {
+            background: #4ade80;
+        }
+
+        .budget-fill.medium {
+            background: #fbbf24;
+        }
+
+        .budget-fill.low {
+            background: #f87171;
+        }
+
+        .budget-text {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .agent-mood {
+            font-size: 24px;
+            margin-left: 8px;
+        }
+
+        /* Task List */
+        .task-item {
+            padding: 16px 24px;
+            border-bottom: 1px solid #2a2a4a;
+            transition: background 0.2s;
+        }
+
+        .task-item:last-child {
+            border-bottom: none;
+        }
+
+        .task-item:hover {
+            background: #252542;
+        }
+
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+
+        .task-title {
+            font-weight: 600;
+            flex: 1;
+        }
+
+        .task-status {
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .task-status.pending {
+            background: rgba(251, 191, 36, 0.2);
+            color: #fbbf24;
+        }
+
+        .task-status.assigned {
+            background: rgba(102, 126, 234, 0.2);
+            color: #667eea;
+        }
+
+        .task-status.completed {
+            background: rgba(74, 222, 128, 0.2);
+            color: #4ade80;
+        }
+
+        .task-status.fused {
+            background: rgba(248, 113, 113, 0.2);
+            color: #f87171;
+        }
+
+        .task-desc {
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 12px;
+            line-height: 1.5;
+        }
+
+        .task-meta {
+            display: flex;
+            gap: 16px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .task-meta span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* Loading State */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #2a2a4a;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Error State */
+        .error {
+            text-align: center;
+            padding: 40px;
+            color: #f87171;
+        }
+
+        /* Empty State */
+        .empty {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        /* Refresh Button */
+        .refresh-btn {
+            background: #2a2a4a;
+            border: none;
+            color: #888;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .refresh-btn:hover {
+            background: #3a3a5a;
+            color: #fff;
+        }
+
+        .refresh-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Status Indicator */
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: #888;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4ade80;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <h1>🚀 星际工作室</h1>
+            <p class="subtitle">
+                <span class="status-indicator">
+                    <span class="status-dot"></span>
+                    系统运行中
+                </span>
+                <span style="margin-left: 16px; color: #666;">|</span>
+                <span style="margin-left: 16px;">实时更新中...</span>
+            </p>
+        </header>
+
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">公司总预算</div>
+                <div class="stat-value" id="total-budget">--<span class="stat-unit">OC币</span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">已使用</div>
+                <div class="stat-value" id="used-budget">--<span class="stat-unit">OC币</span></div>
+                <div class="stat-change negative" id="usage-percent">--%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">剩余预算</div>
+                <div class="stat-value" id="remaining-budget">--<span class="stat-unit">OC币</span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">员工数量</div>
+                <div class="stat-value" id="agent-count">--<span class="stat-unit">人</span></div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-grid">
+            <!-- Agents Section -->
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-title">
+                        <span class="section-icon">👥</span>
+                        员工列表
+                    </div>
+                    <span class="badge" id="agent-badge">0</span>
+                </div>
+                <div class="section-content" id="agents-list">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>加载中...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tasks Section -->
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-title">
+                        <span class="section-icon">📋</span>
+                        任务列表
+                    </div>
+                    <button class="refresh-btn" onclick="loadData()" id="refresh-btn">🔄 刷新</button>
+                </div>
+                <div class="section-content" id="tasks-list">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>加载中...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE = 'http://localhost:8080';
+        const REFRESH_INTERVAL = 5000; // 5 seconds
+
+        // Format number
+        function formatNumber(num) {
+            return num.toLocaleString('zh-CN', { maximumFractionDigits: 0 });
+        }
+
+        // Get budget bar color class
+        function getBudgetClass(percentage) {
+            if (percentage > 60) return 'high';
+            if (percentage > 30) return 'medium';
+            return 'low';
+        }
+
+        // Load company budget
+        async function loadCompanyBudget() {
+            try {
+                const response = await fetch(`${API_BASE}/api/budget/company`);
+                if (!response.ok) throw new Error('Failed to load budget');
+                
+                const data = await response.json();
+                
+                document.getElementById('total-budget').innerHTML = 
+                    formatNumber(data.total_budget) + '<span class="stat-unit">OC币</span>';
+                document.getElementById('used-budget').innerHTML = 
+                    formatNumber(data.total_used) + '<span class="stat-unit">OC币</span>';
+                document.getElementById('remaining-budget').innerHTML = 
+                    formatNumber(data.total_remaining) + '<span class="stat-unit">OC币</span>';
+                document.getElementById('usage-percent').textContent = 
+                    data.usage_percentage.toFixed(1) + '%';
+            } catch (error) {
+                console.error('Error loading budget:', error);
+            }
+        }
+
+        // Load agents
+        async function loadAgents() {
+            const container = document.getElementById('agents-list');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/agents`);
+                if (!response.ok) throw new Error('Failed to load agents');
+                
+                const agents = await response.json();
+                document.getElementById('agent-badge').textContent = agents.length;
+                document.getElementById('agent-count').innerHTML = 
+                    agents.length + '<span class="stat-unit">人</span>';
+                
+                if (agents.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty">
+                            <div class="empty-icon">👤</div>
+                            <p>暂无员工</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                container.innerHTML = agents.map(agent => {
+                    const budgetPercent = (agent.remaining_budget / agent.monthly_budget) * 100;
+                    const budgetClass = getBudgetClass(budgetPercent);
+                    
+                    return `
+                        <div class="agent-item">
+                            <div class="agent-avatar">${agent.emoji}</div>
+                            <div class="agent-info">
+                                <div class="agent-name">${agent.name}</div>
+                                <div class="agent-role">${agent.position_title} · ${agent.status}</div>
+                            </div>
+                            <div class="agent-budget">
+                                <div class="budget-bar">
+                                    <div class="budget-fill ${budgetClass}" style="width: ${budgetPercent}%"></div>
+                                </div>
+                                <div class="budget-text">${formatNumber(agent.remaining_budget)} / ${formatNumber(agent.monthly_budget)} OC币</div>
+                            </div>
+                            <div class="agent-mood">${agent.mood_emoji}</div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Error loading agents:', error);
+                container.innerHTML = `
+                    <div class="error">
+                        <p>❌ 加载失败</p>
+                        <p style="font-size: 12px; margin-top: 8px;">${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Load tasks
+        async function loadTasks() {
+            const container = document.getElementById('tasks-list');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/tasks`);
+                if (!response.ok) throw new Error('Failed to load tasks');
+                
+                const tasks = await response.json();
+                
+                if (tasks.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty">
+                            <div class="empty-icon">📭</div>
+                            <p>暂无任务</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                container.innerHTML = tasks.map(task => {
+                    const statusClass = task.status;
+                    const statusText = {
+                        'pending': '待分配',
+                        'assigned': '进行中',
+                        'completed': '已完成',
+                        'fused': '已熔断'
+                    }[task.status] || task.status;
+                    
+                    const assignedTo = task.assigned_to ? `分配给: ${task.assigned_to}` : '未分配';
+                    
+                    return `
+                        <div class="task-item">
+                            <div class="task-header">
+                                <div class="task-title">${task.title}</div>
+                                <span class="task-status ${statusClass}">${statusText}</span>
+                            </div>
+                            <div class="task-desc">${task.description || '暂无描述'}</div>
+                            <div class="task-meta">
+                                <span>💰 ${task.estimated_cost} OC币</span>
+                                <span>👤 ${assignedTo}</span>
+                                <span>📅 ${new Date(task.created_at).toLocaleDateString('zh-CN')}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Error loading tasks:', error);
+                container.innerHTML = `
+                    <div class="error">
+                        <p>❌ 加载失败</p>
+                        <p style="font-size: 12px; margin-top: 8px;">${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Load all data
+        async function loadData() {
+            const btn = document.getElementById('refresh-btn');
+            btn.disabled = true;
+            btn.textContent = '⏳ 刷新中...';
+            
+            await Promise.all([
+                loadCompanyBudget(),
+                loadAgents(),
+                loadTasks()
+            ]);
+            
+            btn.disabled = false;
+            btn.textContent = '🔄 刷新';
+        }
+
+        // Initial load
+        loadData();
+
+        // Auto refresh
+        setInterval(loadData, REFRESH_INTERVAL);
+    </script>
+</body>
+</html>

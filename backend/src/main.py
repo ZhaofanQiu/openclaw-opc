@@ -3,13 +3,19 @@ OpenClaw OPC Core Service
 FastAPI application for managing AI employees and tasks.
 """
 
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from src.database import init_db
 from src.routers import agents, budget, tasks
+
+
+# Get project root (parent of backend/)
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 @asynccontextmanager
@@ -47,11 +53,13 @@ app.include_router(budget.router, prefix="/api/budget", tags=["budget"])
 
 @app.get("/")
 async def root():
-    """Root endpoint."""
+    """Root endpoint - redirect to dashboard."""
     return {
         "name": "OpenClaw OPC",
         "version": "0.1.0-alpha",
         "status": "running",
+        "dashboard": "/dashboard",
+        "docs": "/docs",
     }
 
 
@@ -59,3 +67,10 @@ async def root():
 async def health():
     """Health check endpoint."""
     return {"status": "healthy"}
+
+
+# Mount static files (dashboard UI)
+web_dir = os.path.join(PROJECT_ROOT, "web")
+if os.path.exists(web_dir):
+    app.mount("/dashboard", StaticFiles(directory=web_dir, html=True), name="dashboard")
+    print(f"✓ Dashboard mounted at /dashboard")
