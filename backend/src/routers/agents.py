@@ -13,6 +13,8 @@ from src.models import Agent, AgentStatus, PositionLevel
 from src.services.agent_service import AgentService
 from src.utils.openclaw_config import read_openclaw_agents, get_agent_details
 
+from src.services.partner_service import PartnerService
+
 router = APIRouter()
 
 
@@ -295,3 +297,104 @@ async def get_agent(
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
     return agent
+
+
+# Partner auto-assignment endpoints
+
+@router.get("/partner/status")
+async def partner_company_status(
+    partner_id: str,
+    db: Session = Depends(get_db),
+):
+    """
+    Get company status for Partner.
+    Shows pending tasks, agent availability, budget status.
+    """
+    service = AgentService(db)
+    
+    # Verify partner
+    partner = service.get_agent(partner_id)
+    if not partner:
+        raise HTTPException(status_code=404, detail="Partner not found")
+    
+    if partner.position_level != PositionLevel.PARTNER.value:
+        raise HTTPException(status_code=403, detail="Only Partner can view company status")
+    
+    partner_service = PartnerService(db)
+    status = partner_service.get_company_status()
+    
+    return {
+        "success": True,
+        "partner": partner.name,
+        "company_status": status
+    }
+
+
+@router.post("/partner/assign/{task_id}")
+async def partner_auto_assign(
+    task_id: str,
+    partner_id: str,
+    strategy: str = "budget",
+    db: Session = Depends(get_db),
+):
+    """
+    Partner auto-assigns a task to the best available agent.
+    
+    Strategies:
+    - budget: Prioritize agents with highest remaining budget ratio
+    - workload: Prioritize agents with lowest workload
+    - combined: Weighted combination (70% budget + 30% workload)
+    """
+    service = AgentService(db)
+    
+    # Verify partner
+    partner = service.get_agent(partner_id)
+    if not partner:
+        raise HTTPException(status_code=404, detail="Partner not found")
+    
+    if partner.position_level != PositionLevel.PARTNER.value:
+        raise HTTPException(status_code=403, detail="Only Partner can assign tasks")
+    
+    partner_service = PartnerService(db)
+    result = partner_service.auto_assign(task_id, strategy)
+    
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result["message"])
+    
+    return result
+
+
+@router.post("/partner/assign-all")
+async def partner_assign_all_pending(
+    partner_id: str,
+    strategy: str = "budget",
+    db: Session = Depends(get_db),
+):
+    """
+    Partner assigns all pending tasks to best available agents.
+    """
+    service = AgentService(db)
+    
+    # Verify partner
+    partner = service.get_agent(partner_id)
+    if not partner:
+        raise HTTPException(status_code=404, detail="Partner not found")
+    
+    if partner.position_level != PositionLevel.PARTNER.value:
+        raise HTTPException(status_code=403, detail="Only Partner can assign tasks")
+    
+    partner_service = PartnerService(db)
+    results = partner_service.assign_all_pending(strategy)
+    
+    successful = sum(1 for r in results if r["success"])
+    failed = len(results) - successful
+    
+    return {
+        "success": True,
+        "summary": {
+            "total": len(results),
+            "successful": successful,
+            "failed": failed
+        },
+        "assignments": results
+    }

@@ -51,7 +51,33 @@ async def list_tasks(
 ):
     """List tasks with optional filters."""
     service = TaskService(db)
-    return service.list_tasks(status=status, agent_id=agent_id)
+    tasks = service.list_tasks(status=status, agent_id=agent_id)
+    
+    # Format response with assigned_to name
+    result = []
+    for task in tasks:
+        task_dict = {
+            "id": task.id,
+            "title": task.title,
+            "description": task.description,
+            "status": task.status,
+            "priority": task.priority,
+            "estimated_cost": task.estimated_cost,
+            "actual_cost": task.actual_cost,
+            "created_at": task.created_at.isoformat() if task.created_at else None,
+            "assigned_to": None,
+        }
+        
+        # Get agent name if assigned
+        if task.agent_id:
+            from src.models import Agent
+            agent = db.query(Agent).filter(Agent.id == task.agent_id).first()
+            if agent:
+                task_dict["assigned_to"] = agent.name
+        
+        result.append(task_dict)
+    
+    return result
 
 
 @router.post("/{task_id}/assign")

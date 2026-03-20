@@ -1,0 +1,222 @@
+"""
+Partner Auto-Assignment Service
+
+This module handles automatic task assignment by Partner Agent.
+"""
+
+from typing import Optional
+
+from sqlalchemy.orm import Session
+
+from src.models import Agent, Task, TaskStatus
+from src.services.task_service import TaskService
+
+
+class AssignmentStrategy:
+    """Task assignment strategies."""
+    
+    @staticmethod
+    def by_budget(agent: Agent, task) -> float:
+        """
+        Score agent based on remaining budget.
+        Higher score = better candidate.
+        """
+        if agent.remaining_budget < task.estimated_cost:
+            return 0.0  # Can't afford
+        
+        # Score based on budget ratio (higher remaining = better)
+        budget_ratio = agent.remaining_budget / agent.monthly_budget
+        return budget_ratio
+    
+    @staticmethod
+    def by_workload(agent: Agent) -> float:
+        """
+        Score agent based on current workload.
+        Lower workload = better candidate.
+        """
+        # Simple heuristic: agents with no tasks are preferred
+        # In real implementation, count active tasks
+        return 1.0  # Placeholder
+    
+    @staticmethod
+    def combined(agent: Agent, task) -> float:
+        """
+        Combined scoring strategy.
+        Weights: 70% budget, 30% workload
+        """
+        budget_score = AssignmentStrategy.by_budget(agent, task)
+        workload_score = AssignmentStrategy.by_workload(agent)
+        
+        if budget_score == 0.0:
+            return 0.0
+        
+        return budget_score * 0.7 + workload_score * 0.3
+
+
+class PartnerService:
+    """
+    Service for Partner Agent operations.
+    
+    Handles automatic task assignment and coordination.
+    """
+    
+    def __init__(self, db: Session):
+        self.db = db
+        self.task_service = TaskService(db)
+    
+    def find_best_agent(self, task_id: str, strategy: str = "budget") -> Optional[Agent]:
+        """
+        Find the best agent to assign a task.
+        
+        Args:
+            task_id: Task ID to assign
+            strategy: Scoring strategy ("budget", "workload", "combined")
+        
+        Returns:
+            Best agent or None if no suitable agent found
+        """
+        # Get task
+        task = self.task_service.get_task(task_id)
+        if not task:
+            return None
+        
+        if task.status != TaskStatus.PENDING.value:
+            return None  # Task already assigned or completed
+        
+        # Get all active agents (excluding Partner)
+        # Status can be "idle" or "busy" (both are considered active/working)
+        agents = self.db.query(Agent).filter(
+            Agent.status.in_(["idle", "busy"]),
+            Agent.position_level < 5  # Exclude Partner (Lv.5)
+        ).all()
+        
+        if not agents:
+            return None
+        
+        # Score each agent
+        strategy_fn = getattr(AssignmentStrategy, strategy, AssignmentStrategy.by_budget)
+        
+        best_agent = None
+        best_score = -1
+        
+        for agent in agents:
+            score = strategy_fn(agent, task)
+            if score > best_score:
+                best_score = score
+                best_agent = agent
+        
+        return best_agent if best_score > 0 else None
+    
+    def auto_assign(self, task_id: str, strategy: str = "budget") -> dict:
+        """
+        Automatically assign a task to the best agent.
+        
+        Args:
+            task_id: Task ID to assign
+            strategy: Scoring strategy
+        
+        Returns:
+            Assignment result
+        """
+        # Find best agent
+        best_agent = self.find_best_agent(task_id, strategy)
+        
+        if not best_agent:
+            return {
+                "success": False,
+                "message": "No suitable agent found for this task",
+                "reason": "insufficient_budget_or_no_employees"
+            }
+        
+        # Assign task
+        try:
+            result = self.task_service.assign_task(task_id, best_agent.agent_id)
+            return {
+                "success": True,
+                "message": f"Task assigned to {best_agent.name}",
+                "task_id": task_id,
+                "assigned_to": {
+                    "id": best_agent.id,
+                    "name": best_agent.name,
+                    "agent_id": best_agent.agent_id,
+                },
+                "strategy": strategy
+            }
+        except ValueError as e:
+            return {
+                "success": False,
+                "message": str(e),
+                "reason": "assignment_failed"
+            }
+    
+    def get_pending_tasks(self) -> list:
+        """
+        Get all pending tasks waiting for assignment.
+        
+        Returns:
+            List of pending tasks
+        """
+        return self.task_service.list_tasks(status="pending")
+    
+    def assign_all_pending(self, strategy: str = "budget") -> list:
+        """
+        Assign all pending tasks to best available agents.
+        
+        Args:
+            strategy: Scoring strategy
+        
+        Returns:
+            List of assignment results
+        """
+        pending = self.get_pending_tasks()
+        results = []
+        
+        for task in pending:
+            result = self.auto_assign(task.id, strategy)
+            results.append(result)
+        
+        return results
+    
+    def get_company_status(self) -> dict:
+        """
+        Get comprehensive company status for Partner.
+        
+        Returns:
+            Company status summary
+        """
+        # Count agents by status
+        agents = self.db.query(Agent).all()
+        total_agents = len(agents)
+        active_agents = sum(1 for a in agents if a.status in ["idle", "busy"])
+        
+        # Count tasks by status
+        from src.models import Task
+        tasks = self.db.query(Task).all()
+        pending_count = sum(1 for t in tasks if t.status == TaskStatus.PENDING.value)
+        assigned_count = sum(1 for t in tasks if t.status == TaskStatus.ASSIGNED.value)
+        completed_count = sum(1 for t in tasks if t.status == TaskStatus.COMPLETED.value)
+        fused_count = sum(1 for t in tasks if t.status == TaskStatus.FUSED.value)
+        
+        # Calculate total budget
+        total_budget = sum(a.monthly_budget for a in agents)
+        total_remaining = sum(a.remaining_budget for a in agents)
+        
+        return {
+            "agents": {
+                "total": total_agents,
+                "active": active_agents,
+            },
+            "tasks": {
+                "total": len(tasks),
+                "pending": pending_count,
+                "assigned": assigned_count,
+                "completed": completed_count,
+                "fused": fused_count,
+            },
+            "budget": {
+                "total": total_budget,
+                "remaining": total_remaining,
+                "usage_percentage": ((total_budget - total_remaining) / total_budget * 100) if total_budget > 0 else 0,
+            },
+            "ready_for_assignment": pending_count > 0 and active_agents > 0
+        }
