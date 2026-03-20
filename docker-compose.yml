@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  core:
+    build:
+      context: ./packages/core
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - OPC_ENV=development
+      - OPC_DB_PATH=/app/data/opc.db
+      - OPC_LOG_LEVEL=info
+    restart: unless-stopped
+
+  ui:
+    build:
+      context: ./packages/ui
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:8080
+    depends_on:
+      - core
+    restart: unless-stopped
+
+volumes:
+  data:
