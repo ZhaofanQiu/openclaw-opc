@@ -61,7 +61,7 @@ async def root():
     """Root endpoint - redirect to dashboard."""
     return {
         "name": "OpenClaw OPC",
-        "version": "0.1.0-alpha",
+        "version": "0.2.0-alpha",
         "status": "running",
         "dashboard": "/dashboard",
         "docs": "/docs",

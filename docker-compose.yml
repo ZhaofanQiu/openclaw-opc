@@ -8,31 +8,78 @@ services:
       dockerfile: Dockerfile
     container_name: opc-backend
     ports:
-      - "8080:8080"
+      - "${PORT:-8080}:8080"
     volumes:
       - ./data:/app/data
     environment:
-      - DATABASE_URL=sqlite:///data/opc.db
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///data/opc.db}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - CORS_ORIGINS=${CORS_ORIGINS:-*}
+      - TOKEN_RATE=${TOKEN_RATE:-100}
+      - BUDGET_WARNING_THRESHOLD=${BUDGET_WARNING_THRESHOLD:-80}
+      - BUDGET_FUSE_THRESHOLD=${BUDGET_FUSE_THRESHOLD:-100}
+      - TASK_TIMEOUT_MINUTES=${TASK_TIMEOUT_MINUTES:-30}
+      - HEARTBEAT_INTERVAL=${HEARTBEAT_INTERVAL:-30}
+      - HEARTBEAT_TIMEOUT=${HEARTBEAT_TIMEOUT:-60}
+      - AUTO_ASSIGN_STRATEGY=${AUTO_ASSIGN_STRATEGY:-budget}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 40s
 
   # Web Dashboard (nginx)
   frontend:
     image: nginx:alpine
     container_name: opc-frontend
     ports:
-      - "3000:80"
+      - "${FRONTEND_PORT:-3000}:80"
     volumes:
       - ./web:/usr/share/nginx/html:ro
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - backend
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 networks:
   default:
     name: opc-network
+
+# Optional: Add PostgreSQL for production
+# Uncomment below for PostgreSQL support
+#
+#  postgres:
+#    image: postgres:16-alpine
+#    container_name: opc-postgres
+#    environment:
+#      POSTGRES_USER: ${POSTGRES_USER:-opc}
+#      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+#      POSTGRES_DB: ${POSTGRES_DB:-opc}
+#    volumes:
+#      - postgres_data:/var/lib/postgresql/data
+#    restart: unless-stopped
+#    healthcheck:
+#      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-opc}"]
+#      interval: 10s
+#      timeout: 5s
+#      retries: 5
+#
+#  redis:
+#    image: redis:7-alpine
+#    container_name: opc-redis
+#    restart: unless-stopped
+#    healthcheck:
+#      test: ["CMD", "redis-cli", "ping"]
+#      interval: 10s
+#      timeout: 5s
+#      retries: 5
+#
+#volumes:
+#  postgres_data:
