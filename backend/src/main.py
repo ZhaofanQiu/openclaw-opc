@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from src.database import init_db
-from src.routers import agents, budget, tasks
+from src.routers import agents, budget, config, monitor, tasks
 
 
 # Get project root (parent of backend/)
@@ -49,6 +49,8 @@ app.add_middleware(
 app.include_router(agents.router, prefix="/api/agents", tags=["agents"])
 app.include_router(tasks.router, prefix="/api/tasks", tags=["tasks"])
 app.include_router(budget.router, prefix="/api/budget", tags=["budget"])
+app.include_router(config.router, prefix="/api/config", tags=["config"])
+app.include_router(monitor.router, prefix="/api/monitor", tags=["monitor"])
 
 
 @app.get("/")

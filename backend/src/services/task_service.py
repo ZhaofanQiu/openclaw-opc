@@ -3,6 +3,7 @@ Task service layer.
 """
 
 import uuid
+from datetime import datetime
 from typing import List, Optional
 
 from sqlalchemy.orm import Session
@@ -82,6 +83,9 @@ class TaskService:
         
         task.agent_id = agent.id
         task.status = TaskStatus.ASSIGNED.value
+        task.assigned_at = datetime.utcnow()  # Record assignment time
+        task.is_overdue = "false"  # Reset overdue status
+        task.overdue_notified_at = None
         agent.status = AgentStatus.WORKING.value
         agent.current_task_id = task.id
         

@@ -51,7 +51,12 @@ class Task(Base):
     # Timeline
     created_at = Column(DateTime, default=datetime.utcnow)
     assigned_at = Column(DateTime, nullable=True)
+    started_at = Column(DateTime, nullable=True)  # When agent actually starts working
     completed_at = Column(DateTime, nullable=True)
+    
+    # Timeout tracking
+    is_overdue = Column(String, default="false")  # "true" or "false"
+    overdue_notified_at = Column(DateTime, nullable=True)
     
     # Result
     result_summary = Column(Text, default="")

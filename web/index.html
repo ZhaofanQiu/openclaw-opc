@@ -401,6 +401,105 @@
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
         }
+
+        /* Config Panel */
+        .config-panel {
+            background: #1a1a2e;
+            border-radius: 16px;
+            border: 1px solid #2a2a4a;
+            padding: 20px 24px;
+            margin-bottom: 24px;
+        }
+
+        .config-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .config-title {
+            font-size: 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .config-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+        }
+
+        .config-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .config-field label {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .config-field input {
+            background: #252542;
+            border: 1px solid #2a2a4a;
+            color: #fff;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .config-field input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .save-config-btn {
+            background: #667eea;
+            border: none;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 16px;
+        }
+
+        .save-config-btn:hover {
+            background: #5a6fd6;
+        }
+
+        /* Overdue Warning */
+        .overdue-alert {
+            background: rgba(248, 113, 113, 0.1);
+            border: 1px solid rgba(248, 113, 113, 0.3);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .overdue-alert.hidden {
+            display: none;
+        }
+
+        .overdue-icon {
+            font-size: 24px;
+        }
+
+        .overdue-text {
+            flex: 1;
+        }
+
+        .overdue-count {
+            font-weight: 700;
+            color: #f87171;
+        }
     </style>
 </head>
 <body>
@@ -417,6 +516,46 @@
                 <span style="margin-left: 16px;">实时更新中...</span>
             </p>
         </header>
+
+        <!-- Overdue Alert -->
+        <div class="overdue-alert hidden" id="overdue-alert">
+            <span class="overdue-icon">⏰</span>
+            <div class="overdue-text">
+                <span class="overdue-count" id="overdue-count">0</span> 个任务已超时
+                <span style="color: #888; font-size: 13px;">（超过设定时间未开始）</span>
+            </div>
+            <button class="refresh-btn" onclick="checkOverdueTasks()">检查任务</button>
+        </div>
+
+        <!-- Config Panel -->
+        <div class="config-panel">
+            <div class="config-header">
+                <div class="config-title">
+                    <span>⚙️</span>
+                    系统配置
+                </div>
+                <button class="refresh-btn" onclick="toggleConfig()">收起/展开</button>
+            </div>
+            <div class="config-form" id="config-form">
+                <div class="config-field">
+                    <label>任务超时时间（分钟）</label>
+                    <input type="number" id="config-timeout" min="1" max="480" value="30">
+                </div>
+                <div class="config-field">
+                    <label>Token 换算比例（tokens/OC币）</label>
+                    <input type="number" id="config-token-rate" min="1" value="100">
+                </div>
+                <div class="config-field">
+                    <label>预算警告阈值（%）</label>
+                    <input type="number" id="config-warning" min="0" max="100" value="80">
+                </div>
+                <div class="config-field">
+                    <label>自动分配策略</label>
+                    <input type="text" id="config-strategy" value="budget" placeholder="budget/workload/combined">
+                </div>
+                <button class="save-config-btn" onclick="saveConfig()">保存配置</button>
+            </div>
+        </div>
 
         <!-- Stats Grid -->
         <div class="stats-grid">
@@ -669,11 +808,100 @@
             }
         }
 
+        // Load system config
+        async function loadConfig() {
+            try {
+                const response = await fetch(`${API_BASE}/api/config`);
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('config-timeout').value = data.task_timeout_minutes;
+                    document.getElementById('config-token-rate').value = data.token_to_oc_rate;
+                    document.getElementById('config-warning').value = data.warning_threshold;
+                    document.getElementById('config-strategy').value = data.default_strategy;
+                }
+            } catch (error) {
+                console.error('Error loading config:', error);
+            }
+        }
+
+        // Save config
+        async function saveConfig() {
+            const btn = document.querySelector('.save-config-btn');
+            btn.textContent = '保存中...';
+            btn.disabled = true;
+
+            const updates = {
+                task_timeout_minutes: parseInt(document.getElementById('config-timeout').value),
+                token_to_oc_rate: parseInt(document.getElementById('config-token-rate').value),
+                warning_threshold: parseFloat(document.getElementById('config-warning').value),
+                default_strategy: document.getElementById('config-strategy').value
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/api/config`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updates)
+                });
+
+                if (response.ok) {
+                    btn.textContent = '✓ 已保存';
+                    setTimeout(() => {
+                        btn.textContent = '保存配置';
+                        btn.disabled = false;
+                    }, 2000);
+                } else {
+                    throw new Error('Save failed');
+                }
+            } catch (error) {
+                console.error('Error saving config:', error);
+                btn.textContent = '保存失败';
+                btn.disabled = false;
+            }
+        }
+
+        // Toggle config panel
+        function toggleConfig() {
+            const form = document.getElementById('config-form');
+            form.style.display = form.style.display === 'none' ? 'grid' : 'none';
+        }
+
+        // Check overdue tasks
+        async function checkOverdueTasks() {
+            try {
+                // First, run check
+                await fetch(`${API_BASE}/api/monitor/check`, { method: 'POST' });
+                
+                // Then get overdue list
+                const response = await fetch(`${API_BASE}/api/monitor/overdue`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const alert = document.getElementById('overdue-alert');
+                    const count = document.getElementById('overdue-count');
+                    
+                    count.textContent = data.overdue_count;
+                    
+                    if (data.overdue_count > 0) {
+                        alert.classList.remove('hidden');
+                    } else {
+                        alert.classList.add('hidden');
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking overdue tasks:', error);
+            }
+        }
+
         // Initial load
         loadData();
+        loadConfig();
+        checkOverdueTasks();
 
         // Auto refresh
-        setInterval(loadData, REFRESH_INTERVAL);
+        setInterval(() => {
+            loadData();
+            checkOverdueTasks();
+        }, REFRESH_INTERVAL);
     </script>
 </body>
 </html>
