@@ -272,7 +272,7 @@ curl -X POST "http://localhost:8080/api/agents/partner/assign/{task_id}?partner_
 
 | 组件 | 状态 | 版本 |
 |------|------|------|
-| Core Service | ✅ 完成 | v0.2.0 |
+| Core Service | ✅ 完成 | v0.2.1 |
 | Web Dashboard | ✅ 完成 | v0.2.0 |
 | 像素办公室 | ✅ 完成 | v0.2.0 |
 | 员工技能系统 | ✅ 完成 | v0.2.0 |
@@ -283,6 +283,9 @@ curl -X POST "http://localhost:8080/api/agents/partner/assign/{task_id}?partner_
 | 系统配置面板 | ✅ 完成 | v0.2.0 |
 | OPC Bridge Skill | ✅ 完成 | v0.2.0 |
 | Docker 部署 | ✅ 完成 | v0.2.0 |
+| **结构化日志** | ✅ 完成 | **v0.2.1** |
+| **API限流** | ✅ 完成 | **v0.2.1** |
+| **输入验证** | ✅ 完成 | **v0.2.1** |
 
 ---
 
