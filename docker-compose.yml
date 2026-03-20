@@ -1,31 +1,38 @@
 version: '3.8'
 
 services:
-  core:
+  # Core Service (FastAPI)
+  backend:
     build:
-      context: ./packages/core
+      context: ./backend
       dockerfile: Dockerfile
+    container_name: opc-backend
     ports:
       - "8080:8080"
     volumes:
       - ./data:/app/data
     environment:
-      - OPC_ENV=development
-      - OPC_DB_PATH=/app/data/opc.db
-      - OPC_LOG_LEVEL=info
+      - DATABASE_URL=sqlite:///data/opc.db
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  ui:
-    build:
-      context: ./packages/ui
-      dockerfile: Dockerfile
+  # Web Dashboard (nginx)
+  frontend:
+    image: nginx:alpine
+    container_name: opc-frontend
     ports:
-      - "3000:3000"
-    environment:
-      - VITE_API_URL=http://localhost:8080
+      - "3000:80"
+    volumes:
+      - ./web:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
-      - core
+      - backend
     restart: unless-stopped
 
-volumes:
-  data:
+networks:
+  default:
+    name: opc-network
