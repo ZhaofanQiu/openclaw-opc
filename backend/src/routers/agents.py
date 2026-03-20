@@ -55,6 +55,7 @@ class AgentResponse(BaseModel):
     position_title: str
     status: str
     mood_emoji: str
+    total_budget: float
     remaining_budget: float
     
     class Config:
@@ -293,7 +294,7 @@ async def list_agents(
     
     if available_only:
         # Filter for agents that are idle
-        agents = [a for a in agents if a.get("status") == AgentStatus.IDLE.value]
+        agents = [a for a in agents if a.status == AgentStatus.IDLE.value]
     
     return agents
 

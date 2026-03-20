@@ -21,7 +21,7 @@ class ConfigUpdate(BaseModel):
     warning_threshold: float = Field(None, ge=0, le=100)
     fuse_threshold: float = Field(None, ge=0, le=100)
     auto_assign_enabled: bool = None
-    default_strategy: str = Field(None, regex="^(budget|workload|combined)$")
+    default_strategy: str = Field(None, pattern=r"^(budget|workload|combined)$")
     heartbeat_interval_seconds: int = Field(None, ge=10, le=300)
     heartbeat_timeout_seconds: int = Field(None, ge=30, le=600)
 
