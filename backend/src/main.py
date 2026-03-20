@@ -32,7 +32,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="OpenClaw OPC",
     description="One-Person Company management system for OpenClaw Agents",
-    version="0.1.0-alpha",
+    version="0.2.0-alpha",
     lifespan=lifespan,
 )
 
