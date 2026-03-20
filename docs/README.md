@@ -10,6 +10,7 @@
 | [BUDGET.md](./BUDGET.md) | 预算与熔断机制 |
 | [UI.md](./UI.md) | 界面设计规范 |
 | [REFERENCES.md](./REFERENCES.md) | 开源项目参考指南 |
+| [TECHNICAL.md](./TECHNICAL.md) | OpenClaw 集成技术方案 |
 | [ROADMAP.md](./ROADMAP.md) | 开发路线图 |
 
 ## 快速链接
