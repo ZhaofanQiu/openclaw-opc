@@ -78,4 +78,4 @@ web_dir = os.path.join(PROJECT_ROOT, "web")
 if os.path.exists(web_dir):
     app.mount("/dashboard", StaticFiles(directory=web_dir, html=True), name="dashboard")
     print(f"✓ Dashboard mounted at /dashboard")
-    print(f"✓ Pixel Office mounted at /pixel-office")
+    print(f"✓ Pixel Office at /dashboard/pixel-office")

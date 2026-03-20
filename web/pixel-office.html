@@ -109,30 +109,34 @@
             opacity: 0.6;
         }
 
-        /* Employee Avatar */
+        /* Employee Avatar - Pixel Art Style */
         .employee-avatar {
             width: 64px;
             height: 64px;
             background: #1a1a2e;
-            border: 2px solid #667eea;
-            border-radius: 8px;
+            border: 3px solid #667eea;
+            border-radius: 4px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 32px;
             margin: 0 auto 12px;
             position: relative;
+            image-rendering: pixelated;
+            box-shadow: 
+                inset 0 0 0 2px #1a1a2e,
+                inset 0 0 0 4px #667eea;
         }
 
         .employee-avatar::after {
             content: '';
             position: absolute;
-            bottom: -4px;
-            right: -4px;
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
+            bottom: -6px;
+            right: -6px;
+            width: 14px;
+            height: 14px;
+            border-radius: 2px;
             border: 2px solid #1a1a2e;
+            box-shadow: inset 0 0 0 1px rgba(0,0,0,0.3);
         }
 
         .employee-avatar.online::after {
@@ -145,6 +149,136 @@
 
         .employee-avatar.unknown::after {
             background: #888;
+        }
+
+        /* Pixel Avatar Inner Container */
+        .pixel-avatar {
+            width: 48px;
+            height: 48px;
+            position: relative;
+            image-rendering: pixelated;
+        }
+
+        /* Pixel Art - Frontend Developer (Laptop/Code theme) */
+        .pixel-avatar.frontend {
+            background: 
+                /* Row 1 */
+                linear-gradient(to right, transparent 20px, #4ade80 20px, #4ade80 28px, transparent 28px),
+                /* Row 2-3 - Hair */
+                linear-gradient(to right, #8b5a2b 16px, #8b5a2b 32px) 0 4px / 100% 4px,
+                /* Row 4-6 - Face */
+                linear-gradient(to right, #f4c2a1 16px, #f4c2a1 32px) 0 12px / 100% 12px,
+                /* Eyes */
+                linear-gradient(to right, transparent 18px, #333 18px, #333 22px, transparent 22px, transparent 26px, #333 26px, #333 30px, transparent 30px) 0 16px / 100% 4px,
+                /* Row 7-10 - Body with laptop */
+                linear-gradient(to right, #667eea 12px, #667eea 36px) 0 24px / 100% 20px,
+                /* Laptop screen glow */
+                linear-gradient(to right, transparent 14px, #4ade80 14px, #4ade80 18px, transparent 18px, transparent 22px, #4ade80 22px, #4ade80 26px, transparent 26px, transparent 30px, #4ade80 30px, #4ade80 34px, transparent 34px) 0 28px / 100% 4px,
+                /* Laptop base */
+                linear-gradient(to right, #4a5568 8px, #4a5568 40px) 0 44px / 100% 4px;
+            background-repeat: no-repeat;
+        }
+
+        /* Pixel Art - Backend Developer (Gear/Terminal theme) */
+        .pixel-avatar.backend {
+            background: 
+                /* Hair */
+                linear-gradient(to right, #2d3748 16px, #2d3748 32px) 0 4px / 100% 4px,
+                /* Face */
+                linear-gradient(to right, #e8c4a0 16px, #e8c4a0 32px) 0 12px / 100% 12px,
+                /* Eyes - glasses */
+                linear-gradient(to right, transparent 16px, #333 16px, #333 20px, transparent 20px, transparent 24px, #333 24px, #333 28px, transparent 28px) 0 16px / 100% 4px,
+                /* Body - dark hoodie */
+                linear-gradient(to right, #2d3748 12px, #2d3748 36px) 0 24px / 100% 20px,
+                /* Terminal screen */
+                linear-gradient(to right, #1a202c 16px, #1a202c 32px) 0 28px / 100% 12px,
+                /* Green code lines */
+                linear-gradient(to right, transparent 18px, #4ade80 18px, #4ade80 24px, transparent 24px) 0 30px / 100% 2px,
+                linear-gradient(to right, transparent 18px, #4ade80 18px, #4ade80 26px, transparent 26px) 0 34px / 100% 2px;
+            background-repeat: no-repeat;
+        }
+
+        /* Pixel Art - Designer (Art/Creative theme) */
+        .pixel-avatar.designer {
+            background: 
+                /* Hair - styled */
+                linear-gradient(to right, #c0392b 14px, #c0392b 34px) 0 2px / 100% 6px,
+                /* Face */
+                linear-gradient(to right, #f5d0c5 16px, #f5d0c5 32px) 0 12px / 100% 12px,
+                /* Eyes - creative sparkle */
+                linear-gradient(to right, transparent 18px, #e74c3c 18px, #e74c3c 22px, transparent 22px, transparent 26px, #9b59b6 26px, #9b59b6 30px, transparent 30px) 0 16px / 100% 4px,
+                /* Body - colorful */
+                linear-gradient(to right, #e74c3c 12px, #e74c3c 20px, #f39c12 20px, #f39c12 28px, #9b59b6 28px, #9b59b6 36px) 0 24px / 100% 20px,
+                /* Paint brush */
+                linear-gradient(to right, transparent 8px, #8b4513 8px, #8b4513 12px, transparent 12px) 0 28px / 100% 16px,
+                /* Palette */
+                linear-gradient(to right, transparent 36px, #f1c40f 36px, #f1c40f 40px, transparent 40px) 0 32px / 100% 4px,
+                linear-gradient(to right, transparent 38px, #3498db 38px, #38px 42px, transparent 42px) 0 36px / 100% 4px;
+            background-repeat: no-repeat;
+        }
+
+        /* Pixel Art - QA/Tester (Bug/Magnifier theme) */
+        .pixel-avatar.qa {
+            background: 
+                /* Hair */
+                linear-gradient(to right, #5d4e37 16px, #5d4e37 32px) 0 4px / 100% 4px,
+                /* Face */
+                linear-gradient(to right, #dbb898 16px, #dbb898 32px) 0 12px / 100% 12px,
+                /* Eyes - focused */
+                linear-gradient(to right, transparent 18px, #333 18px, #333 22px, transparent 22px, transparent 26px, #333 26px, #333 30px, transparent 30px) 0 16px / 100% 4px,
+                /* Body - lab coat */
+                linear-gradient(to right, #fff 12px, #fff 36px) 0 24px / 100% 20px,
+                /* Magnifying glass */
+                linear-gradient(to right, transparent 6px, #718096 6px, #718096 14px, transparent 14px) 0 28px / 100% 12px,
+                linear-gradient(to right, transparent 8px, #a0aec0 8px, #a0aec0 12px, transparent 12px) 0 30px / 100% 8px,
+                /* Bug icon on coat */
+                linear-gradient(to right, transparent 28px, #e53e3e 28px, #e53e3e 32px, transparent 32px) 0 34px / 100% 4px;
+            background-repeat: no-repeat;
+        }
+
+        /* Pixel Art - Partner/Boss (Crown/Leadership theme) */
+        .pixel-avatar.partner {
+            background: 
+                /* Crown */
+                linear-gradient(to right, transparent 16px, #f1c40f 16px, #f1c40f 32px, transparent 32px) 0 0 / 100% 6px,
+                linear-gradient(to right, transparent 18px, #f39c12 18px, #f39c12 20px, transparent 20px, transparent 26px, #f39c12 26px, #f39c12 28px, transparent 28px) 0 2px / 100% 4px,
+                /* Hair */
+                linear-gradient(to right, #2c3e50 16px, #2c3e50 32px) 0 6px / 100% 4px,
+                /* Face - confident */
+                linear-gradient(to right, #f4c2a1 16px, #f4c2a1 32px) 0 12px / 100% 12px,
+                /* Eyes - sharp */
+                linear-gradient(to right, transparent 18px, #2c3e50 18px, #2c3e50 22px, transparent 22px, transparent 26px, #2c3e50 26px, #2c3e50 30px, transparent 30px) 0 16px / 100% 4px,
+                /* Body - suit */
+                linear-gradient(to right, #2c3e50 12px, #2c3e50 36px) 0 24px / 100% 20px,
+                /* Tie */
+                linear-gradient(to right, transparent 22px, #c0392b 22px, #c0392b 26px, transparent 26px) 0 26px / 100% 16px,
+                /* Gold accent */
+                linear-gradient(to right, transparent 20px, #f1c40f 20px, #f1c40f 28px, transparent 28px) 0 40px / 100% 2px;
+            background-repeat: no-repeat;
+        }
+
+        /* Pixel Art - Default/Unknown */
+        .pixel-avatar.default {
+            background: 
+                linear-gradient(to right, #718096 16px, #718096 32px) 0 4px / 100% 4px,
+                linear-gradient(to right, #a0aec0 16px, #a0aec0 32px) 0 12px / 100% 12px,
+                linear-gradient(to right, transparent 18px, #4a5568 18px, #4a5568 22px, transparent 22px, transparent 26px, #4a5568 26px, #4a5568 30px, transparent 30px) 0 16px / 100% 4px,
+                linear-gradient(to right, #718096 12px, #718096 36px) 0 24px / 100% 20px;
+            background-repeat: no-repeat;
+        }
+
+        /* Pixel breathing animation */
+        @keyframes pixel-breathe {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        .pixel-avatar {
+            animation: pixel-breathe 3s ease-in-out infinite;
+        }
+
+        .desk.working .pixel-avatar {
+            animation-duration: 1s;
         }
 
         /* Employee Info */
@@ -465,10 +599,27 @@
                         : 0;
                     const budgetClass = budgetPercent > 60 ? 'high' : budgetPercent > 30 ? 'medium' : 'low';
                     
+                    // Determine pixel avatar class based on position
+                    let avatarClass = 'default';
+                    const position = (agent.position_title || '').toLowerCase();
+                    const name = (agent.name || '').toLowerCase();
+                    
+                    if (position.includes('前端') || name.includes('前端') || name.includes('frontend')) {
+                        avatarClass = 'frontend';
+                    } else if (position.includes('后端') || name.includes('后端') || name.includes('backend')) {
+                        avatarClass = 'backend';
+                    } else if (position.includes('设计') || name.includes('设计') || name.includes('designer')) {
+                        avatarClass = 'designer';
+                    } else if (position.includes('测试') || name.includes('测试') || name.includes('qa')) {
+                        avatarClass = 'qa';
+                    } else if (position.includes('合伙人') || name.includes('partner') || agent.emoji === '👑') {
+                        avatarClass = 'partner';
+                    }
+                    
                     html += `
                         <div class="desk ${isWorking ? 'working' : isOnline ? 'idle' : 'offline'}">
                             <div class="employee-avatar ${isOnline ? 'online' : 'offline'}">
-                                ${agent.emoji}
+                                <div class="pixel-avatar ${avatarClass}"></div>
                             </div>
                             <div class="employee-name">${agent.name}</div>
                             <div class="employee-role">${agent.position_title}</div>
