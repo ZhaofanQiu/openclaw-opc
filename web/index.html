@@ -834,6 +834,28 @@
         </div>
     </div>
 
+    <!-- Bind Agent Modal -->
+    <div class="modal-overlay" id="bind-modal">
+        <div class="modal">
+            <div class="modal-title">绑定 OpenClaw Agent</div>
+            <div class="modal-content">
+                <p style="color: #888; font-size: 13px; margin-bottom: 8px;">员工：<span id="bind-employee-name" style="color: #fff;"></span></p>
+                <p style="color: #888; font-size: 13px; margin-bottom: 12px;">选择要绑定的 OpenClaw Agent：</p>
+                <select class="agent-select" id="bind-agent-select">
+                    <option value="">加载可用Agent...</option>
+                </select>
+                <p style="color: #666; font-size: 12px; margin-top: 12px;">
+                    💡 提示：如果没有可用Agent，需要先在 OpenClaw 配置中创建 Agent，或使用"自动创建"功能。
+                </p>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn secondary" onclick="closeBindModal()">取消</button>
+                <button class="modal-btn" style="background: #f59e0b;" onclick="autoCreateAgent()">自动创建</button>
+                <button class="modal-btn primary" onclick="confirmBind()">确认绑定</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Configuration
         const API_BASE = window.location.hostname === 'localhost' 
@@ -902,13 +924,20 @@
                     const totalBudget = agent.total_budget || 10000; // Default if not provided
                     const budgetPercent = totalBudget > 0 ? (agent.remaining_budget / totalBudget) * 100 : 0;
                     const budgetClass = getBudgetClass(budgetPercent);
+                    const isBound = agent.is_bound === 'true';
+                    const boundBadge = isBound 
+                        ? `<span style="background:#4ade80;color:#000;padding:2px 8px;border-radius:4px;font-size:11px;margin-left:8px;">已绑定 · ${agent.agent_id}</span>`
+                        : `<span style="background:#f87171;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;margin-left:8px;">未绑定</span>`;
+                    const bindButton = !isBound 
+                        ? `<button class="assign-btn" onclick="openBindModal('${agent.id}', '${agent.name}')">绑定Agent</button>`
+                        : '';
                     
                     return `
                         <div class="agent-item">
                             <div class="agent-avatar">${agent.emoji}</div>
                             <div class="agent-info">
-                                <div class="agent-name">${agent.name}</div>
-                                <div class="agent-role">${agent.position_title} · ${agent.status}</div>
+                                <div class="agent-name">${agent.name}${boundBadge}</div>
+                                <div class="agent-role">${agent.position_title} · ${agent.status}${bindButton}</div>
                             </div>
                             <div class="agent-budget">
                                 <div class="budget-bar">
@@ -1254,6 +1283,120 @@
             } catch (error) {
                 console.error('Error assigning task:', error);
                 alert('分配失败，请稍后重试');
+            }
+        }
+
+        // Bind Agent Modal
+        let currentBindEmployeeId = null;
+        let currentBindEmployeeName = null;
+
+        function openBindModal(employeeId, employeeName) {
+            currentBindEmployeeId = employeeId;
+            currentBindEmployeeName = employeeName;
+            document.getElementById('bind-employee-name').textContent = employeeName;
+            loadAvailableAgentsForBinding();
+            document.getElementById('bind-modal').classList.add('visible');
+        }
+
+        function closeBindModal() {
+            document.getElementById('bind-modal').classList.remove('visible');
+            currentBindEmployeeId = null;
+            currentBindEmployeeName = null;
+        }
+
+        async function loadAvailableAgentsForBinding() {
+            const select = document.getElementById('bind-agent-select');
+            select.innerHTML = '<option value="">加载可用Agent...</option>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/agents/binding/available`);
+                if (!response.ok) throw new Error('Failed to load available agents');
+                
+                const data = await response.json();
+                if (data.available_agents.length === 0) {
+                    select.innerHTML = '<option value="">暂无可用Agent</option>';
+                    return;
+                }
+                
+                select.innerHTML = data.available_agents.map(a => 
+                    `<option value="${a.id}">${a.name} (${a.id})</option>`
+                ).join('');
+            } catch (error) {
+                console.error('Error loading available agents:', error);
+                select.innerHTML = '<option value="">加载失败</option>';
+            }
+        }
+
+        async function confirmBind() {
+            const select = document.getElementById('bind-agent-select');
+            const agentId = select.value;
+            
+            if (!agentId || !currentBindEmployeeId) {
+                alert('请选择一个Agent');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/agents/binding/bind`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        employee_id: currentBindEmployeeId,
+                        agent_id: agentId 
+                    })
+                });
+                
+                if (response.ok) {
+                    closeBindModal();
+                    loadData();
+                    alert('绑定成功！');
+                } else {
+                    const error = await response.json();
+                    alert('绑定失败: ' + (error.detail || '未知错误'));
+                }
+            } catch (error) {
+                console.error('Error binding agent:', error);
+                alert('绑定失败，请稍后重试');
+            }
+        }
+
+        async function autoCreateAgent() {
+            if (!currentBindEmployeeId) return;
+            
+            const confirm = window.confirm(
+                `即将为 "${currentBindEmployeeName}" 自动创建 OpenClaw Agent。\n\n` +
+                `这将：\n` +
+                `1. 修改 openclaw.json 配置文件\n` +
+                `2. 创建 Agent workspace\n` +
+                `3. 生成基础 SOUL.md\n\n` +
+                `注意：可能需要重启 OpenClaw Gateway 才能生效。\n\n` +
+                `是否继续？`
+            );
+            
+            if (!confirm) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/agents/auto-create`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        employee_id: currentBindEmployeeId,
+                        employee_name: currentBindEmployeeName
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    closeBindModal();
+                    loadData();
+                    alert(`创建成功！Agent ID: ${data.agent_id}\n\n记得重启 Gateway 以激活新 Agent。`);
+                } else {
+                    const error = await response.json();
+                    alert('创建失败: ' + (error.detail || '未知错误'));
+                }
+            } catch (error) {
+                console.error('Error auto-creating agent:', error);
+                alert('创建失败，请稍后重试');
             }
         }
     </script>

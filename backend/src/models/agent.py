@@ -41,7 +41,8 @@ class Agent(Base):
     position_title = Column(String, default="实习生")
     
     # OpenClaw mapping
-    agent_id = Column(String, unique=True, nullable=False)  # OpenClaw agent ID
+    agent_id = Column(String, unique=True, nullable=True)  # OpenClaw agent ID (optional for unbound employees)
+    is_bound = Column(String, default="false")  # "true" if bound to OpenClaw agent, "false" if virtual employee
     
     # Budget
     monthly_budget = Column(Float, default=2000.0)  # OC币
