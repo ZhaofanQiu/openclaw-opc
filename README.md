@@ -4,7 +4,7 @@
 > 将 AI Agent 作为员工管理，构建你的一人公司
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-0.2.0--alpha-blue)](https://github.com/ZhaofanQiu/openclaw-opc)
+[![Version](https://img.shields.io/badge/version-0.3.0--beta-blue)](https://github.com/ZhaofanQiu/openclaw-opc)
 [![OpenClaw](https://img.shields.io/badge/Built%20for-OpenClaw-green)](https://openclaw.ai)
 
 ---
@@ -307,24 +307,25 @@ curl -X POST "http://localhost:8080/api/agents/partner/assign/{task_id}?partner_
 
 | 组件 | 状态 | 版本 |
 |------|------|------|
-| Core Service | ✅ 完成 | v0.2.1 |
-| Web Dashboard | ✅ 完成 | v0.2.0 |
-| 像素办公室 | ✅ 完成 | v0.2.0 |
-| 员工技能系统 | ✅ 完成 | v0.2.0 |
-| Partner 自动分配 | ✅ 完成 | v0.2.0 |
-| Partner 健康监控 | ✅ 完成 | v0.2.0 |
-| 工作日报 | ✅ 完成 | v0.2.0 |
-| 通知系统 | ✅ 完成 | v0.2.0 |
-| 系统配置面板 | ✅ 完成 | v0.2.0 |
-| OPC Bridge Skill | ✅ 完成 | v0.2.0 |
-| Docker 部署 | ✅ 完成 | v0.2.0 |
-| **结构化日志** | ✅ 完成 | **v0.2.1** |
-| **API限流** | ✅ 完成 | **v0.2.1** |
-| **输入验证** | ✅ 完成 | **v0.2.1** |
-| **API Key 认证** | ✅ 完成 | **v0.3.0** |
-| **Agent 自动创建** | 🔄 开发中 | **v0.3.0** |
-| **Agent 执行闭环** | ⏳ 待实现 | **v0.3.1** |
-| **任务流/审批流** | 📋 设计中 | **v0.4.0** |
+| Core Service | ✅ 完成 | v0.3.0-beta |
+| Web Dashboard | ✅ 完成 | v0.3.0-beta |
+| 像素办公室 | ✅ 完成 | v0.3.0-beta |
+| 员工技能系统 | ✅ 完成 | v0.3.0-beta |
+| Partner 自动分配 | ✅ 完成 | v0.3.0-beta |
+| Partner 健康监控 | ✅ 完成 | v0.3.0-beta |
+| 工作日报 | ✅ 完成 | v0.3.0-beta |
+| 通知系统 | ✅ 完成 | v0.3.0-beta |
+| 系统配置面板 | ✅ 完成 | v0.3.0-beta |
+| OPC Bridge Skill | ✅ 完成 | v0.3.0-beta |
+| Docker 部署 | ✅ 完成 | v0.3.0-beta |
+| **异步消息系统** | ✅ 完成 | **v0.3.0-beta** |
+| **Agent 自动创建** | ✅ 完成 | **v0.3.0-beta** |
+| **精确 Token 追踪** | ✅ 完成 | **v0.3.0-beta** |
+| **PostgreSQL 迁移** | ✅ 完成 | **v0.3.0-beta** |
+| **像素头像 V2** | ✅ 完成 | **v0.3.0-beta** |
+| **图表可视化** | ✅ 完成 | **v0.3.0-beta** |
+| **熔断后选项** | ✅ 完成 | **v0.3.0-beta** |
+| **任务流/审批流** | 📋 规划中 | **v0.4.0** |
 
 ---
 
