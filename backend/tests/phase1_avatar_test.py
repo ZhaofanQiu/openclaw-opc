@@ -105,10 +105,8 @@ def test_system_avatar_generation():
         SessionLocal = sessionmaker(bind=engine)
         db = SessionLocal()
         
-        service = AvatarService(db)
+        service = AvatarService(db, upload_dir=Path(TEST_AVATAR_DIR))
         # Use actual service avatar directory
-        service.avatar_dir = Path(TEST_AVATAR_DIR)
-        service.UPLOAD_DIR = Path(TEST_AVATAR_DIR)
         
         agent_id = "agent_001"
         styles = ['humanoid', 'robot', 'alien', 'spirit']
@@ -144,8 +142,7 @@ def test_avatar_upload():
         SessionLocal = sessionmaker(bind=engine)
         db = SessionLocal()
         
-        service = AvatarService(db)
-        service.avatar_dir = Path(TEST_AVATAR_DIR)
+        service = AvatarService(db, upload_dir=Path(TEST_AVATAR_DIR))
         
         agent_id = "agent_upload"
         
@@ -183,8 +180,8 @@ def test_avatar_upload():
         
         log(f"✓ SVG uploaded: {service.get_avatar_url(avatar2)}")
         
-        # Verify file exists in storage
-        avatar_path = Path(TEST_AVATAR_DIR) / f"{agent_id}.png"
+        # Verify file exists in storage (filename is {agent_id}_upload.{ext})
+        avatar_path = Path(TEST_AVATAR_DIR) / f"{agent_id}_upload.png"
         assert avatar_path.exists(), f"Uploaded file not found: {avatar_path}"
         log(f"✓ File stored at: {avatar_path}")
         
@@ -209,8 +206,7 @@ def test_avatar_size_limit():
         SessionLocal = sessionmaker(bind=engine)
         db = SessionLocal()
         
-        service = AvatarService(db)
-        service.avatar_dir = Path(TEST_AVATAR_DIR)
+        service = AvatarService(db, upload_dir=Path(TEST_AVATAR_DIR))
         
         # Create 6MB file
         large_file = b'0' * (6 * 1024 * 1024)
@@ -256,8 +252,7 @@ def test_malicious_file_rejection():
         SessionLocal = sessionmaker(bind=engine)
         db = SessionLocal()
         
-        service = AvatarService(db)
-        service.avatar_dir = Path(TEST_AVATAR_DIR)
+        service = AvatarService(db, upload_dir=Path(TEST_AVATAR_DIR))
         
         malicious_files = [
             (b'#!/bin/bash\nevil', 'script.sh'),
@@ -299,8 +294,7 @@ def test_default_avatar_fallback():
         SessionLocal = sessionmaker(bind=engine)
         db = SessionLocal()
         
-        service = AvatarService(db)
-        service.avatar_dir = Path(TEST_AVATAR_DIR)
+        service = AvatarService(db, upload_dir=Path(TEST_AVATAR_DIR))
         
         # Create default avatar
         default_path = Path(TEST_AVATAR_DIR) / "default.svg"
@@ -342,8 +336,7 @@ def test_avatar_update_and_delete():
         SessionLocal = sessionmaker(bind=engine)
         db = SessionLocal()
         
-        service = AvatarService(db)
-        service.avatar_dir = Path(TEST_AVATAR_DIR)
+        service = AvatarService(db, upload_dir=Path(TEST_AVATAR_DIR))
         
         agent_id = "agent_update"
         

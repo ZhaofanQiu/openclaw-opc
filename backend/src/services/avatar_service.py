@@ -118,8 +118,9 @@ class AvatarService:
         "default": ["#667eea", "#764ba2", "#f093fb"],    # Purple gradient
     }
     
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, upload_dir: Optional[Path] = None):
         self.db = db
+        self.UPLOAD_DIR = upload_dir or self.__class__.UPLOAD_DIR
         self.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     
     def get_avatar(self, agent_id: str) -> Optional[EmployeeAvatar]:
@@ -514,3 +515,30 @@ class AvatarService:
             ],
             "pixel_styles": list(self.PIXEL_TEMPLATES.keys()),
         }
+
+    def delete_avatar(self, agent_id: str) -> bool:
+        """
+        Delete avatar for an employee.
+
+        Args:
+            agent_id: Employee ID
+
+        Returns:
+            True if deleted, False if no avatar exists
+        """
+        avatar = self.get_avatar(agent_id)
+        if not avatar:
+            return False
+
+        # Delete file from storage if exists
+        if avatar.storage_path:
+            try:
+                Path(avatar.storage_path).unlink(missing_ok=True)
+            except Exception:
+                pass  # File may not exist
+
+        # Delete from database
+        self.db.query(EmployeeAvatar).filter(EmployeeAvatar.agent_id == agent_id).delete()
+        self.db.commit()
+
+        return True
