@@ -9,6 +9,9 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 
 from src.models import Agent, AgentStatus, Task, TaskStatus
+from src.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 class TaskService:

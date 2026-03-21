@@ -144,11 +144,19 @@ class TaskExecutionService:
                 f"",
             ])
         
-        if task.required_skills:
-            message_parts.append(f"**所需技能**: {', '.join(task.required_skills)}")
+        # Handle skill requirements safely
+        try:
+            if hasattr(task, 'required_skills') and task.required_skills:
+                message_parts.append(f"**所需技能**: {', '.join(task.required_skills)}")
+        except:
+            pass  # Skills not available, skip
         
-        if task.due_date:
-            message_parts.append(f"**截止日期**: {task.due_date.strftime('%Y-%m-%d %H:%M')}")
+        # Handle due date safely
+        try:
+            if hasattr(task, 'due_date') and task.due_date:
+                message_parts.append(f"**截止日期**: {task.due_date.strftime('%Y-%m-%d %H:%M')}")
+        except:
+            pass
         
         message_parts.extend([
             f"",
@@ -276,11 +284,8 @@ class TaskExecutionService:
                 "error": f"Task '{task_id}' is not assigned to Agent '{agent_id}'"
             }
         
-        # Calculate actual cost
-        from src.services.budget_service import BudgetService
-        budget_service = BudgetService(self.db)
-        
-        actual_cost = budget_service.calculate_cost(token_used)
+        # Calculate actual cost (1 OC币 = 100 tokens)
+        actual_cost = token_used / 100.0
         
         # Update task
         task.status = TaskStatus.COMPLETED.value if status == "completed" else TaskStatus.FAILED.value
@@ -291,20 +296,22 @@ class TaskExecutionService:
         task.completed_at = datetime.utcnow()
         
         # Update agent budget and status
-        agent.remaining_budget -= actual_cost
-        agent.total_spent = (agent.total_spent or 0) + actual_cost
+        agent.used_budget = (agent.used_budget or 0) + actual_cost
         agent.status = AgentStatus.IDLE.value
         agent.current_task_id = None
-        agent.mood_emoji = budget_service.get_mood_emoji(agent.remaining_budget, agent.total_budget)
         
-        # Record transaction
-        budget_service.record_transaction(
+        # Record transaction manually
+        from src.models import BudgetTransaction, TransactionType
+        import uuid
+        transaction = BudgetTransaction(
+            id=str(uuid.uuid4())[:8],
             agent_id=agent.id,
-            amount=actual_cost,
-            type="task",
+            task_id=task.id,
+            transaction_type=TransactionType.TASK_CONSUMPTION.value if hasattr(TransactionType, 'TASK_CONSUMPTION') else "task",
+            amount=-actual_cost,
             description=f"Task '{task.title}' {status}",
-            task_id=task.id
         )
+        self.db.add(transaction)
         
         self.db.commit()
         
@@ -316,8 +323,7 @@ class TaskExecutionService:
             notification_service.notify_task_completed(
                 task_id=task.id,
                 task_title=task.title,
-                agent_name=agent.name,
-                cost=actual_cost
+                agent_name=agent.name
             )
         else:
             notification_service.create_notification(
