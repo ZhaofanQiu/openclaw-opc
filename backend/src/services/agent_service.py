@@ -243,7 +243,9 @@ class AgentService:
         task.actual_cost = cost
         task.result_summary = result_summary
         task.status = TaskStatus.COMPLETED.value if status == "completed" else TaskStatus.FAILED.value
+        task.execution_status = "completed" if status == "completed" else "failed"  # Update execution status
         task.completed_at = __import__('datetime').datetime.utcnow()
+        task.token_used = token_used  # Store actual tokens used
         
         # Store exact token tracking if provided
         if is_exact and tokens_input is not None and tokens_output is not None:
