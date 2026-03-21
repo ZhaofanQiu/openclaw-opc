@@ -48,6 +48,16 @@ class ReportService:
 
         # Calculate total budget consumed
         total_consumed = sum(t.amount for t in transactions if t.amount < 0)
+        
+        # Calculate exact vs estimated
+        exact_transactions = [t for t in transactions if t.is_exact == "true"]
+        estimated_transactions = [t for t in transactions if t.is_exact != "true"]
+        
+        exact_cost = sum(abs(t.amount) for t in exact_transactions)
+        estimated_cost = sum(abs(t.amount) for t in estimated_transactions)
+        
+        exact_tokens = sum(t.actual_tokens_input + t.actual_tokens_output for t in exact_transactions)
+        estimated_tokens = sum(t.actual_tokens_input + t.actual_tokens_output for t in estimated_transactions)
 
         # Agent statistics
         agent_stats = {}
@@ -60,15 +70,26 @@ class ReportService:
                     "emoji": agent.emoji if agent else "❓",
                     "tasks_completed": 0,
                     "budget_consumed": 0.0,
+                    "exact_tokens": 0,
+                    "estimated_tokens": 0,
                     "tasks": []
                 }
 
             agent_stats[agent_id]["tasks_completed"] += 1
             agent_stats[agent_id]["budget_consumed"] += task.actual_cost
+            
+            if task.is_exact == "true":
+                agent_stats[agent_id]["exact_tokens"] += task.actual_tokens_input + task.actual_tokens_output
+            else:
+                agent_stats[agent_id]["estimated_tokens"] += task.actual_tokens_input + task.actual_tokens_output
+                
             agent_stats[agent_id]["tasks"].append({
                 "id": task.id,
                 "title": task.title,
-                "cost": task.actual_cost
+                "cost": task.actual_cost,
+                "is_exact": task.is_exact == "true",
+                "tokens_input": task.actual_tokens_input,
+                "tokens_output": task.actual_tokens_output,
             })
 
         # Calculate completion rate for tasks created that day
@@ -85,6 +106,11 @@ class ReportService:
         ])
 
         completion_rate = (completed_same_day / created_count * 100) if created_count > 0 else 0
+        
+        # Calculate estimate accuracy
+        estimate_accuracy = None
+        if estimated_cost > 0:
+            estimate_accuracy = round(100 - abs(exact_cost - estimated_cost) / estimated_cost * 100, 1)
 
         return {
             "date": report_date.isoformat(),
@@ -93,7 +119,16 @@ class ReportService:
                 "total_tasks_completed": len(completed_tasks),
                 "total_budget_consumed": abs(total_consumed),
                 "tasks_created": created_count,
-                "completion_rate": round(completion_rate, 1)
+                "completion_rate": round(completion_rate, 1),
+                "exact_tracking": {
+                    "exact_count": len(exact_transactions),
+                    "estimated_count": len(estimated_transactions),
+                    "exact_cost": round(exact_cost, 2),
+                    "estimated_cost": round(estimated_cost, 2),
+                    "exact_tokens": exact_tokens,
+                    "estimated_tokens": estimated_tokens,
+                    "estimate_accuracy_percentage": estimate_accuracy,
+                }
             },
             "agent_performance": list(agent_stats.values()),
             "completed_tasks": [
@@ -102,6 +137,9 @@ class ReportService:
                     "title": t.title,
                     "agent_name": agent_stats.get(t.agent_id, {}).get("name", "Unknown"),
                     "actual_cost": t.actual_cost,
+                    "is_exact": t.is_exact == "true",
+                    "tokens_input": t.actual_tokens_input,
+                    "tokens_output": t.actual_tokens_output,
                     "completed_at": t.completed_at.isoformat() if t.completed_at else None
                 }
                 for t in completed_tasks

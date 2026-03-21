@@ -321,6 +321,111 @@
             border-color: #667eea;
             color: #667eea;
         }
+
+        /* Comparison Chart */
+        .comparison-chart {
+            margin: 20px 0;
+            padding: 16px;
+            background: #1a1a2e;
+            border-radius: 8px;
+        }
+
+        .comparison-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .comparison-label {
+            width: 100px;
+            font-size: 12px;
+            color: #888;
+        }
+
+        .comparison-bar-container {
+            flex: 1;
+            height: 24px;
+            background: #2a2a4a;
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .comparison-bar {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .comparison-bar.exact {
+            background: linear-gradient(90deg, #4ade80 0%, #22c55e 100%);
+        }
+
+        .comparison-bar.estimated {
+            background: linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%);
+        }
+
+        .comparison-value {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 11px;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        .comparison-legend {
+            display: flex;
+            gap: 24px;
+            justify-content: center;
+            margin-top: 16px;
+            font-size: 12px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
+
+        .legend-color.exact {
+            background: #4ade80;
+        }
+
+        .legend-color.estimated {
+            background: #fbbf24;
+        }
+
+        .accuracy-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+
+        .accuracy-badge.good {
+            background: rgba(74, 222, 128, 0.2);
+            color: #4ade80;
+        }
+
+        .accuracy-badge.warning {
+            background: rgba(251, 191, 36, 0.2);
+            color: #fbbf24;
+        }
+
+        .accuracy-badge.bad {
+            background: rgba(248, 113, 113, 0.2);
+            color: #f87171;
+        }
     </style>
 </head>
 <body>
@@ -345,6 +450,7 @@
         <div class="quick-links">
             <button class="quick-link" onclick="loadYesterday()">昨天</button>
             <button class="quick-link" onclick="loadRecent()">最近7天</button>
+            <button class="quick-link" onclick="loadComparison()">📊 估算对比</button>
         </div>
 
         <!-- Report Container -->

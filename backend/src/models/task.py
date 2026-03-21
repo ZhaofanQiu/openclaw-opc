@@ -45,9 +45,15 @@ class Task(Base):
     status = Column(String, default=TaskStatus.PENDING.value)
     priority = Column(String, default=TaskPriority.NORMAL.value)
 
-    # Budget
+    # Budget (estimated from task complexity)
     estimated_cost = Column(Float, default=0.0)
     actual_cost = Column(Float, default=0.0)
+
+    # Exact token tracking (from session_status)
+    actual_tokens_input = Column(Integer, default=0)  # Actual input tokens
+    actual_tokens_output = Column(Integer, default=0)  # Actual output tokens
+    is_exact = Column(String, default="false")  # "true" if exact, "false" if estimated
+    session_key = Column(String, nullable=True)  # OpenClaw session identifier
 
     # Timeline
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -72,3 +78,8 @@ class Task(Base):
         if self.estimated_cost <= 0:
             return 0.0
         return (self.actual_cost / self.estimated_cost) * 100
+    
+    @property
+    def total_tokens(self) -> int:
+        """Get total tokens consumed (input + output)."""
+        return self.actual_tokens_input + self.actual_tokens_output

@@ -5,7 +5,7 @@ Budget models.
 from datetime import datetime
 from enum import Enum as PyEnum
 
-from sqlalchemy import Column, DateTime, Float, Integer, String, Text
+from sqlalchemy import Column, DateTime, Float, Integer, String, Text, Boolean
 
 from src.database import Base
 
@@ -19,7 +19,12 @@ class TransactionType(str, PyEnum):
 
 
 class BudgetTransaction(Base):
-    """Budget transaction log."""
+    """Budget transaction log.
+    
+    Tracks both estimated and actual token consumption.
+    When is_exact='true', actual_tokens_* contain real values from session_status.
+    When is_exact='false', these are estimates based on task complexity.
+    """
     
     __tablename__ = "budget_transactions"
     
@@ -31,5 +36,11 @@ class BudgetTransaction(Base):
     amount = Column(Float, nullable=False)  # Positive = add, Negative = consume
     
     description = Column(Text, default="")
+    
+    # Exact token tracking fields
+    actual_tokens_input = Column(Integer, default=0)  # Actual input tokens consumed
+    actual_tokens_output = Column(Integer, default=0)  # Actual output tokens consumed
+    is_exact = Column(String, default="false")  # "true" if exact values, "false" if estimated
+    session_key = Column(String, nullable=True)  # Associated OpenClaw session
     
     created_at = Column(DateTime, default=datetime.utcnow)

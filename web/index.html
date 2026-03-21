@@ -760,6 +760,24 @@
                 <div class="stat-label">员工数量</div>
                 <div class="stat-value" id="agent-count">--<span class="stat-unit">人</span></div>
             </div>
+            <!-- New: Exact Token Tracking Stats -->
+            <div class="stat-card" id="exact-tracking-card" style="grid-column: span 2;">
+                <div class="stat-label">🎯 精确 Token 追踪</div>
+                <div style="display: flex; gap: 24px; margin-top: 8px;">
+                    <div>
+                        <div class="stat-value" style="font-size: 24px;" id="exact-tokens">--</div>
+                        <div style="font-size: 12px; color: #888;">实际消耗 Tokens</div>
+                    </div>
+                    <div>
+                        <div class="stat-value" style="font-size: 24px;" id="estimated-tokens">--</div>
+                        <div style="font-size: 12px; color: #888;">估算消耗 Tokens</div>
+                    </div>
+                    <div>
+                        <div class="stat-value" style="font-size: 24px;" id="tracking-accuracy">--%</div>
+                        <div style="font-size: 12px; color: #888;">估算准确率</div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Main Content -->
@@ -996,6 +1014,39 @@
                     const assignedTo = task.assigned_to ? `分配给: ${task.assigned_to}` : '未分配';
                     const canAssign = task.status === 'pending';
                     
+                    // Build token display
+                    let tokenDisplay = '';
+                    if (task.status === 'completed' || task.status === 'fused') {
+                        const isExact = task.is_exact;
+                        const exactBadge = isExact ? '🎯' : '📊';
+                        const totalTokens = (task.tokens_input || 0) + (task.tokens_output || 0);
+                        const costDiff = task.actual_cost - task.estimated_cost;
+                        const costDiffClass = costDiff > 0 ? 'negative' : 'positive';
+                        const costDiffText = costDiff > 0 ? `+${costDiff.toFixed(2)}` : costDiff.toFixed(2);
+                        
+                        tokenDisplay = `
+                            <div style="margin-top: 8px; padding: 8px; background: #252542; border-radius: 6px;">
+                                <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+                                    <span>${exactBadge} Token 消耗</span>
+                                    <span style="color: ${isExact ? '#4ade80' : '#888'};">${isExact ? '精确值' : '估算值'}</span>
+                                </div>
+                                <div style="font-size: 13px; color: #aaa;">
+                                    ${totalTokens > 0 ? `
+                                        输入: ${formatNumber(task.tokens_input || 0)} tokens · 
+                                        输出: ${formatNumber(task.tokens_output || 0)} tokens · 
+                                        总计: ${formatNumber(totalTokens)} tokens
+                                    ` : 'Token 数据未记录'}
+                                </div>
+                                ${task.estimated_cost > 0 ? `
+                                    <div style="font-size: 12px; margin-top: 4px;">
+                                        预算: ${task.estimated_cost} OC币 → 实际: ${task.actual_cost.toFixed(2)} OC币
+                                        <span class="${costDiffClass}">(${costDiffText})</span>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `;
+                    }
+                    
                     return `
                         <div class="task-item">
                             <div class="task-header">
@@ -1009,6 +1060,7 @@
                                 <span>👤 ${assignedTo}</span>
                                 <span>📅 ${new Date(task.created_at).toLocaleDateString('zh-CN')}</span>
                             </div>
+                            ${tokenDisplay}
                         </div>
                     `;
                 }).join('');
@@ -1033,7 +1085,8 @@
                 loadCompanyBudget(),
                 loadAgents(),
                 loadTasks(),
-                loadPartnerHealth()
+                loadPartnerHealth(),
+                loadExactTokenStats()
             ]);
             
             btn.disabled = false;
@@ -1117,6 +1170,41 @@
         function toggleConfig() {
             const form = document.getElementById('config-form');
             form.style.display = form.style.display === 'none' ? 'grid' : 'none';
+        }
+
+        // Load exact token tracking stats
+        async function loadExactTokenStats() {
+            try {
+                const response = await Auth.authFetch(`${API_BASE}/api/budget/comparison?days=30`);
+                if (!response.ok) throw new Error('Failed to load token stats');
+                
+                const data = await response.json();
+                
+                document.getElementById('exact-tokens').textContent = formatNumber(data.exact_tokens);
+                document.getElementById('estimated-tokens').textContent = formatNumber(data.estimated_tokens);
+                
+                const accuracy = data.estimate_accuracy_percentage !== null 
+                    ? data.estimate_accuracy_percentage.toFixed(1) 
+                    : 'N/A';
+                document.getElementById('tracking-accuracy').textContent = accuracy + '%';
+                
+                // Color code accuracy
+                const accuracyEl = document.getElementById('tracking-accuracy');
+                if (data.estimate_accuracy_percentage !== null) {
+                    if (data.estimate_accuracy_percentage >= 90) {
+                        accuracyEl.style.color = '#4ade80';  // Green
+                    } else if (data.estimate_accuracy_percentage >= 70) {
+                        accuracyEl.style.color = '#fbbf24';  // Yellow
+                    } else {
+                        accuracyEl.style.color = '#f87171';  // Red
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading exact token stats:', error);
+                document.getElementById('exact-tokens').textContent = '--';
+                document.getElementById('estimated-tokens').textContent = '--';
+                document.getElementById('tracking-accuracy').textContent = '--%';
+            }
         }
 
         // Check overdue tasks
