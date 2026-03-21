@@ -687,18 +687,28 @@
 <body>
     <div class="container">
         <!-- Header -->
-        <header>
-            <h1>🚀 星际工作室</h1>
-            <p class="subtitle">
-                <span class="status-indicator">
-                    <span class="status-dot"></span>
-                    系统运行中
-                </span>
-                <span style="margin-left: 16px; color: #666;">|</span>
-                <span style="margin-left: 16px;">实时更新中...</span>
-                <span style="margin-left: 16px; color: #666;">|</span>
-                <a href="/pixel-office" style="margin-left: 16px; color: #667eea; text-decoration: none;">🏢 像素办公室 →</a>
-            </p>
+        <header style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+                <h1>🚀 星际工作室</h1>
+                <p class="subtitle">
+                    <span class="status-indicator">
+                        <span class="status-dot"></span>
+                        系统运行中
+                    </span>
+                    <span style="margin-left: 16px; color: #666;">|</span>
+                    <span style="margin-left: 16px;">实时更新中...</span>
+                    <span style="margin-left: 16px; color: #666;">|</span>
+                    <a href="/pixel-office" style="margin-left: 16px; color: #667eea; text-decoration: none;">🏢 像素办公室 →</a>
+                </p>
+            </div>
+            <div style="display: flex; gap: 12px;">
+                <button class="refresh-btn" onclick="openShareModal()" title="分享链接">
+                    🔗 分享
+                </button>
+                <button class="refresh-btn" onclick="logout()" style="background: #f87171;" title="登出">
+                    🚪 登出
+                </button>
+            </div>
         </header>
 
         <!-- Overdue Alert -->
@@ -1491,6 +1501,138 @@
                 alert('创建失败，请稍后重试');
             }
         }
+        
+        // Share link functions
+        function openShareModal() {
+            document.getElementById('share-modal').classList.remove('hidden');
+        }
+        
+        function closeShareModal() {
+            document.getElementById('share-modal').classList.add('hidden');
+            document.getElementById('share-result').classList.add('hidden');
+        }
+        
+        async function generateShareLink() {
+            const resourceType = document.getElementById('share-resource-type').value;
+            const expiresHours = parseInt(document.getElementById('share-expires').value);
+            const permissions = document.getElementById('share-permissions').value;
+            const maxUses = document.getElementById('share-max-uses').value;
+            const password = document.getElementById('share-password').value;
+            const description = document.getElementById('share-description').value;
+            
+            const data = {
+                resource_type: resourceType,
+                expires_hours: expiresHours,
+                permissions: permissions,
+                max_uses: maxUses ? parseInt(maxUses) : null,
+                password: password || null,
+                description: description || null,
+            };
+            
+            try {
+                const response = await fetch('/api/share/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data),
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    document.getElementById('share-link-url').value = result.share_url;
+                    document.getElementById('share-expires-display').textContent = new Date(result.expires_at).toLocaleString('zh-CN');
+                    document.getElementById('share-result').classList.remove('hidden');
+                } else {
+                    const error = await response.json();
+                    alert('生成分享链接失败: ' + (error.detail || '未知错误'));
+                }
+            } catch (error) {
+                console.error('Error generating share link:', error);
+                alert('生成分享链接失败，请稍后重试');
+            }
+        }
+        
+        function copyShareLink() {
+            const input = document.getElementById('share-link-url');
+            input.select();
+            document.execCommand('copy');
+            
+            const btn = document.getElementById('copy-share-btn');
+            const originalText = btn.textContent;
+            btn.textContent = '✅ 已复制';
+            setTimeout(() => {
+                btn.textContent = originalText;
+            }, 2000);
+        }
     </script>
+    
+    <!-- Share Link Modal -->
+    <div id="share-modal" class="modal hidden">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 class="modal-title">🔗 生成分享链接</h3>
+                <button class="modal-close" onclick="closeShareModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">资源类型</label>
+                    <select id="share-resource-type" class="form-input">
+                        <option value="dashboard">Dashboard (仪表板)</option>
+                        <option value="pixel_office">像素办公室</option>
+                        <option value="report">报告页面</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">有效期</label>
+                    <select id="share-expires" class="form-input">
+                        <option value="1">1小时</option>
+                        <option value="24" selected>24小时</option>
+                        <option value="72">3天</option>
+                        <option value="168">7天</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">权限</label>
+                    <select id="share-permissions" class="form-input">
+                        <option value="read">只读</option>
+                        <option value="write">读写</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">最大使用次数 (可选)</label>
+                    <input type="number" id="share-max-uses" class="form-input" placeholder="无限制" min="1" max="1000">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">密码保护 (可选)</label>
+                    <input type="password" id="share-password" class="form-input" placeholder="不设置密码" minlength="4">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">描述 (可选)</label>
+                    <input type="text" id="share-description" class="form-input" placeholder="例如：给客户的临时访问链接">
+                </div>
+                
+                <div id="share-result" class="hidden" style="margin-top: 20px; padding: 16px; background: #1a2e1a; border-radius: 8px; border: 1px solid #2a4a2a;">
+                    <label class="form-label" style="color: #4ade80;">✅ 分享链接已生成</label>
+                    <input type="text" id="share-link-url" class="form-input" style="margin-top: 8px; font-family: monospace; font-size: 12px;" readonly>
+                    <div style="margin-top: 8px; font-size: 12px; color: #888;">
+                        过期时间: <span id="share-expires-display"></span>
+                    </div>
+                    <button id="copy-share-btn" class="refresh-btn" style="margin-top: 12px; width: 100%;" onclick="copyShareLink()">
+                        📋 复制链接
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="refresh-btn" style="background: #666;" onclick="closeShareModal()">取消</button>
+                <button class="refresh-btn" onclick="generateShareLink()">生成链接</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

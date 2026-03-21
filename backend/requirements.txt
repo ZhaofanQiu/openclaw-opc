@@ -13,3 +13,6 @@ structlog==24.4.0
 
 # Rate limiting
 slowapi==0.1.9
+
+# JWT for share links
+python-jose[cryptography]==3.3.0
