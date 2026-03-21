@@ -1184,6 +1184,16 @@
                     return;
                 }
                 
+                // Load avatars for all agents
+                const avatarPromises = agents.map(agent => 
+                    Auth.authFetch(`${API_BASE}/api/avatars/${agent.id}`).then(r => r.ok ? r.json() : null).catch(() => null)
+                );
+                const avatars = await Promise.all(avatarPromises);
+                const avatarMap = {};
+                avatars.forEach((avatar, idx) => {
+                    if (avatar) avatarMap[agents[idx].id] = avatar.url;
+                });
+                
                 container.innerHTML = agents.map(agent => {
                     const totalBudget = agent.total_budget || 10000; // Default if not provided
                     const budgetPercent = totalBudget > 0 ? (agent.remaining_budget / totalBudget) * 100 : 0;
@@ -1196,9 +1206,14 @@
                         ? `<button class="assign-btn" onclick="openBindModal('${agent.id}', '${agent.name}')">绑定Agent</button>`
                         : '';
                     
+                    const avatarUrl = avatarMap[agent.id] || '/avatars/default.svg';
+                    
                     return `
                         <div class="agent-item">
-                            <div class="agent-avatar">${agent.emoji}</div>
+                            <div class="agent-avatar" style="cursor:pointer;position:relative;" onclick="openAvatarModal('${agent.id}', '${agent.name}')" title="点击更换头像">
+                                <img src="${avatarUrl}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;" onerror="this.src='/avatars/default.svg'">
+                                <div style="position:absolute;bottom:0;right:0;background:#667eea;color:#fff;font-size:10px;padding:2px 4px;border-radius:4px;">编辑</div>
+                            </div>
                             <div class="agent-info">
                                 <div class="agent-name">${agent.name}${boundBadge}</div>
                                 <div class="agent-role">${agent.position_title} · ${agent.status}${bindButton}</div>
@@ -2156,5 +2171,236 @@
             </div>
         </div>
     </div>
+    
+    <!-- Avatar Modal -->
+    <div id="avatar-modal" class="modal hidden">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 class="modal-title">🎨 更换头像</h3>
+                <button class="modal-close" onclick="closeAvatarModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <img id="avatar-preview" src="/avatars/default.svg" style="width: 100px; height: 100px; border-radius: 50%; border: 3px solid #667eea;">
+                    <div id="avatar-agent-name" style="margin-top: 12px; font-size: 16px; color: #667eea;"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">选择方式</label>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button class="refresh-btn" id="btn-system" onclick="showSystemOptions()" style="flex: 1;">🎲 系统生成</button>
+                        <button class="refresh-btn" id="btn-upload" onclick="showUploadOption()" style="flex: 1;">📤 上传图片</button>
+                        <button class="refresh-btn" id="btn-ai" onclick="showAIOption()" style="flex: 1; opacity: 0.5;" disabled title="需要配置AI skill">🤖 AI生成</button>
+                    </div>
+                </div>
+                
+                <!-- System Options -->
+                <div id="system-options" style="display: none;">
+                    <div class="form-group">
+                        <label class="form-label">选择风格</label>
+                        <select id="avatar-style" class="form-input">
+                            <option value="humanoid">人形 (Humanoid)</option>
+                            <option value="robot">机器人 (Robot)</option>
+                            <option value="alien">外星人 (Alien)</option>
+                            <option value="spirit">精灵 (Spirit)</option>
+                        </select>
+                    </div>
+                    <button class="refresh-btn" style="width: 100%; background: #667eea;" onclick="generateSystemAvatar()">🎲 随机生成</button>
+                </div>
+                
+                <!-- Upload Option -->
+                <div id="upload-option" style="display: none;">
+                    <div class="form-group">
+                        <label class="form-label">上传图片 (PNG/JPG/SVG, 最大5MB)</label>
+                        <input type="file" id="avatar-file" class="form-input" accept=".png,.jpg,.jpeg,.svg" onchange="previewUpload()">
+                    </div>
+                    <button class="refresh-btn" style="width: 100%; background: #10b981;" onclick="uploadAvatar()">📤 确认上传</button>
+                </div>
+                
+                <!-- AI Option -->
+                <div id="ai-option" style="display: none;">
+                    <div class="form-group">
+                        <label class="form-label">描述你想要的头像</label>
+                        <input type="text" id="avatar-prompt" class="form-input" placeholder="例如: 赛博朋克风格的程序员, 紫色头发, 戴眼镜">
+                    </div>
+                    <div style="font-size: 12px; color: #888; margin-bottom: 12px;">
+                        💡 提示: AI生成需要配置 vivago-ai 或其他图像生成 skill
+                    </div>
+                    <button class="refresh-btn" style="width: 100%; background: #8b5cf6;" onclick="requestAIAvatar()">🤖 请求AI生成</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="refresh-btn" style="background: #666;" onclick="closeAvatarModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Avatar modal functions
+        let currentAvatarAgentId = null;
+        
+        async function openAvatarModal(agentId, agentName) {
+            currentAvatarAgentId = agentId;
+            document.getElementById('avatar-agent-name').textContent = agentName;
+            
+            // Load current avatar
+            try {
+                const response = await Auth.authFetch(`${API_BASE}/api/avatars/${agentId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('avatar-preview').src = data.url;
+                }
+            } catch (error) {
+                console.error('Error loading avatar:', error);
+            }
+            
+            // Check options availability
+            try {
+                const response = await Auth.authFetch(`${API_BASE}/api/avatars/${agentId}/options`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const aiOption = data.options.find(o => o.type === 'ai');
+                    if (aiOption && aiOption.available) {
+                        document.getElementById('btn-ai').disabled = false;
+                        document.getElementById('btn-ai').style.opacity = '1';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading avatar options:', error);
+            }
+            
+            document.getElementById('avatar-modal').classList.remove('hidden');
+        }
+        
+        function closeAvatarModal() {
+            document.getElementById('avatar-modal').classList.add('hidden');
+            currentAvatarAgentId = null;
+            // Reset views
+            document.getElementById('system-options').style.display = 'none';
+            document.getElementById('upload-option').style.display = 'none';
+            document.getElementById('ai-option').style.display = 'none';
+        }
+        
+        function showSystemOptions() {
+            document.getElementById('system-options').style.display = 'block';
+            document.getElementById('upload-option').style.display = 'none';
+            document.getElementById('ai-option').style.display = 'none';
+        }
+        
+        function showUploadOption() {
+            document.getElementById('system-options').style.display = 'none';
+            document.getElementById('upload-option').style.display = 'block';
+            document.getElementById('ai-option').style.display = 'none';
+        }
+        
+        function showAIOption() {
+            document.getElementById('system-options').style.display = 'none';
+            document.getElementById('upload-option').style.display = 'none';
+            document.getElementById('ai-option').style.display = 'block';
+        }
+        
+        function previewUpload() {
+            const file = document.getElementById('avatar-file').files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    document.getElementById('avatar-preview').src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        async function generateSystemAvatar() {
+            if (!currentAvatarAgentId) return;
+            
+            const style = document.getElementById('avatar-style').value;
+            
+            try {
+                const response = await Auth.authFetch(`${API_BASE}/api/avatars/${currentAvatarAgentId}/generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ style: style })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('avatar-preview').src = data.url + '?t=' + Date.now();
+                    alert('头像生成成功！');
+                    loadData();
+                } else {
+                    const error = await response.json();
+                    alert('生成失败: ' + (error.detail || '未知错误'));
+                }
+            } catch (error) {
+                console.error('Error generating avatar:', error);
+                alert('生成失败，请稍后重试');
+            }
+        }
+        
+        async function uploadAvatar() {
+            if (!currentAvatarAgentId) return;
+            
+            const fileInput = document.getElementById('avatar-file');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('请选择图片文件');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await Auth.authFetch(`${API_BASE}/api/avatars/${currentAvatarAgentId}/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('avatar-preview').src = data.url + '?t=' + Date.now();
+                    alert('头像上传成功！');
+                    loadData();
+                } else {
+                    const error = await response.json();
+                    alert('上传失败: ' + (error.detail || '未知错误'));
+                }
+            } catch (error) {
+                console.error('Error uploading avatar:', error);
+                alert('上传失败，请稍后重试');
+            }
+        }
+        
+        async function requestAIAvatar() {
+            if (!currentAvatarAgentId) return;
+            
+            const prompt = document.getElementById('avatar-prompt').value;
+            if (!prompt) {
+                alert('请输入头像描述');
+                return;
+            }
+            
+            try {
+                const response = await Auth.authFetch(`${API_BASE}/api/avatars/${currentAvatarAgentId}/ai-generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: prompt, skill_name: 'vivago-ai' })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    alert(data.message || 'AI生成请求已提交，请稍后查看结果');
+                    closeAvatarModal();
+                } else {
+                    const error = await response.json();
+                    alert('请求失败: ' + (error.detail || '未知错误'));
+                }
+            } catch (error) {
+                console.error('Error requesting AI avatar:', error);
+                alert('请求失败，请稍后重试');
+            }
+        }
+    </script>
 </body>
 </html>
