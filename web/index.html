@@ -5848,12 +5848,13 @@
             if (!content) return;
 
             try {
-                const response = await Auth.authFetch(`${API_BASE}/api/communication/messages`, {
+                const response = await Auth.authFetch(`${API_BASE}/api/communication/send`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        agent_id: currentModalAgentId,
-                        content: content
+                        recipient_id: currentModalAgentId,
+                        content: content,
+                        subject: '来自Dashboard的消息'
                     })
                 });
 
