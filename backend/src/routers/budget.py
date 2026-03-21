@@ -51,14 +51,24 @@ async def list_agent_budgets(
     result = []
     for agent in agents:
         budget = service.get_agent_budget(agent.id)
-        result.append({
-            "id": agent.id,
-            "name": agent.name,
-            "agent_id": agent.agent_id,
-            "budget": budget.get("budget", 0),
-            "used": budget.get("used", 0),
-            "remaining": budget.get("remaining", 0),
-        })
+        if budget:
+            result.append({
+                "id": agent.id,
+                "name": agent.name,
+                "agent_id": agent.agent_id,
+                "budget": budget.get("budget", 0),
+                "used": budget.get("used", 0),
+                "remaining": budget.get("remaining", 0),
+            })
+        else:
+            result.append({
+                "id": agent.id,
+                "name": agent.name,
+                "agent_id": agent.agent_id,
+                "budget": 0,
+                "used": 0,
+                "remaining": 0,
+            })
     
     return {"agents": result}
 
