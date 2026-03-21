@@ -3949,16 +3949,23 @@
             container.scrollTop = container.scrollHeight;
         }
 
+        // Partner async chat
+        let partnerPendingMessages = new Set();
+        let partnerPollingInterval = null;
+
         async function sendChatMessage() {
             const input = document.getElementById('partner-chat-input');
             const message = input.value.trim();
 
             if (!message) return;
 
-            // Check if partner is awake
+            // Check if partner is awake, if not auto-wake
             if (partnerState !== 'awake') {
-                addSystemMessage('Partner 未唤醒，请先点击上方唤醒');
-                return;
+                await wakePartner();
+                if (partnerState !== 'awake') {
+                    addSystemMessage('Partner 唤醒失败，请稍后重试');
+                    return;
+                }
             }
 
             // Add user message
@@ -3968,77 +3975,122 @@
             // Reset auto-sleep timer
             resetAutoSleepTimer();
 
-            // Show loading indicator
+            // Show pending status
             const container = document.getElementById('partner-chat-messages');
-            const loadingDiv = document.createElement('div');
-            loadingDiv.id = 'partner-loading-indicator';
-            loadingDiv.style.cssText = 'text-align: center; padding: 10px; color: #667eea; font-size: 12px;';
-            loadingDiv.innerHTML = '<span class="spinner" style="width: 16px; height: 16px; display: inline-block; vertical-align: middle; margin-right: 8px;"></span> Partner 思考中...';
-            container.appendChild(loadingDiv);
+            const pendingId = 'pending-' + Date.now();
+            const pendingDiv = document.createElement('div');
+            pendingDiv.id = pendingId;
+            pendingDiv.style.cssText = 'text-align: left; margin-bottom: 12px;';
+            pendingDiv.innerHTML = `
+                <div style="display: inline-block; max-width: 80%; padding: 10px 14px; border-radius: 12px; background: #2a2a4a; color: #fff; font-size: 14px;">
+                    <span class="spinner" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle; margin-right: 8px;"></span>
+                    Partner 思考中...
+                </div>
+                <div style="font-size: 11px; color: #888; margin-top: 4px;">⏳ 已发送，等待回复</div>
+            `;
+            container.appendChild(pendingDiv);
             container.scrollTop = container.scrollHeight;
 
-            // Send to Partner
+            // Send via async message API
             try {
-                const response = await Auth.authFetch(`${API_BASE}/api/agents/partner/chat?partner_id=${PARTNER_ID}`, {
+                const response = await Auth.authFetch(`${API_BASE}/api/async-messages/send`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message })
+                    body: JSON.stringify({
+                        recipient_id: PARTNER_ID,
+                        content: message,
+                        subject: 'Partner Chat',
+                        timeout_seconds: 1800  // 30 minutes
+                    })
                 });
 
-                // Remove loading indicator
-                const loading = document.getElementById('partner-loading-indicator');
-                if (loading) loading.remove();
+                const data = await response.json();
 
-                if (response.ok) {
-                    const data = await response.json();
-
-                    // Add Partner response
-                    const messageDiv = document.createElement('div');
-                    messageDiv.className = 'partner-chat-message partner';
-                    messageDiv.textContent = data.response;
-                    container.appendChild(messageDiv);
-
-                    // Add action buttons if any
-                    if (data.actions && data.actions.length > 0) {
-                        const actionsDiv = document.createElement('div');
-                        actionsDiv.className = 'partner-chat-actions';
-
-                        data.actions.forEach(action => {
-                            const btn = document.createElement('button');
-                            btn.className = 'partner-chat-action-btn';
-
-                            if (action === 'wake') {
-                                btn.textContent = '🟢 唤醒 Partner';
-                                btn.onclick = wakePartner;
-                            } else if (action === 'open_hire_modal') {
-                                btn.textContent = '🤝 雇佣员工';
-                                btn.onclick = openHireModal;
-                            } else if (action === 'open_create_task') {
-                                btn.textContent = '📝 发布任务';
-                                btn.onclick = openCreateTaskModal;
-                            } else if (action === 'show_reports') {
-                                btn.textContent = '📊 查看报告';
-                                btn.onclick = () => location.href = 'reports.html';
-                            }
-
-                            actionsDiv.appendChild(btn);
-                        });
-
-                        container.appendChild(actionsDiv);
+                if (response.ok && data.success) {
+                    // Track pending message
+                    partnerPendingMessages.add(data.message_id);
+                    pendingDiv.dataset.messageId = data.message_id;
+                    
+                    // Start polling
+                    if (!partnerPollingInterval) {
+                        partnerPollingInterval = setInterval(() => pollPartnerMessages(), 5000);
                     }
-
-                    container.scrollTop = container.scrollHeight;
                 } else {
-                    const errorData = await response.json().catch(() => ({}));
-                    addSystemMessage(`发送失败: ${errorData.detail || response.status}`);
+                    // Remove pending indicator
+                    pendingDiv.remove();
+                    addSystemMessage('发送失败: ' + (data.detail || '未知错误'));
                 }
             } catch (error) {
-                // Remove loading indicator
-                const loading = document.getElementById('partner-loading-indicator');
-                if (loading) loading.remove();
-
                 console.error('Error sending message:', error);
+                pendingDiv.remove();
                 addSystemMessage('发送失败，请检查网络连接');
+            }
+        }
+
+        async function pollPartnerMessages() {
+            if (partnerPendingMessages.size === 0) {
+                clearInterval(partnerPollingInterval);
+                partnerPollingInterval = null;
+                return;
+            }
+
+            for (const messageId of partnerPendingMessages) {
+                try {
+                    const response = await Auth.authFetch(`${API_BASE}/api/async-messages/${messageId}`);
+                    if (!response.ok) continue;
+                    
+                    const msg = await response.json();
+                    
+                    // Find pending element
+                    const pendingEl = document.querySelector(`[data-message-id="${messageId}"]`);
+                    
+                    if (msg.status === 'responded') {
+                        // Got response!
+                        partnerPendingMessages.delete(messageId);
+                        
+                        if (pendingEl) {
+                            pendingEl.innerHTML = `
+                                <div class="partner-chat-message partner">${msg.response_content}</div>
+                                <div style="font-size: 11px; color: #666; margin-top: 4px;">${new Date(msg.responded_at).toLocaleString()}</div>
+                            `;
+                        } else {
+                            // If element not found (user switched views), add as new
+                            addPartnerMessage(msg.response_content);
+                        }
+                        
+                        // Show notification if chat closed
+                        if (!isPartnerChatOpen()) {
+                            showNotification('Partner 回复了您的消息');
+                        }
+                    } else if (msg.status === 'failed' || msg.status === 'timeout') {
+                        partnerPendingMessages.delete(messageId);
+                        if (pendingEl) {
+                            pendingEl.innerHTML = `
+                                <div style="color: #f87171; font-size: 14px;">❌ ${msg.status === 'timeout' ? '回复超时（30分钟）' : '发送失败'}</div>
+                            `;
+                        }
+                    } else if (msg.status === 'sent' || msg.status === 'delivered') {
+                        if (pendingEl) {
+                            pendingEl.querySelector('div:last-child').textContent = '📤 Partner已接收';
+                        }
+                    }
+                } catch (error) {
+                    console.error(`Error polling partner message ${messageId}:`, error);
+                }
+            }
+        }
+
+        function isPartnerChatOpen() {
+            const chat = document.getElementById('partner-chat-container');
+            return chat && chat.style.display !== 'none';
+        }
+
+        function showNotification(message) {
+            // Check if browser supports notifications
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification('OpenClaw OPC', { body: message });
+            } else {
+                showToast(message);
             }
         }
 
@@ -5775,6 +5827,16 @@
 
         function closeAgentModal() {
             document.getElementById('agent-detail-modal').classList.remove('visible');
+            
+            // Clear polling interval
+            if (agentModalPollingInterval) {
+                clearInterval(agentModalPollingInterval);
+                agentModalPollingInterval = null;
+            }
+            
+            // Note: We keep pendingAgentMessages so user can come back later
+            // The messages will still be processed in background
+            
             currentModalAgentId = null;
             currentModalAgentData = null;
             resumeAutoRefresh();
@@ -5897,6 +5959,10 @@
             }
         }
 
+        // Async message polling for agent modal
+        let agentModalPollingInterval = null;
+        let pendingAgentMessages = new Set();
+
         async function sendAgentModalMessage() {
             if (!currentModalAgentId) return;
 
@@ -5905,28 +5971,166 @@
 
             if (!content) return;
 
+            // Show loading state
+            const sendBtn = input.nextElementSibling;
+            const originalText = sendBtn.textContent;
+            sendBtn.textContent = '发送中...';
+            sendBtn.disabled = true;
+
             try {
-                const response = await Auth.authFetch(`${API_BASE}/api/communication/send`, {
+                // Use async message API
+                const response = await Auth.authFetch(`${API_BASE}/api/async-messages/send`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         recipient_id: currentModalAgentId,
                         content: content,
-                        subject: '来自Dashboard的消息'
+                        subject: '员工对话',
+                        timeout_seconds: 1800  // 30 minutes
                     })
                 });
 
-                if (response.ok) {
+                const data = await response.json();
+
+                if (response.ok && data.success) {
                     input.value = '';
-                    loadAgentModalMessages(currentModalAgentId);
+                    
+                    // Add to pending messages for polling
+                    pendingAgentMessages.add(data.message_id);
+                    
+                    // Show pending message in UI
+                    addPendingMessageToUI(content, data.message_id);
+                    
+                    // Start polling if not already
+                    if (!agentModalPollingInterval) {
+                        agentModalPollingInterval = setInterval(() => pollAgentModalMessages(), 5000);
+                    }
+                    
+                    // Show notification
+                    showToast('消息已发送，Agent处理中...');
                 } else {
-                    const error = await response.json();
-                    alert('发送失败: ' + (error.detail || '未知错误'));
+                    alert('发送失败: ' + (data.detail || '未知错误'));
                 }
             } catch (error) {
                 console.error('Error sending message:', error);
                 alert('发送失败，请稍后重试');
+            } finally {
+                sendBtn.textContent = originalText;
+                sendBtn.disabled = false;
             }
+        }
+
+        function addPendingMessageToUI(content, messageId) {
+            const container = document.getElementById('agent-modal-chat-messages');
+            
+            // Remove empty state if exists
+            if (container.querySelector('.empty')) {
+                container.innerHTML = '';
+            }
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.id = `msg-${messageId}`;
+            messageDiv.style.cssText = 'margin-bottom: 12px; text-align: right;';
+            messageDiv.innerHTML = `
+                <div style="display: inline-block; max-width: 80%; padding: 10px 14px; border-radius: 12px; background: #667eea; color: #fff; font-size: 14px;">
+                    ${content}
+                </div>
+                <div style="font-size: 11px; color: #888; margin-top: 4px;" class="msg-status" data-msg-id="${messageId}">
+                    ⏳ 发送中...
+                </div>
+            `;
+            
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function pollAgentModalMessages() {
+            if (pendingAgentMessages.size === 0) {
+                clearInterval(agentModalPollingInterval);
+                agentModalPollingInterval = null;
+                return;
+            }
+
+            for (const messageId of pendingAgentMessages) {
+                try {
+                    const response = await Auth.authFetch(`${API_BASE}/api/async-messages/${messageId}`);
+                    if (!response.ok) continue;
+                    
+                    const msg = await response.json();
+                    
+                    // Update status in UI
+                    const statusEl = document.querySelector(`.msg-status[data-msg-id="${messageId}"]`);
+                    if (!statusEl) continue;
+                    
+                    if (msg.status === 'responded') {
+                        // Agent replied!
+                        statusEl.textContent = '✓ 已回复';
+                        statusEl.style.color = '#4ade80';
+                        
+                        // Add response to UI
+                        addAgentResponseToUI(msg.response_content);
+                        
+                        // Remove from pending
+                        pendingAgentMessages.delete(messageId);
+                    } else if (msg.status === 'failed' || msg.status === 'timeout') {
+                        statusEl.textContent = '❌ ' + (msg.status === 'timeout' ? '超时' : '失败');
+                        statusEl.style.color = '#f87171';
+                        pendingAgentMessages.delete(messageId);
+                    } else if (msg.status === 'sent' || msg.status === 'delivered') {
+                        statusEl.textContent = '📤 Agent已接收';
+                        statusEl.style.color = '#60a5fa';
+                    }
+                } catch (error) {
+                    console.error(`Error polling message ${messageId}:`, error);
+                }
+            }
+        }
+
+        function addAgentResponseToUI(response) {
+            const container = document.getElementById('agent-modal-chat-messages');
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.style.cssText = 'margin-bottom: 12px; text-align: left;';
+            messageDiv.innerHTML = `
+                <div style="display: inline-block; max-width: 80%; padding: 10px 14px; border-radius: 12px; background: #2a2a4a; color: #fff; font-size: 14px; white-space: pre-wrap;">
+                    ${response}
+                </div>
+                <div style="font-size: 11px; color: #666; margin-top: 4px;">
+                    ${new Date().toLocaleString()}
+                </div>
+            `;
+            
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+            
+            // Show notification
+            showToast('收到Agent回复！');
+        }
+
+        function showToast(message) {
+            // Create toast element
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: #667eea;
+                color: #fff;
+                padding: 12px 24px;
+                border-radius: 8px;
+                font-size: 14px;
+                z-index: 10000;
+                animation: fadeIn 0.3s ease;
+            `;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                toast.style.animation = 'fadeOut 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
         }
 
         function showSystemOptions() {
