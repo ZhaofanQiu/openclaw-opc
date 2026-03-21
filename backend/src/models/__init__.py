@@ -1,6 +1,7 @@
 """Models package."""
 
 from src.models.agent import Agent, AgentStatus, PositionLevel
+from src.models.async_message import AsyncMessage, AsyncMessageStatus, AsyncMessageType
 from src.models.budget import BudgetTransaction, TransactionType
 from src.models.communication import AgentMessage, MessagePriority, MessageStatus
 from src.models.config import SystemConfig
@@ -13,6 +14,9 @@ __all__ = [
     "Agent",
     "AgentStatus",
     "PositionLevel",
+    "AsyncMessage",
+    "AsyncMessageStatus",
+    "AsyncMessageType",
     "BudgetTransaction",
     "TransactionType",
     "AgentMessage",

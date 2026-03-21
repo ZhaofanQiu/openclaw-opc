@@ -3,30 +3,36 @@
 ## 问题汇总
 
 ### 1. 用户详情页中剩余预算显示0 OC币，实际是10000
-**状态**: 需要进一步调查
+**状态**: ✅ 已修复（第二轮）
 **严重程度**: 高
 
 **问题分析**:
-- 后端 `Agent.remaining_budget` 是动态计算的属性：`monthly_budget - used_budget`
-- `AgentResponse` 模型已包含 `total_budget` 和 `remaining_budget` 字段
-- 问题可能出在前端显示逻辑或数据未正确返回
+- 后端 `Agent.remaining_budget` 是 Python `@property` 计算属性：`monthly_budget - used_budget`
+- `AgentResponse` 模型定义了 `total_budget` 和 `remaining_budget` 字段，并添加了 `model_validator` 计算它们
+- **第一轮修复根因**: Pydantic 的 `from_attributes=True` 不会自动包含 Python property，且路由直接返回 SQLAlchemy 模型，没有触发 Pydantic 验证器
 
-**可能原因**:
-1. 前端 `agent-modal-budget` 元素赋值逻辑问题
-2. API 返回数据中 `remaining_budget` 字段缺失或为 null
-3. 数据类型问题（字符串 vs 数字）
-
-**修复建议**:
-```javascript
-// 在 openAgentModal 函数中检查
-console.log('Agent data:', agent);
-document.getElementById('agent-modal-budget').textContent = formatNumber(agent.remaining_budget || 0) + ' OC币';
+**第一轮修复**（不完整）:
+```python
+class AgentResponse(BaseModel):
+    ...
+    @model_validator(mode='after')
+    def compute_budget_fields(self):
+        self.total_budget = self.monthly_budget
+        self.remaining_budget = self.monthly_budget - self.used_budget
+        return self
 ```
 
-**验证方法**:
-1. 打开浏览器开发者工具 (F12)
-2. 查看 Network 面板中 `/api/agents/{id}` 的响应
-3. 检查 `remaining_budget` 和 `total_budget` 字段值
+**第二轮修复**（完整）:
+```python
+@router.get("/{agent_id}", response_model=AgentResponse)
+async def get_agent(...):
+    agent = service.get_agent_by_id(agent_id)
+    # 必须手动调用 model_validate 触发验证器
+    return AgentResponse.model_validate(agent)
+```
+
+**修复文件**: 
+- `backend/src/routers/agents.py`（两轮修复）
 
 ---
 
@@ -136,30 +142,30 @@ async function confirmAssign() {
 ---
 
 ### 6. 分配完任务之后点击悬浮框提示partner唤醒失败了，但页面显示partner在线
-**状态**: 需要进一步调查
+**状态**: ✅ 已修复
 **严重程度**: 中
 
 **问题分析**:
-- Partner 有两种状态：
-  1. **在线状态** (`is_online`): 基于心跳，表示 Partner Agent 进程在运行
-  2. **唤醒状态** (`partnerState`): 表示 Partner 正在与用户交互
+- 后端日志显示错误：`'Task' object has no attribute 'due_date'`
+- 错误发生在 `partner_service.py` 的 `get_company_summary()` 函数中
 
-- "在线" ≠ "已唤醒"
-- 唤醒失败可能原因：
-  1. Partner ID 未正确加载（`PARTNER_ID` 为 null）
-  2. `/api/agents/partner/wake` API 调用失败
-  3. Partner 员工未绑定到 OpenClaw Agent
-
-**需要检查**:
-```javascript
-// 浏览器控制台检查
-console.log('PARTNER_ID:', PARTNER_ID);
+**根因代码**:
+```python
+# src/services/partner_service.py:313-315
+overdue = sum(1 for t in tasks 
+             if t.status in [TaskStatus.ASSIGNED.value, TaskStatus.IN_PROGRESS.value]
+             and t.due_date   # ❌ Task 模型没有 due_date 字段
+             and t.due_date < datetime.utcnow())
 ```
 
-**修复建议**:
-1. 确保 Partner 员工正确创建并绑定到 OpenClaw Agent
-2. 检查 `/api/agents/partner/wake` 的响应错误详情
-3. 在 UI 上区分"在线"和"已唤醒"两种状态
+**修复**:
+```python
+# 使用 is_overdue 字段代替
+overdue = sum(1 for t in tasks 
+             if t.is_overdue == "true")
+```
+
+**修复文件**: `backend/src/services/partner_service.py`
 
 ---
 
