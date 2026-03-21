@@ -309,6 +309,11 @@ class AvatarService:
         Returns:
             Created avatar record
         """
+        # Validate file size (max 5MB)
+        MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB in bytes
+        if len(file_data) > MAX_FILE_SIZE:
+            raise ValueError(f"File size exceeds 5MB limit. Got {len(file_data) / 1024 / 1024:.2f}MB")
+        
         # Validate content type
         allowed_types = ["image/png", "image/jpeg", "image/jpg", "image/svg+xml"]
         if content_type not in allowed_types:
