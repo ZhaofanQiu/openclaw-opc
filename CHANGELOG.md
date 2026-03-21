@@ -7,6 +7,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- **PostgreSQL Migration** - Production database support
+  - Dual database support (SQLite for dev, PostgreSQL for prod)
+  - Environment-based configuration (DB_TYPE, DATABASE_URL)
+  - Data migration script from SQLite to PostgreSQL
+  - Docker Compose profile for PostgreSQL stack
+  - Connection pooling and health checks
+  - Complete migration guide
 - **Post-Fuse Options** - Actions when budget fuse is triggered
   - 💰 Add Budget - Increase agent's monthly budget
   - ✂️ Split Task - Break into smaller sub-tasks
