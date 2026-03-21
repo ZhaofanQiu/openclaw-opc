@@ -390,3 +390,151 @@ async def resend_task_to_agent(
         }
     else:
         raise HTTPException(status_code=400, detail=result.get("error", "Failed to resend"))
+
+
+# ============================================================
+# Exact Token Tracking API (v0.3.0 P0 #4)
+# ============================================================
+
+class ExactTokenRecord(BaseModel):
+    """Record exact token usage for a task."""
+    session_key: str = Field(..., description="OpenClaw session key")
+
+
+class ExactTokenResponse(BaseModel):
+    """Exact token recording response."""
+    success: bool
+    task_id: str
+    input_tokens: int
+    output_tokens: int
+    total_tokens: int
+    model: str
+    exact_cost: float
+    message: str
+
+
+@router.post("/{task_id}/exact-tokens", response_model=ExactTokenResponse)
+async def record_exact_tokens(
+    request: Request,
+    task_id: str,
+    record: ExactTokenRecord,
+    db: Session = Depends(get_db),
+):
+    """
+    Record exact token usage for a completed task.
+    
+    This endpoint is called to update a task with exact token consumption
+    from OpenClaw session_status. Should be called after task completion
+    when the exact session data is available.
+    
+    **Process**:
+    1. Fetches exact tokens from OpenClaw session_status
+    2. Updates task with exact input/output tokens
+    3. Recalculates actual cost if significant difference
+    4. Adjusts agent budget if needed
+    
+    **When to call**:
+    - After Agent reports task completion
+    - When OpenClaw session has ended
+    - For reconciliation of estimated vs actual costs
+    """
+    from src.services.exact_token_service import ExactTokenService
+    
+    logger.info(
+        "record_exact_tokens_request",
+        task_id=task_id,
+        session_key=record.session_key
+    )
+    
+    service = ExactTokenService(db)
+    result = service.record_exact_tokens(task_id, record.session_key)
+    
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("error", "Failed to record tokens"))
+    
+    logger.info(
+        "exact_tokens_recorded",
+        task_id=task_id,
+        total_tokens=result.get("total_tokens"),
+        model=result.get("model")
+    )
+    
+    return ExactTokenResponse(
+        success=True,
+        task_id=result["task_id"],
+        input_tokens=result["input_tokens"],
+        output_tokens=result["output_tokens"],
+        total_tokens=result["total_tokens"],
+        model=result["model"],
+        exact_cost=result["exact_cost"],
+        message=f"Exact tokens recorded. Cost: {result['exact_cost']:.2f} OC币"
+    )
+
+
+@router.get("/stats/exact-tokens")
+async def get_exact_token_summary(
+    agent_id: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    """
+    Get summary of exact vs estimated token tracking.
+    
+    Returns statistics showing how many tasks have exact token tracking
+    vs estimated tracking.
+    
+    **Metrics**:
+    - Total completed tasks
+    - Tasks with exact token tracking
+    - Tasks with estimated tracking
+    - Exact tracking percentage
+    - Total input/output tokens
+    """
+    from src.services.exact_token_service import ExactTokenService
+    
+    service = ExactTokenService(db)
+    summary = service.get_exact_token_summary(agent_id)
+    
+    return summary
+
+
+@router.post("/batch/exact-tokens")
+async def batch_record_exact_tokens(
+    request: Request,
+    session_keys: Dict[str, str] = Body(..., description="Map of task_id -> session_key"),
+    db: Session = Depends(get_db),
+):
+    """
+    Batch record exact tokens for multiple tasks.
+    
+    Useful for reconciling multiple tasks at once after a batch of
+    OpenClaw sessions have completed.
+    
+    **Request body**: Dict mapping task_id to session_key
+    
+    **Example**:
+    ```json
+    {
+        "task_abc123": "session_xyz789",
+        "task_def456": "session_uvw012"
+    }
+    ```
+    
+    **Returns**:
+    - List of successful updates
+    - List of failed updates with errors
+    """
+    from src.services.exact_token_service import ExactTokenService
+    
+    if not session_keys:
+        raise HTTPException(status_code=400, detail="No session keys provided")
+    
+    service = ExactTokenService(db)
+    results = service.batch_update_exact_tokens(session_keys)
+    
+    return {
+        "success": True,
+        "total": results["total"],
+        "successful": len(results["success"]),
+        "failed": len(results["failed"]),
+        "details": results
+    }
