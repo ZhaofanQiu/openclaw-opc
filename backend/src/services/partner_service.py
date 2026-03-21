@@ -306,11 +306,9 @@ class PartnerService:
                              and t.completed_at 
                              and t.completed_at > datetime.utcnow() - timedelta(days=1))
         
-        # Overdue tasks
+        # Overdue tasks (use is_overdue flag instead of due_date)
         overdue = sum(1 for t in tasks 
-                     if t.status in [TaskStatus.ASSIGNED.value, TaskStatus.IN_PROGRESS.value]
-                     and t.due_date 
-                     and t.due_date < datetime.utcnow())
+                     if t.is_overdue == "true")
         
         # Generate alerts (negative things to note)
         alerts = []
