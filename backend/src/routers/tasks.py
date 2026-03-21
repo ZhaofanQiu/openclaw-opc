@@ -581,3 +581,120 @@ async def delete_task(
         "task_id": task_id,
         "task_title": task_title
     }
+
+
+# ============================================================
+# Task Report Endpoint (Phase 6) - Agent Callback
+# ============================================================
+
+class TaskReport(BaseModel):
+    """Task completion report from Agent."""
+    agent_id: str = Field(..., description="OpenClaw Agent ID reporting the task")
+    status: str = Field(..., description="Task status: completed or failed")
+    result_summary: str = Field(default="", description="Summary of the task result")
+    token_used: int = Field(default=0, ge=0, description="Total tokens used")
+    tokens_input: Optional[int] = Field(default=None, ge=0, description="Input tokens consumed")
+    tokens_output: Optional[int] = Field(default=None, ge=0, description="Output tokens consumed")
+    session_key: Optional[str] = Field(default=None, description="OpenClaw session key for exact token tracking")
+    is_exact: bool = Field(default=False, description="Whether tokens are exact measurements from session_status API")
+
+
+@router.post("/{task_id}/report")
+@limiter.limit(RATE_LIMITS["create"])
+async def report_task_completion(
+    request: Request,
+    task_id: str,
+    report: TaskReport,
+    db: Session = Depends(get_db),
+):
+    """
+    Report task completion from Agent.
+    
+    Called by OPC Bridge Skill or Agent after task completion.
+    Supports both estimated and exact token consumption reporting.
+    
+    **Authentication**: Requires valid Agent ID (checked against assigned agent)
+    
+    **Request body**:
+    - agent_id: OpenClaw Agent ID
+    - status: "completed" or "failed"
+    - result_summary: Task result description
+    - token_used: Total tokens (if exact=False)
+    - tokens_input/output: Exact tokens (if exact=True)
+    - session_key: For fetching exact tokens from session_status API
+    - is_exact: Whether to use exact token tracking
+    
+    **Returns**:
+    - Task update confirmation
+    - Budget deduction details
+    """
+    from src.models import Task, Agent
+    from src.services.agent_service import AgentService
+    
+    # Get task
+    task = db.query(Task).filter(Task.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    # Verify agent is assigned to this task
+    agent = db.query(Agent).filter(Agent.agent_id == report.agent_id).first()
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    
+    if task.agent_id != agent.id:
+        raise HTTPException(status_code=403, detail="Agent not assigned to this task")
+    
+    # Validate status
+    if report.status not in ["completed", "failed"]:
+        raise HTTPException(status_code=400, detail="Status must be 'completed' or 'failed'")
+    
+    try:
+        # Use AgentService for consistent task reporting
+        service = AgentService(db)
+        
+        # If exact token tracking is requested and session_key provided
+        if report.is_exact and report.session_key:
+            result = service.report_task_completion(
+                agent_id=agent.id,
+                task_id=task_id,
+                token_used=report.token_used,
+                result_summary=report.result_summary,
+                status=report.status,
+                tokens_input=report.tokens_input,
+                tokens_output=report.tokens_output,
+                session_key=report.session_key,
+                is_exact=True,
+            )
+        else:
+            # Use estimated tokens
+            result = service.report_task_completion(
+                agent_id=agent.id,
+                task_id=task_id,
+                token_used=report.token_used,
+                result_summary=report.result_summary,
+                status=report.status,
+            )
+        
+        logger.info(
+            "task_reported",
+            task_id=task_id,
+            agent_id=agent.id,
+            status=report.status,
+            is_exact=report.is_exact
+        )
+        
+        return {
+            "success": True,
+            "task_id": task_id,
+            "status": report.status,
+            "message": f"Task '{task.title}' marked as {report.status}",
+            "budget_deducted": result.get("token_used", report.token_used),
+            "agent_remaining_budget": agent.remaining_budget
+        }
+        
+    except ValueError as e:
+        logger.error("task_report_failed", task_id=task_id, error=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error("task_report_error", task_id=task_id, error=str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to process report: {str(e)}")
