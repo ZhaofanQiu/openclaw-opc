@@ -45,11 +45,44 @@ cp .env.example .env
 chmod +x start.sh
 ./start.sh
 
-# 4. 打开浏览器访问
+# 4. 配置 Partner Agent（关键步骤！）
+# 打开浏览器访问 Dashboard，在配置向导中：
+#   - 方式1: 一键自动创建（推荐）
+#   - 方式2: 绑定现有 OpenClaw Agent
+
+# 5. 重启 OpenClaw Gateway 使 Partner Agent 生效
+
+# 6. 打开浏览器访问
 # Dashboard:      http://localhost:3000
 # 像素办公室:      http://localhost:3000/pixel-office
 # 工作日报:        http://localhost:3000/reports
 # API Docs:       http://localhost:8080/docs
+```
+
+### Partner Agent 配置
+
+Partner Agent 是 OPC 的核心，负责：
+- 🎉 欢迎用户并提供公司状态
+- 📋 协助雇佣员工、发布任务
+- 📊 生成日报和洞察
+- 💬 与用户对话式交互
+
+**推荐：一键自动创建**
+
+系统会自动创建 `opc_partner` Agent：
+- ✅ 独立的 workspace（上下文隔离）
+- ✅ 独立的 memory（不影响你的主 Agent）
+- ✅ 预设 CEO Assistant 身份
+
+```bash
+# API 调用方式
+curl -X POST http://localhost:8080/api/agents/partner/setup-auto \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"monthly_budget": 10000}'
+
+# 如果创建了新的 Agent，重启 OpenClaw Gateway
+openclaw gateway restart
 ```
 
 ### 手动安装
@@ -261,8 +294,9 @@ curl -X POST "http://localhost:8080/api/agents/partner/assign/{task_id}?partner_
 |------|------|
 | [PROJECT_STATUS.md](./docs/PROJECT_STATUS.md) | 项目完成状态与发布信息 |
 | [PROJECT_REVIEW.md](./docs/PROJECT_REVIEW.md) | 项目Review与优化方案 |
-| [ROADMAP.md](./docs/ROADMAP.md) | 未来开发路线图 |
+| [ROADMAP.md](./docs/ROADMAP.md) | 未来开发路线图（含协作机制设计） |
 | [TECHNICAL.md](./docs/TECHNICAL.md) | 技术方案详细说明 |
+| [REMOTE_TESTING.md](./docs/REMOTE_TESTING.md) | 远程测试报告与安全指南 |
 | [CHANGELOG.md](./CHANGELOG.md) | 版本变更记录 |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | 贡献指南 |
 | [archive/](./docs/archive/) | 历史文档归档 |
@@ -287,6 +321,10 @@ curl -X POST "http://localhost:8080/api/agents/partner/assign/{task_id}?partner_
 | **结构化日志** | ✅ 完成 | **v0.2.1** |
 | **API限流** | ✅ 完成 | **v0.2.1** |
 | **输入验证** | ✅ 完成 | **v0.2.1** |
+| **API Key 认证** | ✅ 完成 | **v0.3.0** |
+| **Agent 自动创建** | 🔄 开发中 | **v0.3.0** |
+| **Agent 执行闭环** | ⏳ 待实现 | **v0.3.1** |
+| **任务流/审批流** | 📋 设计中 | **v0.4.0** |
 
 ---
 
@@ -386,13 +424,19 @@ curl -X POST -H "Authorization: Bearer YOUR_API_KEY" \
 
 ---
 
-## 🌐 外网访问（测试方案）
+## 🌐 外网访问（临时测试）
 
-> ⚠️ **警告：以下方案尚未经验证，仅供测试使用**
+> ⚠️ **警告：以下方案仅供临时测试使用，生产环境请使用正式方案**
+> 
+> 详细测试报告：[docs/REMOTE_TESTING.md](./docs/REMOTE_TESTING.md)
+
+### 安全提示
+
+- **Cpolar 仅用于临时测试**，测试完成后必须关闭
+- 公网 URL 泄露后任何人可访问你的 Dashboard
+- 生产环境建议使用：**公网 IP + DDNS** 或 **云服务器**
 
 ### Cloudflare Quick Tunnel（临时测试）
-
-如需临时测试外网访问，可使用 Cloudflare Quick Tunnel：
 
 ```bash
 # 1. 确保 OpenClaw OPC 本地运行
@@ -402,12 +446,10 @@ docker run --rm -it cloudflare/cloudflared:latest tunnel --url http://host.docke
 # 3. 复制输出的 URL 访问 Dashboard
 ```
 
-**已知问题：**
-- 连接不稳定，可能随时断开
-- 可能遇到 530 错误
-- 每次启动 URL 都会变化
-
-详细说明请参考 [docs/CLOUDFLARE_TUNNEL.md](./docs/CLOUDFLARE_TUNNEL.md)
+**测试完成后务必关闭：**
+```bash
+pkill -f cpolar  # 如果使用 cpolar
+```
 
 ### 生产环境建议
 

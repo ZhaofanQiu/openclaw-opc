@@ -52,7 +52,8 @@ function getApiBase() {
  */
 async function validateApiKey(apiKey) {
     try {
-        const response = await fetch(`${getApiBase()}/api/keys/stats`, {
+        // Use a simple endpoint that requires authentication but not admin
+        const response = await fetch(`${getApiBase()}/api/agents?limit=1`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${apiKey}`,

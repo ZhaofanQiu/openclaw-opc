@@ -1,0 +1,91 @@
+{
+  "app": {
+    "name": "OpenClaw OPC",
+    "title": "Star Studio - One-Person Company Management"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "pixelOffice": "Pixel Office",
+    "reports": "Reports",
+    "back": "← Back to Dashboard"
+  },
+  "partner": {
+    "title": "Partner Assistant",
+    "status": {
+      "awake": "🟢 Partner Awake - Click to Chat",
+      "standby": "💤 Click to Wake Partner",
+      "sleeping": "Partner in Standby (5min inactive)"
+    },
+    "actions": {
+      "hire": "🤝 Hire Employee",
+      "assign": "📋 Global Assignment",
+      "health": "🏥 Health Details",
+      "reports": "📊 View Reports",
+      "createTask": "📝 Create Task"
+    },
+    "welcome": {
+      "greeting": "Hello! 👋",
+      "budget": "Budget",
+      "tasks": "Tasks",
+      "alerts": "⚠️ Attention",
+      "goodNews": "✅ Good News",
+      "help": "What can I help you with?"
+    }
+  },
+  "dashboard": {
+    "title": "Company Overview",
+    "budget": {
+      "title": "Company Budget",
+      "used": "Used",
+      "remaining": "Remaining",
+      "usageRate": "Usage Rate"
+    },
+    "tasks": {
+      "title": "Task Overview",
+      "pending": "Pending",
+      "inProgress": "In Progress",
+      "completed": "Completed",
+      "create": "➕ Create Task"
+    },
+    "employees": {
+      "title": "Employees",
+      "count": "employees",
+      "idle": "Idle",
+      "busy": "Busy",
+      "hire": "Hire"
+    },
+    "alerts": {
+      "overdue": "Overdue Tasks",
+      "fuse": "🚨 Budget Fuse Alert"
+    }
+  },
+  "config": {
+    "title": "Settings",
+    "companyName": "Company Name",
+    "warningThreshold": "Budget Warning Threshold (%)",
+    "fuseThreshold": "Budget Fuse Threshold (%)",
+    "strategy": "Auto-Assignment Strategy",
+    "strategies": {
+      "combined": "⚖️ Combined",
+      "budget": "💰 Budget First",
+      "workload": "📊 Workload First",
+      "skill": "🎯 Skill Match"
+    },
+    "save": "Save Settings"
+  },
+  "common": {
+    "loading": "Loading...",
+    "refresh": "Refresh",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "send": "Send",
+    "search": "Search",
+    "filter": "Filter",
+    "share": "Share",
+    "logout": "Logout"
+  }
+}

@@ -238,12 +238,23 @@ async def health():
 # Mount static files (dashboard UI)
 web_dir = os.path.join(PROJECT_ROOT, "web")
 if os.path.exists(web_dir):
+    # Explicit route for pixel-office (before mounting static files)
+    from fastapi.responses import FileResponse
+    
+    @app.get("/dashboard/pixel-office", include_in_schema=False)
+    async def pixel_office():
+        """Serve pixel office HTML file."""
+        return FileResponse(os.path.join(web_dir, "pixel-office.html"))
+    
     app.mount("/dashboard", StaticFiles(directory=web_dir, html=True), name="dashboard")
     logger.info("dashboard_mounted", path="/dashboard")
     logger.info("pixel_office_mounted", path="/dashboard/pixel-office")
 
-# Mount avatars directory
-avatars_dir = os.path.join(PROJECT_ROOT, "data", "avatars")
+# Mount avatars directory - use web/avatars for direct access
+avatars_dir = os.path.join(PROJECT_ROOT, "web", "avatars")
+if not os.path.exists(avatars_dir):
+    # Fallback to data/avatars if web/avatars doesn't exist
+    avatars_dir = os.path.join(PROJECT_ROOT, "data", "avatars")
 os.makedirs(avatars_dir, exist_ok=True)
 app.mount("/avatars", StaticFiles(directory=avatars_dir), name="avatars")
-logger.info("avatars_mounted", path="/avatars")
+logger.info("avatars_mounted", path="/avatars", directory=avatars_dir)

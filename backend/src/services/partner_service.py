@@ -29,28 +29,50 @@ class AssignmentStrategy:
         return budget_ratio
     
     @staticmethod
-    def by_workload(agent: Agent) -> float:
+    def by_workload(agent: Agent, db: Session = None) -> float:
         """
         Score agent based on current workload.
         Lower workload = better candidate.
+        Score ranges from 0.0 (max workload) to 1.0 (no workload)
         """
-        # Simple heuristic: agents with no tasks are preferred
-        # In real implementation, count active tasks
-        return 1.0  # Placeholder
+        if db:
+            # Count active tasks for this agent
+            active_tasks = db.query(Task).filter(
+                Task.agent_id == agent.id,
+                Task.status.in_(["assigned", "in_progress"])
+            ).count()
+            
+            # Max concurrent tasks assumption: 3
+            max_tasks = 3
+            workload_ratio = min(active_tasks / max_tasks, 1.0)
+            return 1.0 - workload_ratio  # Inverse: less workload = higher score
+        
+        return 1.0  # Default: assume no workload if db not available
     
     @staticmethod
-    def combined(agent: Agent, task) -> float:
+    def combined(agent: Agent, task, db: Session = None) -> float:
         """
         Combined scoring strategy.
-        Weights: 70% budget, 30% workload
+        Weights: 40% budget, 30% workload, 30% skill match
         """
+        # Budget score (40%)
         budget_score = AssignmentStrategy.by_budget(agent, task)
-        workload_score = AssignmentStrategy.by_workload(agent)
-        
         if budget_score == 0.0:
-            return 0.0
+            return 0.0  # Can't afford the task
         
-        return budget_score * 0.7 + workload_score * 0.3
+        # Workload score (30%) - inverse of current workload
+        workload_score = AssignmentStrategy.by_workload(agent, db)
+        
+        # Skill match score (30%)
+        skill_score = 0.5  # Default neutral score if no skill data
+        if db:
+            try:
+                skill_score = AssignmentStrategy.by_skill(agent, task, db)
+            except Exception:
+                skill_score = 0.5  # Fallback to neutral if skill calc fails
+        
+        # Weighted combination
+        return budget_score * 0.4 + workload_score * 0.3 + skill_score * 0.3
     
     @staticmethod
     def by_skill(agent: Agent, task, db: Session) -> float:
@@ -124,13 +146,19 @@ class PartnerService:
             
             return best_agent if best_score > 0 else None
         else:
-            strategy_fn = getattr(AssignmentStrategy, strategy, AssignmentStrategy.by_budget)
-            
             best_agent = None
             best_score = -1
             
             for agent in agents:
-                score = strategy_fn(agent, task)
+                # Special handling for strategies that need db
+                if strategy == "combined":
+                    score = AssignmentStrategy.combined(agent, task, self.db)
+                elif strategy == "workload":
+                    score = AssignmentStrategy.by_workload(agent, self.db)
+                else:
+                    strategy_fn = getattr(AssignmentStrategy, strategy, AssignmentStrategy.by_budget)
+                    score = strategy_fn(agent, task)
+                
                 if score > best_score:
                     best_score = score
                     best_agent = agent
@@ -249,4 +277,88 @@ class PartnerService:
                 "usage_percentage": ((total_budget - total_remaining) / total_budget * 100) if total_budget > 0 else 0,
             },
             "ready_for_assignment": pending_count > 0 and active_agents > 0
+        }
+    
+    def get_company_summary(self) -> dict:
+        """
+        Get company status summary for Partner welcome message.
+        
+        Returns:
+            Summary with budget, tasks, alerts, and good news
+        """
+        from datetime import datetime, timedelta
+        from src.models import Task, TaskStatus
+        
+        # Budget info
+        agents = self.db.query(Agent).filter(Agent.position_level < 5).all()
+        total_budget = sum(a.monthly_budget for a in agents)
+        total_used = sum(a.used_budget for a in agents)
+        total_remaining = sum(a.remaining_budget for a in agents)
+        budget_pct = (total_used / total_budget * 100) if total_budget > 0 else 0
+        
+        # Task counts
+        tasks = self.db.query(Task).all()
+        pending = sum(1 for t in tasks if t.status == TaskStatus.PENDING.value)
+        assigned = sum(1 for t in tasks if t.status == TaskStatus.ASSIGNED.value)
+        in_progress = sum(1 for t in tasks if t.status == TaskStatus.IN_PROGRESS.value)
+        completed_today = sum(1 for t in tasks 
+                             if t.status == TaskStatus.COMPLETED.value 
+                             and t.completed_at 
+                             and t.completed_at > datetime.utcnow() - timedelta(days=1))
+        
+        # Overdue tasks
+        overdue = sum(1 for t in tasks 
+                     if t.status in [TaskStatus.ASSIGNED.value, TaskStatus.IN_PROGRESS.value]
+                     and t.due_date 
+                     and t.due_date < datetime.utcnow())
+        
+        # Generate alerts (negative things to note)
+        alerts = []
+        for agent in agents:
+            remaining_pct = (agent.remaining_budget / agent.monthly_budget * 100) if agent.monthly_budget > 0 else 100
+            if remaining_pct < 20:
+                alerts.append(f"{agent.name} 预算不足20%")
+        
+        if overdue > 0:
+            alerts.append(f"{overdue}个任务已逾期")
+        
+        for agent in agents:
+            if agent.status == "fused":
+                alerts.append(f"{agent.name} 预算熔断")
+        
+        # Generate good news (positive things)
+        good_news = []
+        if completed_today > 0:
+            good_news.append(f"今天完成了{completed_today}个任务")
+        
+        low_budget_count = sum(1 for a in agents if a.remaining_budget < a.monthly_budget * 0.2)
+        if low_budget_count == 0:
+            good_news.append("所有员工预算充足")
+        
+        if pending == 0 and len(tasks) > 0:
+            good_news.append("所有任务都已分配")
+        
+        return {
+            "budget": {
+                "total": total_budget,
+                "used": total_used,
+                "remaining": total_remaining,
+                "used_percentage": budget_pct,
+            },
+            "tasks": {
+                "total": len(tasks),
+                "pending": pending,
+                "assigned": assigned,
+                "in_progress": in_progress,
+                "completed_today": completed_today,
+                "overdue": overdue,
+            },
+            "agents": {
+                "total": len(agents),
+                "idle": sum(1 for a in agents if a.status == "idle"),
+                "busy": sum(1 for a in agents if a.status == "busy"),
+            },
+            "alerts": alerts,
+            "good_news": good_news,
+            "timestamp": datetime.utcnow().isoformat()
         }

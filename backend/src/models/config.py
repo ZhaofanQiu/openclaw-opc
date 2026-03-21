@@ -26,7 +26,7 @@ class SystemConfig(Base):
     
     # Auto-assignment settings
     auto_assign_enabled = Column(String, default="true")  # 是否启用自动分配
-    default_strategy = Column(String, default="budget")  # 默认分配策略
+    default_strategy = Column(String, default="combined")  # 默认分配策略
     
     # Partner heartbeat
     heartbeat_interval_seconds = Column(Integer, default=30)  # 心跳间隔
@@ -45,7 +45,7 @@ class SystemConfig(Base):
             "warning_threshold": 80.0,
             "fuse_threshold": 100.0,
             "auto_assign_enabled": True,
-            "default_strategy": "budget",
+            "default_strategy": "combined",
             "heartbeat_interval_seconds": 30,
             "heartbeat_timeout_seconds": 60,
         }
