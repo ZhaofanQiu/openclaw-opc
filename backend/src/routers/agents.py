@@ -324,14 +324,20 @@ async def partner_hire_employee(
     Partner assists in hiring a new employee.
     Validates partner permissions and creates employee.
     """
+    logger.info(f"Hire request: partner_id={partner_id}, employee_name={employee.name}")
+    
     service = AgentService(db)
     
     # Verify partner
     partner = service.get_agent_by_id(partner_id)
     if not partner:
+        logger.error(f"Partner not found: partner_id={partner_id}")
         raise HTTPException(status_code=404, detail="Partner not found")
     
+    logger.info(f"Partner found: {partner.name}, agent_id={partner.agent_id}, position_level={partner.position_level}")
+    
     if partner.position_level != PositionLevel.PARTNER.value:
+        logger.error(f"Not a partner: position_level={partner.position_level}")
         raise HTTPException(status_code=403, detail="Only Partner can hire employees")
     
     # Create employee

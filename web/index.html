@@ -4215,6 +4215,15 @@
         }
 
         async function hireEmployee(name, position, budget) {
+            // Ensure Partner ID is loaded
+            if (!PARTNER_ID) {
+                const loaded = await loadPartnerId();
+                if (!loaded) {
+                    alert('无法获取 Partner 信息，请刷新页面后重试');
+                    return;
+                }
+            }
+            
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/agents/partner/hire?partner_id=${PARTNER_ID}`, {
                     method: 'POST',
