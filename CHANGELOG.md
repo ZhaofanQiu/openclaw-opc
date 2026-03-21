@@ -7,12 +7,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- **Agent Communication** - Inter-agent messaging system
+  - Partner can send messages to employees via sessions_send
+  - Task assignment notifications
+  - Message status tracking: pending → sent → delivered
+  - Retry logic (max 3 attempts)
+  - Inbox and conversation history
+  - Broadcast messages to multiple agents
 - **Pixel Avatar V2** - Three-mode avatar system
   - System-generated: 4 pixel art styles (humanoid, robot, alien, spirit)
   - User upload: Support PNG/JPG/SVG, max 5MB
-  - AI-generated: Pending mode for external skill integration
+  - AI-generated: Partner calls skill for generation
   - Avatar editor modal with live preview
-  - Position-based color palettes
+  - Status animations (idle/busy/offline/fused)
 - **Chart Visualization** - Data visualization for reports
   - Dashboard: 7-day budget usage trend chart
   - Daily report: Budget distribution pie chart by employee
