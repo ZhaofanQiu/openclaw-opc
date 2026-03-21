@@ -2448,6 +2448,30 @@
             : '';  // Production (same origin via nginx proxy)
         const REFRESH_INTERVAL = 5000; // 5 seconds
 
+        // Auto refresh control
+        let isAutoRefreshPaused = false;
+        let openModalCount = 0;
+
+        function pauseAutoRefresh() {
+            openModalCount++;
+            isAutoRefreshPaused = true;
+            console.log('[AutoRefresh] Paused, open modals:', openModalCount);
+        }
+
+        function resumeAutoRefresh() {
+            openModalCount = Math.max(0, openModalCount - 1);
+            if (openModalCount === 0) {
+                isAutoRefreshPaused = false;
+                console.log('[AutoRefresh] Resumed');
+            } else {
+                console.log('[AutoRefresh] Still paused, open modals:', openModalCount);
+            }
+        }
+
+        function isModalOpen() {
+            return document.querySelectorAll('.modal-overlay.visible').length > 0;
+        }
+
         // Format number
         function formatNumber(num) {
             if (num === undefined || num === null) return '0';
@@ -4167,6 +4191,7 @@
 
         // Create Task Modal Functions
         function openCreateTaskModal() {
+            pauseAutoRefresh();
             document.getElementById('create-task-modal').classList.add('visible');
             // Set default due date to 3 days from now
             const defaultDue = new Date();
@@ -4183,6 +4208,7 @@
             document.getElementById('task-priority').value = 'normal';
             document.getElementById('task-budget').value = '';
             document.getElementById('task-skills').value = '';
+            resumeAutoRefresh();
         }
 
         async function confirmCreateTask() {
@@ -4248,6 +4274,10 @@
 
         // Auto refresh
         setInterval(() => {
+            if (isAutoRefreshPaused || isModalOpen()) {
+                console.log('[AutoRefresh] Skipped (paused or modal open)');
+                return;
+            }
             loadData();
             checkOverdueTasks();
             loadNotifications();
@@ -4322,6 +4352,7 @@
         // Manual assignment
         function openAssignModal(taskId) {
             currentAssignTaskId = taskId;
+            pauseAutoRefresh();
             loadAvailableAgents();
             document.getElementById('assign-modal').classList.add('visible');
         }
@@ -4329,6 +4360,7 @@
         function closeAssignModal() {
             document.getElementById('assign-modal').classList.remove('visible');
             currentAssignTaskId = null;
+            resumeAutoRefresh();
         }
 
         async function loadAvailableAgents() {
@@ -5286,6 +5318,7 @@
 
         async function openAvatarModal(agentId, agentName) {
             currentAvatarAgentId = agentId;
+            pauseAutoRefresh();
             document.getElementById('avatar-agent-name').textContent = agentName;
 
             // Get agent info to determine avatar class
@@ -5345,6 +5378,7 @@
             document.getElementById('system-options').style.display = 'none';
             document.getElementById('upload-option').style.display = 'none';
             document.getElementById('ai-option').style.display = 'none';
+            resumeAutoRefresh();
         }
 
         // Agent Detail Modal functions
@@ -5353,6 +5387,7 @@
 
         async function openAgentModal(agentId) {
             currentModalAgentId = agentId;
+            pauseAutoRefresh();
 
             // Show modal
             document.getElementById('agent-detail-modal').classList.add('visible');
@@ -5420,6 +5455,7 @@
             document.getElementById('agent-detail-modal').classList.remove('visible');
             currentModalAgentId = null;
             currentModalAgentData = null;
+            resumeAutoRefresh();
         }
 
         function switchAgentModalTab(tab) {
