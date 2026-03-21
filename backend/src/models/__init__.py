@@ -2,7 +2,9 @@
 
 from src.models.agent import Agent, AgentStatus, PositionLevel
 from src.models.budget import BudgetTransaction, TransactionType
+from src.models.communication import AgentMessage, MessagePriority, MessageStatus
 from src.models.config import SystemConfig
+from src.models.fuse import BudgetFuseEvent, FuseAction, FuseEventStatus
 from src.models.notification import Notification, NotificationType
 from src.models.skill import Skill, TaskSkillRequirement, agent_skills_table
 from src.models.task import Task, TaskPriority, TaskStatus
@@ -13,7 +15,13 @@ __all__ = [
     "PositionLevel",
     "BudgetTransaction",
     "TransactionType",
+    "AgentMessage",
+    "MessagePriority",
+    "MessageStatus",
     "SystemConfig",
+    "BudgetFuseEvent",
+    "FuseAction",
+    "FuseEventStatus",
     "Notification",
     "NotificationType",
     "Skill",
