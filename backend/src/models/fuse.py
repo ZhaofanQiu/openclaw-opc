@@ -14,10 +14,11 @@ from src.database import Base
 
 class FuseAction(str, PyEnum):
     """Post-fuse action types."""
-    ADD_BUDGET = "add_budget"  # Add more budget
-    SPLIT_TASK = "split_task"  # Split into smaller tasks
-    REASSIGN = "reassign"      # Reassign to another agent
-    PAUSE = "pause"            # Pause and wait
+    ADD_BUDGET = "add_budget"           # Add more budget
+    SPLIT_TASK = "split_task"           # Split into smaller tasks
+    REASSIGN = "reassign"               # Reassign to another agent
+    PAUSE = "pause"                     # Pause and wait
+    ASSIGN_TO_PARTNER = "assign_to_partner"  # Assign to Partner Agent
 
 
 class FuseEventStatus(str, PyEnum):

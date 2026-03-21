@@ -751,7 +751,7 @@
             background: rgba(248, 113, 113, 0.2);
             color: #f87171;
         }
-        
+
         /* Task execution status badges (v0.3.0 P0) */
         .execution-badge {
             display: inline-flex;
@@ -763,19 +763,19 @@
             font-weight: 500;
             margin-left: 8px;
         }
-        
+
         .execution-badge.sent {
             background: rgba(245, 158, 11, 0.2);
             color: #f59e0b;
             border: 1px solid rgba(245, 158, 11, 0.4);
         }
-        
+
         .execution-badge.acked {
             background: rgba(59, 130, 246, 0.2);
             color: #3b82f6;
             border: 1px solid rgba(59, 130, 246, 0.4);
         }
-        
+
         .execution-badge.running {
             background: rgba(139, 92, 246, 0.2);
             color: #8b5cf6;
@@ -1891,6 +1891,7 @@
                 <button class="fuse-btn add-budget" onclick="openAddBudgetModal()">💰 追加预算</button>
                 <button class="fuse-btn split" onclick="openSplitTaskModal()">✂️ 拆分任务</button>
                 <button class="fuse-btn reassign" onclick="openReassignModal()">🔄 换人</button>
+                <button class="fuse-btn partner" onclick="handleAssignToPartner()" style="background: linear-gradient(135deg, #8b5cf6, #a855f7);">👑 Partner接管</button>
                 <button class="fuse-btn pause" onclick="handlePause()">⏸️ 暂停</button>
             </div>
         </div>
@@ -1911,7 +1912,7 @@
                     </div>
                 </div>
                 <div class="partner-chat-input-area">
-                    <input type="text" class="partner-chat-input" id="partner-chat-input" 
+                    <input type="text" class="partner-chat-input" id="partner-chat-input"
                            placeholder="输入消息..." onkeypress="handleChatKeyPress(event)">
                     <button class="partner-chat-send" onclick="sendChatMessage()">发送</button>
                 </div>
@@ -1964,9 +1965,9 @@
                     </select>
                 </div>
                 <button class="save-config-btn" onclick="saveConfig()">保存配置</button>
-                
+
                 <hr style="border: none; border-top: 1px solid #2a2a4a; margin: 20px 0;">
-                
+
                 <!-- Gateway Management -->
                 <div class="apikey-section">
                     <div class="apikey-header" onclick="toggleGatewaySection()">
@@ -2029,7 +2030,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- New: Skill Map -->
             <div class="stat-card" style="grid-column: span 2; cursor: pointer;" onclick="openSkillMapModal()">
                 <div class="stat-label">🛠️ 公司技能图谱</div>
@@ -2203,7 +2204,7 @@
                             </ul>
                         </div>
                     </div>
-                    
+
                     <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
                         <div style="display: flex; align-items: flex-start;">
                             <span style="font-size: 18px; margin-right: 8px;">⚠️</span>
@@ -2216,14 +2217,14 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div id="auto-create-step2" style="display: none;">
                     <div style="text-align: center; padding: 20px;">
                         <div class="spinner" style="width: 40px; height: 40px; margin: 0 auto 16px;"></div>
                         <p style="color: #888;">正在创建 Agent 配置...</p>
                     </div>
                 </div>
-                
+
                 <div id="auto-create-step3" style="display: none;">
                     <div style="text-align: center; padding: 20px;">
                         <div style="font-size: 48px; margin-bottom: 16px;">✅</div>
@@ -2240,7 +2241,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div id="auto-create-error" style="display: none;">
                     <div style="text-align: center; padding: 20px;">
                         <div style="font-size: 48px; margin-bottom: 16px;">❌</div>
@@ -2310,7 +2311,7 @@
                     <label>员工名称 *</label>
                     <input type="text" id="hire-name" placeholder="输入员工名称...">
                 </div>
-                
+
                 <div class="form-group">
                     <label>职位 *</label>
                     <select id="hire-position">
@@ -2328,7 +2329,7 @@
                         <option value="其他">🔧 其他</option>
                     </select>
                 </div>
-                
+
                 <div class="form-group">
                     <label>月预算 (OC币) *</label>
                     <input type="number" id="hire-budget" placeholder="2000" min="100" max="50000" value="2000">
@@ -2351,12 +2352,12 @@
                     <label>任务标题 *</label>
                     <input type="text" id="task-title" placeholder="输入任务标题...">
                 </div>
-                
+
                 <div class="form-group">
                     <label>任务描述</label>
                     <textarea id="task-description" placeholder="输入任务详细描述..." rows="3" style="resize: vertical;"></textarea>
                 </div>
-                
+
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                     <div class="form-group">
                         <label>优先级</label>
@@ -2367,18 +2368,18 @@
                             <option value="critical">🔴 紧急</option>
                         </select>
                     </div>
-                    
+
                     <div class="form-group">
                         <label>预算 (OC币) *</label>
                         <input type="number" id="task-budget" placeholder="100" min="1" max="10000">
                     </div>
                 </div>
-                
+
                 <div class="form-group">
                     <label>截止日期</label>
                     <input type="datetime-local" id="task-due-date">
                 </div>
-                
+
                 <div class="form-group">
                     <label>所需技能</label>
                     <input type="text" id="task-skills" placeholder="例如: python, api, frontend (用逗号分隔)">
@@ -2400,7 +2401,7 @@
                     <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
                     <p style="margin-bottom: 16px;">Agent <strong id="restart-agent-id">--</strong> 创建成功！</p>
                     <p style="color: #888; font-size: 14px; margin-bottom: 20px;">需要重启 OpenClaw Gateway 以激活新 Agent</p>
-                    
+
                     <!-- Progress Bar -->
                     <div style="background: #2a2a4a; border-radius: 8px; height: 8px; margin: 20px 0; overflow: hidden;">
                         <div id="restart-progress" style="background: linear-gradient(90deg, #667eea, #764ba2); height: 100%; width: 0%; transition: width 0.3s;"></div>
@@ -2417,7 +2418,7 @@
 
     <script>
         // Configuration
-        const API_BASE = window.location.hostname === 'localhost' 
+        const API_BASE = window.location.hostname === 'localhost'
             ? 'http://localhost:8080'  // Development
             : '';  // Production (same origin via nginx proxy)
         const REFRESH_INTERVAL = 5000; // 5 seconds
@@ -2440,16 +2441,16 @@
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/budget/company`);
                 if (!response.ok) throw new Error('Failed to load budget');
-                
+
                 const data = await response.json();
-                
-                document.getElementById('total-budget').innerHTML = 
+
+                document.getElementById('total-budget').innerHTML =
                     formatNumber(data.total_budget) + '<span class="stat-unit">OC币</span>';
-                document.getElementById('used-budget').innerHTML = 
+                document.getElementById('used-budget').innerHTML =
                     formatNumber(data.total_used) + '<span class="stat-unit">OC币</span>';
-                document.getElementById('remaining-budget').innerHTML = 
+                document.getElementById('remaining-budget').innerHTML =
                     formatNumber(data.total_remaining) + '<span class="stat-unit">OC币</span>';
-                document.getElementById('usage-percent').textContent = 
+                document.getElementById('usage-percent').textContent =
                     data.usage_percentage.toFixed(1) + '%';
             } catch (error) {
                 console.error('Error loading budget:', error);
@@ -2461,25 +2462,25 @@
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/reports/recent?days=7`);
                 if (!response.ok) throw new Error('Failed to load trend data');
-                
+
                 const data = await response.json();
                 const reports = data.reports || [];
-                
+
                 if (reports.length === 0) return;
-                
+
                 // Reverse to show oldest first
                 const sortedReports = [...reports].reverse();
                 const dates = sortedReports.map(r => r.date.slice(5)); // MM-DD
                 const budgetData = sortedReports.map(r => Math.round(r.summary.total_budget_consumed));
                 const tasksData = sortedReports.map(r => r.summary.total_tasks_completed);
-                
+
                 const ctx = document.getElementById('budgetTrendChart').getContext('2d');
-                
+
                 // Destroy existing chart if any
                 if (window.budgetChartInstance) {
                     window.budgetChartInstance.destroy();
                 }
-                
+
                 window.budgetChartInstance = new Chart(ctx, {
                     type: 'bar',
                     data: {
@@ -2581,16 +2582,16 @@
         // Load agents
         async function loadAgents() {
             const container = document.getElementById('agents-list');
-            
+
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/agents`);
                 if (!response.ok) throw new Error('Failed to load agents');
-                
+
                 const agents = await response.json();
                 document.getElementById('agent-badge').textContent = agents.length;
-                document.getElementById('agent-count').innerHTML = 
+                document.getElementById('agent-count').innerHTML =
                     agents.length + '<span class="stat-unit">人</span>';
-                
+
                 if (agents.length === 0) {
                     container.innerHTML = `
                         <div class="empty">
@@ -2600,9 +2601,9 @@
                     `;
                     return;
                 }
-                
+
                 // Load avatars for all agents
-                const avatarPromises = agents.map(agent => 
+                const avatarPromises = agents.map(agent =>
                     Auth.authFetch(`${API_BASE}/api/avatars/${agent.id}`).then(r => r.ok ? r.json() : null).catch(() => null)
                 );
                 const avatars = await Promise.all(avatarPromises);
@@ -2610,26 +2611,26 @@
                 avatars.forEach((avatar, idx) => {
                     if (avatar) avatarMap[agents[idx].id] = avatar.url;
                 });
-                
+
                 container.innerHTML = agents.map(agent => {
                     const totalBudget = agent.total_budget || 10000; // Default if not provided
                     const budgetPercent = totalBudget > 0 ? (agent.remaining_budget / totalBudget) * 100 : 0;
                     const budgetClass = getBudgetClass(budgetPercent);
                     const isBound = agent.is_bound === 'true';
-                    const boundBadge = isBound 
+                    const boundBadge = isBound
                         ? `<span style="background:#4ade80;color:#000;padding:2px 8px;border-radius:4px;font-size:11px;margin-left:8px;">已绑定 · ${agent.agent_id}</span>`
                         : `<span style="background:#f87171;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;margin-left:8px;">未绑定</span>`;
-                    
+
                     // Auto-create agent button for unbound employees
-                    const bindButton = !isBound 
+                    const bindButton = !isBound
                         ? `<button class="assign-btn" onclick="event.stopPropagation(); openAutoCreateModal('${agent.id}', '${agent.name}')" style="background: #8b5cf6; margin-right: 4px;">🤖 创建Agent</button><button class="assign-btn" onclick="event.stopPropagation(); openBindModal('${agent.id}', '${agent.name}')">绑定Agent</button>`
                         : '';
-                    
+
                     // Determine pixel avatar class based on position (like pixel office)
                     let avatarClass = 'default';
                     const position = (agent.position_title || '').toLowerCase();
                     const name = (agent.name || '').toLowerCase();
-                    
+
                     if (position.includes('前端') || name.includes('前端') || name.includes('frontend')) {
                         avatarClass = 'frontend';
                     } else if (position.includes('后端') || name.includes('后端') || name.includes('backend')) {
@@ -2641,7 +2642,7 @@
                     } else if (position.includes('合伙人') || name.includes('partner') || agent.emoji === '👑') {
                         avatarClass = 'partner';
                     }
-                    
+
                     // Determine status class for avatar animation
                     let statusClass = 'status-idle';
                     if (agent.status === 'fused' || (agent.remaining_budget <= 0 && agent.status === 'busy')) {
@@ -2651,7 +2652,7 @@
                     } else if (agent.status === 'offline') {
                         statusClass = 'status-offline';
                     }
-                    
+
                     return `
                         <div class="agent-item" onclick="toggleAgentDetail('${agent.id}')" style="cursor: pointer;">
                             <div class="agent-avatar-container ${statusClass}" style="position:relative;" onclick="event.stopPropagation(); openAvatarModal('${agent.id}', '${agent.name}')" title="点击更换头像">
@@ -2713,13 +2714,13 @@
         // Load tasks
         async function loadTasks() {
             const container = document.getElementById('tasks-list');
-            
+
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/tasks`);
                 if (!response.ok) throw new Error('Failed to load tasks');
-                
+
                 const tasks = await response.json();
-                
+
                 if (tasks.length === 0) {
                     container.innerHTML = `
                         <div class="empty">
@@ -2729,7 +2730,7 @@
                     `;
                     return;
                 }
-                
+
                 container.innerHTML = tasks.map(task => {
                     const statusClass = task.status;
                     const statusText = {
@@ -2738,7 +2739,7 @@
                         'completed': '已完成',
                         'fused': '已熔断'
                     }[task.status] || task.status;
-                    
+
                     // Execution status for assigned tasks (v0.3.0 P0)
                     const executionStatusMap = {
                         'sent': { text: '已发送', icon: '📤', color: '#f59e0b' },
@@ -2748,7 +2749,7 @@
                         'failed': { text: '失败', icon: '❌', color: '#f87171' },
                         'timeout': { text: '超时', icon: '⏰', color: '#f87171' }
                     };
-                    
+
                     let executionBadge = '';
                     if (task.status === 'assigned' && task.execution_status) {
                         const exec = executionStatusMap[task.execution_status];
@@ -2760,10 +2761,10 @@
                             `;
                         }
                     }
-                    
+
                     const assignedTo = task.assigned_to ? `分配给: ${task.assigned_to}` : '未分配';
                     const canAssign = task.status === 'pending';
-                    
+
                     // Resend button for assigned but not acked tasks
                     let resendButton = '';
                     if (task.status === 'assigned' && task.execution_status === 'sent') {
@@ -2771,19 +2772,19 @@
                             <button class="assign-btn" onclick="event.stopPropagation(); resendTask('${task.id}')" style="background: #f59e0b; margin-left: 8px;" title="重新发送任务">🔄 重发</button>
                         `;
                     }
-                    
+
                     // Fetch exact tokens button for completed tasks without exact data
                     let fetchExactButton = '';
-                    if ((task.status === 'completed' || task.status === 'failed') && 
-                        task.execution_session_id && 
+                    if ((task.status === 'completed' || task.status === 'failed') &&
+                        task.execution_session_id &&
                         task.is_exact !== 'true') {
                         fetchExactButton = `
                             <button class="assign-btn" onclick="event.stopPropagation(); fetchExactTokens('${task.id}', '${task.execution_session_id}')" style="background: #8b5cf6; margin-left: 8px;" title="获取精确Token数据">🎯 精确Token</button>
                         `;
                     }
-                    
+
                     // Build token display
-                    
+
                     // Build token display
                     let tokenDisplay = '';
                     if (task.status === 'completed' || task.status === 'fused') {
@@ -2793,7 +2794,7 @@
                         const costDiff = task.actual_cost - task.estimated_cost;
                         const costDiffClass = costDiff > 0 ? 'negative' : 'positive';
                         const costDiffText = costDiff > 0 ? `+${costDiff.toFixed(2)}` : costDiff.toFixed(2);
-                        
+
                         tokenDisplay = `
                             <div style="margin-top: 8px; padding: 8px; background: #252542; border-radius: 6px;">
                                 <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
@@ -2802,8 +2803,8 @@
                                 </div>
                                 <div style="font-size: 13px; color: #aaa;">
                                     ${totalTokens > 0 ? `
-                                        输入: ${formatNumber(task.tokens_input || 0)} tokens · 
-                                        输出: ${formatNumber(task.tokens_output || 0)} tokens · 
+                                        输入: ${formatNumber(task.tokens_input || 0)} tokens ·
+                                        输出: ${formatNumber(task.tokens_output || 0)} tokens ·
                                         总计: ${formatNumber(totalTokens)} tokens
                                     ` : 'Token 数据未记录'}
                                 </div>
@@ -2816,7 +2817,7 @@
                             </div>
                         `;
                     }
-                    
+
                     return `
                         <div class="task-item">
                             <div class="task-header">
@@ -2855,11 +2856,11 @@
             const btn = document.getElementById('refresh-btn');
             btn.disabled = true;
             btn.textContent = '⏳ 刷新中...';
-            
+
             // Save expanded agent detail state
             const expandedAgentId = Array.from(document.querySelectorAll('.agent-detail'))
                 .find(el => el.style.display !== 'none')?.id?.replace('agent-detail-', '');
-            
+
             await Promise.all([
                 loadCompanyBudget(),
                 loadAgents(),
@@ -2867,7 +2868,7 @@
                 loadPartnerHealth(),
                 loadExactTokenStats()
             ]);
-            
+
             // Restore expanded agent detail
             if (expandedAgentId) {
                 const detail = document.getElementById(`agent-detail-${expandedAgentId}`);
@@ -2875,16 +2876,16 @@
                     detail.style.display = 'block';
                 }
             }
-            
+
             // Load budget trend chart
             loadBudgetTrendChart();
-            
+
             // Load skill map
             loadSkillMap();
-            
+
             // Check for pending fuse events
             await checkFuseEvents();
-            
+
             btn.disabled = false;
             btn.textContent = '🔄 刷新';
         }
@@ -2893,12 +2894,12 @@
         function toggleAgentDetail(agentId) {
             const detail = document.getElementById(`agent-detail-${agentId}`);
             const isVisible = detail.style.display !== 'none';
-            
+
             // Close all other details
             document.querySelectorAll('.agent-detail').forEach(el => {
                 el.style.display = 'none';
             });
-            
+
             // Toggle current
             if (!isVisible) {
                 detail.style.display = 'block';
@@ -2910,11 +2911,11 @@
             const tabs = document.querySelectorAll(`#agent-detail-${agentId} .agent-tab`);
             tabs.forEach(t => t.classList.remove('active'));
             event.target.classList.add('active');
-            
+
             // Show/hide content
             document.getElementById(`agent-tab-info-${agentId}`).style.display = tab === 'info' ? 'block' : 'none';
             document.getElementById(`agent-tab-chat-${agentId}`).style.display = tab === 'chat' ? 'block' : 'none';
-            
+
             // Load messages if switching to chat tab
             if (tab === 'chat') {
                 loadAgentMessages(agentId);
@@ -2923,10 +2924,10 @@
 
         async function loadAgentMessages(agentId) {
             const container = document.getElementById(`agent-chat-messages-${agentId}`);
-            
+
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/communication/messages?agent_id=${agentId}&limit=20`);
-                
+
                 if (!response.ok) {
                     container.innerHTML = `
                         <div class="empty" style="padding: 20px;">
@@ -2936,9 +2937,9 @@
                     `;
                     return;
                 }
-                
+
                 const messages = await response.json();
-                
+
                 if (!messages || messages.length === 0) {
                     container.innerHTML = `
                         <div class="empty" style="padding: 20px;">
@@ -2949,16 +2950,16 @@
                     `;
                     return;
                 }
-                
+
                 // Render messages
                 container.innerHTML = messages.map(msg => {
                     const isSent = msg.sender_id !== agentId;
                     const msgClass = isSent ? 'sent' : 'received';
-                    const time = new Date(msg.created_at).toLocaleTimeString('zh-CN', { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
+                    const time = new Date(msg.created_at).toLocaleTimeString('zh-CN', {
+                        hour: '2-digit',
+                        minute: '2-digit'
                     });
-                    
+
                     return `
                         <div class="chat-message ${msgClass}">
                             <div>${escapeHtml(msg.content)}</div>
@@ -2966,10 +2967,10 @@
                         </div>
                     `;
                 }).join('');
-                
+
                 // Scroll to bottom
                 container.scrollTop = container.scrollHeight;
-                
+
             } catch (error) {
                 console.error('Error loading messages:', error);
                 container.innerHTML = `
@@ -2984,9 +2985,9 @@
         async function sendAgentMessage(agentId) {
             const input = document.getElementById(`agent-chat-input-${agentId}`);
             const content = input.value.trim();
-            
+
             if (!content) return;
-            
+
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/communication/send`, {
                     method: 'POST',
@@ -2996,7 +2997,7 @@
                         content: content
                     })
                 });
-                
+
                 if (response.ok) {
                     input.value = '';
                     // Reload messages
@@ -3035,17 +3036,17 @@
                     const agents = await response.json();
                     const select = document.getElementById('transaction-agent-filter');
                     const currentValue = select.value;
-                    
+
                     // Keep "全部员工" option
                     select.innerHTML = '<option value="">全部员工</option>';
-                    
+
                     agents.forEach(agent => {
                         const option = document.createElement('option');
                         option.value = agent.id;
                         option.textContent = agent.name;
                         select.appendChild(option);
                     });
-                    
+
                     select.value = currentValue;
                 }
             } catch (error) {
@@ -3065,23 +3066,23 @@
             try {
                 // Build query parameters (backend supports agent_id and limit only)
                 const agentFilter = document.getElementById('transaction-agent-filter').value;
-                
+
                 let url = `${API_BASE}/api/budget/transactions?limit=100`;
-                
+
                 if (agentFilter) {
                     url += `&agent_id=${agentFilter}`;
                 }
 
                 const response = await Auth.authFetch(url);
-                
+
                 if (response.ok) {
                     const transactions = await response.json();
                     // Client-side filtering for time and type
                     const timeFilter = document.getElementById('transaction-time-filter').value;
                     const typeFilter = document.getElementById('transaction-type-filter').value;
-                    
+
                     let filteredTransactions = transactions;
-                    
+
                     // Time filter (client-side)
                     if (timeFilter !== 'all') {
                         const days = parseInt(timeFilter);
@@ -3092,16 +3093,16 @@
                             return txDate >= cutoffDate;
                         });
                     }
-                    
+
                     // Type filter (client-side)
                     if (typeFilter) {
-                        filteredTransactions = filteredTransactions.filter(tx => 
+                        filteredTransactions = filteredTransactions.filter(tx =>
                             tx.transaction_type === typeFilter
                         );
                     }
-                    
+
                     renderTransactions(filteredTransactions);
-                    document.getElementById('transactions-summary').textContent = 
+                    document.getElementById('transactions-summary').textContent =
                         `共 ${filteredTransactions.length} 条记录`;
                 } else {
                     listContainer.innerHTML = `
@@ -3124,7 +3125,7 @@
 
         function renderTransactions(transactions) {
             const listContainer = document.getElementById('transactions-list');
-            
+
             if (!transactions || transactions.length === 0) {
                 listContainer.innerHTML = `
                     <div class="empty">
@@ -3157,14 +3158,14 @@
                 const isNegative = tx.amount < 0;
                 const amountClass = isNegative ? 'negative' : 'positive';
                 const amountPrefix = isNegative ? '' : '+';
-                
+
                 const date = new Date(tx.created_at);
                 const dateStr = date.toLocaleDateString('zh-CN');
                 const timeStr = date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-                
+
                 // For now, use placeholder since API doesn't return agent details
                 const agentName = tx.agent_id ? `Agent ${tx.agent_id.slice(-6)}` : '系统';
-                
+
                 return `
                     <div class="transaction-item">
                         <div class="transaction-header">
@@ -3197,7 +3198,7 @@
 
             // Simple CSV export
             let csv = '日期,时间,类型,员工,金额,描述\n';
-            
+
             transactions.forEach(item => {
                 const meta = item.querySelector('.transaction-meta');
                 const dateTime = meta.children[0].textContent.split(' ');
@@ -3205,7 +3206,7 @@
                 const amount = item.querySelector('.transaction-amount').textContent.replace(' OC币', '').trim();
                 const type = item.querySelector('.transaction-type span:last-child').textContent;
                 const desc = meta.children[2]?.textContent.replace('• ', '') || '';
-                
+
                 csv += `${dateTime[0]},${dateTime[1] || ''},${type},${agent},${amount},"${desc}"\n`;
             });
 
@@ -3222,10 +3223,10 @@
             const content = document.getElementById('apikey-content');
             const icon = document.getElementById('apikey-toggle-icon');
             const isVisible = content.style.display !== 'none';
-            
+
             content.style.display = isVisible ? 'none' : 'block';
             icon.textContent = isVisible ? '▼' : '▲';
-            
+
             if (!isVisible) {
                 loadApiKeys();
             }
@@ -3235,7 +3236,7 @@
             const content = document.getElementById('gateway-content');
             const icon = document.getElementById('gateway-toggle-icon');
             const isVisible = content.style.display !== 'none';
-            
+
             content.style.display = isVisible ? 'none' : 'block';
             icon.textContent = isVisible ? '▼' : '▲';
         }
@@ -3251,7 +3252,7 @@
 
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/keys`);
-                
+
                 if (!response.ok) {
                     container.innerHTML = `
                         <div class="empty">
@@ -3263,7 +3264,7 @@
                 }
 
                 const keys = await response.json();
-                
+
                 if (!keys || keys.length === 0) {
                     container.innerHTML = `
                         <div class="empty">
@@ -3280,7 +3281,7 @@
                     const badgeClass = isReadonly ? 'readonly' : 'readwrite';
                     const badgeText = isReadonly ? '只读' : '读写';
                     const createdAt = new Date(key.created_at).toLocaleDateString('zh-CN');
-                    
+
                     return `
                         <div class="apikey-item">
                             <div class="apikey-info">
@@ -3312,11 +3313,11 @@
         function openCreateApiKeyModal() {
             const name = prompt('请输入API Key名称:');
             if (!name) return;
-            
-            const permissions = confirm('是否需要写入权限?\n\n确定 = 读写权限\n取消 = 只读权限') 
-                ? ['read', 'write'] 
+
+            const permissions = confirm('是否需要写入权限?\n\n确定 = 读写权限\n取消 = 只读权限')
+                ? ['read', 'write']
                 : ['read'];
-            
+
             createApiKey(name, permissions);
         }
 
@@ -3330,7 +3331,7 @@
 
                 if (response.ok) {
                     const data = await response.json();
-                    
+
                     // Show the new key
                     const container = document.getElementById('apikey-list');
                     const newKeyHtml = `
@@ -3341,9 +3342,9 @@
                             <button class="apikey-btn" onclick="copyApiKey('${data.key}')" style="margin-top: 8px;">📋 复制Key</button>
                         </div>
                     `;
-                    
+
                     container.insertAdjacentHTML('afterbegin', newKeyHtml);
-                    
+
                     // Reload list after a delay
                     setTimeout(loadApiKeys, 3000);
                 } else {
@@ -3364,7 +3365,7 @@
 
         async function rotateApiKey(keyId) {
             if (!confirm('确定要轮转此API Key吗?\n\n旧Key将立即失效，新Key将生成。')) return;
-            
+
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/keys/${keyId}/rotate`, {
                     method: 'POST'
@@ -3386,7 +3387,7 @@
 
         async function revokeApiKey(keyId) {
             if (!confirm('确定要撤销此API Key吗?\n\n此操作不可恢复，使用该Key的访问将立即失效。')) return;
-            
+
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/keys/${keyId}/revoke`, {
                     method: 'POST'
@@ -3455,7 +3456,7 @@
                 container.style.display = 'flex';
                 toggle.classList.add('open');
                 partnerChatOpen = true;
-                
+
                 // Show loading in chat
                 const messagesContainer = document.getElementById('partner-chat-messages');
                 messagesContainer.innerHTML = `
@@ -3464,7 +3465,7 @@
                         <p>正在唤醒 Partner...</p>
                     </div>
                 `;
-                
+
                 const success = await wakePartner();
                 if (!success) {
                     // Wake failed, show error and keep chat open for retry
@@ -3510,12 +3511,12 @@
 
                     // Start auto-sleep timer
                     resetAutoSleepTimer();
-                    
+
                     return true;
                 } else {
                     const errorData = await response.json().catch(() => ({}));
                     console.error('Wake partner failed:', response.status, errorData);
-                    
+
                     // Show error in chat
                     const messagesContainer = document.getElementById('partner-chat-messages');
                     messagesContainer.innerHTML = `
@@ -3528,7 +3529,7 @@
                 }
             } catch (error) {
                 console.error('Error waking partner:', error);
-                
+
                 // Show error in chat
                 const messagesContainer = document.getElementById('partner-chat-messages');
                 messagesContainer.innerHTML = `
@@ -3607,7 +3608,7 @@
             const message = input.value.trim();
 
             if (!message) return;
-            
+
             // Check if partner is awake
             if (partnerState !== 'awake') {
                 addSystemMessage('Partner 未唤醒，请先点击上方唤醒');
@@ -3620,7 +3621,7 @@
 
             // Reset auto-sleep timer
             resetAutoSleepTimer();
-            
+
             // Show loading indicator
             const container = document.getElementById('partner-chat-messages');
             const loadingDiv = document.createElement('div');
@@ -3637,7 +3638,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ message })
                 });
-                
+
                 // Remove loading indicator
                 const loading = document.getElementById('partner-loading-indicator');
                 if (loading) loading.remove();
@@ -3689,7 +3690,7 @@
                 // Remove loading indicator
                 const loading = document.getElementById('partner-loading-indicator');
                 if (loading) loading.remove();
-                
+
                 console.error('Error sending message:', error);
                 addSystemMessage('发送失败，请检查网络连接');
             }
@@ -3715,12 +3716,12 @@
                 const response = await Auth.authFetch(`${API_BASE}/api/agents/partner/health?partner_id=${PARTNER_ID}`);
                 if (response.ok) {
                     const data = await response.json();
-                    
+
                     // Update header indicator
                     const indicator = document.querySelector('.status-indicator');
                     const statusText = document.getElementById('partner-status-text');
                     const statsText = document.getElementById('partner-stats');
-                    
+
                     if (data.is_online) {
                         indicator.innerHTML = '<span class="status-dot"></span>Partner 在线';
                         indicator.style.color = '#4ade80';
@@ -3736,14 +3737,14 @@
                             statusText.className = 'partner-status offline';
                         }
                     }
-                    
+
                     // Update stats
                     if (statsText) {
                         const assigned = data.today_assigned || 0;
                         const completed = data.today_completed || 0;
                         statsText.innerHTML = `<span>今日分配: ${assigned} 个</span> <span style="color: #4ade80;">完成: ${completed} 个</span>`;
                     }
-                    
+
                     // Update health panel if visible
                     updatePartnerHealthPanel(data);
                 }
@@ -3762,22 +3763,22 @@
             const successRate = document.getElementById('partner-success-rate');
             const avgTime = document.getElementById('partner-avg-time');
             const todayAssigned = document.getElementById('partner-today-assigned');
-            
+
             if (heartbeat) {
                 const lastBeat = data.last_heartbeat ? new Date(data.last_heartbeat).toLocaleTimeString('zh-CN') : '未知';
                 heartbeat.textContent = lastBeat;
             }
-            
+
             if (successRate) {
                 const rate = data.success_rate !== undefined ? `${(data.success_rate * 100).toFixed(0)}%` : '--';
                 successRate.textContent = rate;
             }
-            
+
             if (avgTime) {
                 const time = data.avg_response_time ? `${data.avg_response_time}s` : '--';
                 avgTime.textContent = time;
             }
-            
+
             if (todayAssigned) {
                 todayAssigned.textContent = data.today_assigned || 0;
             }
@@ -3787,7 +3788,7 @@
             const panel = document.getElementById('partner-health-panel');
             const isVisible = panel.style.display !== 'none';
             panel.style.display = isVisible ? 'none' : 'block';
-            
+
             if (!isVisible) {
                 loadPartnerHealth();
             }
@@ -3838,7 +3839,7 @@
                         position_title: position  // 添加职位
                     })
                 });
-                
+
                 if (response.ok) {
                     const data = await response.json();
                     alert(`✅ ${data.message || '成功雇佣: ' + name}`);
@@ -3868,16 +3869,16 @@
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/tasks?status=pending`);
                 if (!response.ok) return;
-                
+
                 const tasks = await response.json();
                 const container = document.getElementById('global-assign-task-list');
                 if (!container) return;
-                
+
                 if (tasks.length === 0) {
                     container.innerHTML = '<p style="color: #888; font-size: 13px;">没有待分配的任务</p>';
                     return;
                 }
-                
+
                 container.innerHTML = tasks.map(task => `
                     <div class="global-assign-task-item">
                         <div>
@@ -3897,7 +3898,7 @@
                 const response = await Auth.authFetch(`${API_BASE}/api/agents/partner/assign/${taskId}`, {
                     method: 'POST'
                 });
-                
+
                 if (response.ok) {
                     const data = await response.json();
                     alert(`✅ 任务已分配给: ${data.assigned_to_name || '员工'}`);
@@ -3976,17 +3977,17 @@
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/budget/comparison?days=30`);
                 if (!response.ok) throw new Error('Failed to load token stats');
-                
+
                 const data = await response.json();
-                
+
                 document.getElementById('exact-tokens').textContent = formatNumber(data.exact_tokens || 0);
                 document.getElementById('estimated-tokens').textContent = formatNumber(data.estimated_tokens || 0);
-                
+
                 const accuracy = data.estimate_accuracy_percentage != null && !isNaN(data.estimate_accuracy_percentage)
-                    ? data.estimate_accuracy_percentage.toFixed(1) 
+                    ? data.estimate_accuracy_percentage.toFixed(1)
                     : 'N/A';
                 document.getElementById('tracking-accuracy').textContent = accuracy + '%';
-                
+
                 // Color code accuracy
                 const accuracyEl = document.getElementById('tracking-accuracy');
                 if (data.estimate_accuracy_percentage != null && !isNaN(data.estimate_accuracy_percentage)) {
@@ -4086,16 +4087,16 @@
             try {
                 // First, run check
                 await Auth.authFetch(`${API_BASE}/api/monitor/check`, { method: 'POST' });
-                
+
                 // Then get overdue list
                 const response = await Auth.authFetch(`${API_BASE}/api/monitor/overdue`);
                 if (response.ok) {
                     const data = await response.json();
                     const alert = document.getElementById('overdue-alert');
                     const count = document.getElementById('overdue-count');
-                    
+
                     count.textContent = data.overdue_count;
-                    
+
                     if (data.overdue_count > 0) {
                         alert.classList.remove('hidden');
                     } else {
@@ -4134,7 +4135,7 @@
             const budget = parseFloat(document.getElementById('task-budget').value);
             const dueDate = document.getElementById('task-due-date').value;
             const skillsStr = document.getElementById('task-skills').value.trim();
-            
+
             // Validation
             if (!title) {
                 alert('请输入任务标题');
@@ -4144,12 +4145,12 @@
                 alert('请输入有效的预算金额 (1-10000 OC币)');
                 return;
             }
-            
+
             // Parse skills
-            const required_skills = skillsStr 
+            const required_skills = skillsStr
                 ? skillsStr.split(',').map(s => s.trim()).filter(s => s)
                 : [];
-            
+
             const taskData = {
                 title,
                 description,
@@ -4158,14 +4159,14 @@
                 required_skills,
                 due_date: dueDate || null
             };
-            
+
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/tasks`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(taskData)
                 });
-                
+
                 if (response.ok) {
                     const result = await response.json();
                     const task = result.task || result; // Handle both wrapped and unwrapped response
@@ -4203,10 +4204,10 @@
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/notifications`);
                 if (!response.ok) return;
-                
+
                 const data = await response.json();
                 currentNotifications = data.notifications;
-                
+
                 // Update badge
                 const badge = document.getElementById('notification-badge');
                 if (data.unread_count > 0) {
@@ -4215,14 +4216,14 @@
                 } else {
                     badge.classList.add('hidden');
                 }
-                
+
                 // Update list
                 const list = document.getElementById('notification-list');
                 if (currentNotifications.length === 0) {
                     list.innerHTML = '<div class="empty">暂无通知</div>';
                     return;
                 }
-                
+
                 list.innerHTML = currentNotifications.map(n => `
                     <div class="notification-item ${n.is_read ? '' : 'unread'}" onclick="markNotificationRead(${n.id})">
                         <div class="notification-title">${n.title}</div>
@@ -4276,18 +4277,18 @@
         async function loadAvailableAgents() {
             const select = document.getElementById('assign-agent-select');
             select.innerHTML = '<option value="">加载中...</option>';
-            
+
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/agents?available_only=true`);
                 if (!response.ok) throw new Error('Failed to load agents');
-                
+
                 const agents = await response.json();
                 if (agents.length === 0) {
                     select.innerHTML = '<option value="">暂无可用员工</option>';
                     return;
                 }
-                
-                select.innerHTML = agents.map(a => 
+
+                select.innerHTML = agents.map(a =>
                     `<option value="${a.agent_id}">${a.name} (${a.position_title})</option>`
                 ).join('');
             } catch (error) {
@@ -4299,19 +4300,19 @@
         async function confirmAssign() {
             const select = document.getElementById('assign-agent-select');
             const agentId = select.value;
-            
+
             if (!agentId || !currentAssignTaskId) {
                 alert('请选择一个员工');
                 return;
             }
-            
+
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/tasks/${currentAssignTaskId}/assign`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ agent_id: agentId })
                 });
-                
+
                 if (response.ok) {
                     closeAssignModal();
                     loadData();
@@ -4348,18 +4349,18 @@
         async function loadAvailableAgentsForBinding() {
             const select = document.getElementById('bind-agent-select');
             select.innerHTML = '<option value="">加载可用Agent...</option>';
-            
+
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/agents/binding/available`);
                 if (!response.ok) throw new Error('Failed to load available agents');
-                
+
                 const data = await response.json();
                 if (data.available_agents.length === 0) {
                     select.innerHTML = '<option value="">暂无可用Agent</option>';
                     return;
                 }
-                
-                select.innerHTML = data.available_agents.map(a => 
+
+                select.innerHTML = data.available_agents.map(a =>
                     `<option value="${a.id}">${a.name} (${a.id})</option>`
                 ).join('');
             } catch (error) {
@@ -4371,22 +4372,22 @@
         async function confirmBind() {
             const select = document.getElementById('bind-agent-select');
             const agentId = select.value;
-            
+
             if (!agentId || !currentBindEmployeeId) {
                 alert('请选择一个Agent');
                 return;
             }
-            
+
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/agents/binding/bind`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
+                    body: JSON.stringify({
                         employee_id: currentBindEmployeeId,
-                        agent_id: agentId 
+                        agent_id: agentId
                     })
                 });
-                
+
                 if (response.ok) {
                     closeBindModal();
                     loadData();
@@ -4403,7 +4404,7 @@
 
         async function autoCreateAgent() {
             if (!currentBindEmployeeId) return;
-            
+
             const confirm = window.confirm(
                 `即将为 "${currentBindEmployeeName}" 自动创建 OpenClaw Agent。\n\n` +
                 `这将：\n` +
@@ -4413,24 +4414,24 @@
                 `创建完成后，建议重启 OpenClaw Gateway 以激活新 Agent。\n\n` +
                 `是否继续？`
             );
-            
+
             if (!confirm) return;
-            
+
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/agents/auto-create`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
+                    body: JSON.stringify({
                         employee_id: currentBindEmployeeId,
                         employee_name: currentBindEmployeeName
                     })
                 });
-                
+
                 if (response.ok) {
                     const data = await response.json();
                     closeBindModal();
                     loadData();
-                    
+
                     // Show restart confirmation modal
                     if (data.restart_recommended) {
                         showRestartModal(data.agent_id);
@@ -4446,7 +4447,7 @@
                 alert('创建失败，请稍后重试');
             }
         }
-        
+
         // Gateway Restart Modal Functions
         function showRestartModal(agentId) {
             const modal = document.getElementById('restart-modal');
@@ -4463,37 +4464,37 @@
                 }
             }
         }
-        
+
         function closeRestartModal() {
             const modal = document.getElementById('restart-modal');
             if (modal) {
                 modal.classList.remove('visible');
             }
         }
-        
+
         async function restartGateway() {
             const statusEl = document.getElementById('restart-status');
             const progressEl = document.getElementById('restart-progress');
-            
+
             statusEl.textContent = '正在发送重启信号...';
             progressEl.style.width = '30%';
-            
+
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/agents/gateway/restart`, {
                     method: 'POST'
                 });
-                
+
                 if (response.ok) {
                     const data = await response.json();
                     statusEl.textContent = '已发送重启信号，等待 Gateway 恢复...';
                     progressEl.style.width = '50%';
-                    
+
                     // Poll for gateway status
                     await waitForGatewayRestart();
-                    
+
                     statusEl.textContent = 'Gateway 重启成功！';
                     progressEl.style.width = '100%';
-                    
+
                     setTimeout(() => {
                         closeRestartModal();
                         alert('OpenClaw Gateway 重启成功！新 Agent 已激活。');
@@ -4509,21 +4510,21 @@
                 progressEl.style.width = '0%';
             }
         }
-        
+
         // ============================================================
         // Task Resend Function (v0.3.0 P0 - Agent execution loop)
         // ============================================================
-        
+
         async function resendTask(taskId) {
             if (!confirm('确定要重新发送这个任务吗？\n\n这将再次通过 sessions_send 通知 Agent。')) {
                 return;
             }
-            
+
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/tasks/${taskId}/resend`, {
                     method: 'POST'
                 });
-                
+
                 if (response.ok) {
                     const data = await response.json();
                     alert(`✅ 任务已重新发送\n\nSession ID: ${data.session_id}`);
@@ -4537,23 +4538,23 @@
                 alert('重发失败，请重试');
             }
         }
-        
+
         // ============================================================
         // Exact Token Tracking (v0.3.0 P0 #4)
         // ============================================================
-        
+
         async function fetchExactTokens(taskId, sessionKey) {
             if (!confirm('确定要获取精确Token数据吗？\n\n这将调用 OpenClaw session_status API 获取准确的Token消耗。')) {
                 return;
             }
-            
+
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/tasks/${taskId}/exact-tokens`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ session_key: sessionKey })
                 });
-                
+
                 if (response.ok) {
                     const data = await response.json();
                     alert(`✅ 精确Token数据已获取\n\n` +
@@ -4565,7 +4566,7 @@
                     loadTasks();
                 } else {
                     const error = await response.json();
-                    alert('获取精确Token失败: ' + (error.detail || '未知错误') + 
+                    alert('获取精确Token失败: ' + (error.detail || '未知错误') +
                           '\n\n可能原因：\n- Session 已过期\n- Gateway 不可用\n- Session Key 无效');
                 }
             } catch (error) {
@@ -4573,25 +4574,25 @@
                 alert('获取精确Token失败，请重试');
             }
         }
-        
+
         async function waitForGatewayRestart() {
             const maxAttempts = 30; // 30 seconds max
             const statusEl = document.getElementById('restart-status');
             const progressEl = document.getElementById('restart-progress');
-            
+
             // Wait 5 seconds before starting to poll (give gateway time to shut down)
             statusEl.textContent = '等待 Gateway 关闭... (5s)';
             await new Promise(r => setTimeout(r, 5000));
-            
+
             for (let i = 0; i < maxAttempts; i++) {
                 await new Promise(r => setTimeout(r, 1000));
-                
+
                 try {
-                    const response = await fetch(`${API_BASE}/health`, { 
+                    const response = await fetch(`${API_BASE}/health`, {
                         method: 'GET',
                         // Don't use authFetch here as it might fail during restart
                     });
-                    
+
                     if (response.ok) {
                         const progress = 50 + Math.floor((i / maxAttempts) * 50);
                         progressEl.style.width = progress + '%';
@@ -4600,15 +4601,15 @@
                 } catch (e) {
                     // Gateway is still restarting, continue polling
                 }
-                
+
                 const progress = 50 + Math.floor((i / maxAttempts) * 40);
                 progressEl.style.width = progress + '%';
                 statusEl.textContent = `等待 Gateway 恢复... (${i + 1}s)`;
             }
-            
+
             throw new Error('Gateway 重启超时，请手动检查状态');
         }
-        
+
         // Manual Gateway Restart Button
         async function showManualRestartConfirm() {
             const confirm = window.confirm(
@@ -4620,23 +4621,23 @@
                 '建议在非工作时间或确认无重要对话时进行。\n\n' +
                 '是否确认重启？'
             );
-            
+
             if (confirm) {
                 showRestartModal('手动重启');
                 await restartGateway();
             }
         }
-        
+
         // Share link functions
         function openShareModal() {
             document.getElementById('share-modal').classList.remove('hidden');
         }
-        
+
         function closeShareModal() {
             document.getElementById('share-modal').classList.add('hidden');
             document.getElementById('share-result').classList.add('hidden');
         }
-        
+
         async function generateShareLink() {
             const resourceType = document.getElementById('share-resource-type').value;
             const expiresHours = parseInt(document.getElementById('share-expires').value);
@@ -4644,7 +4645,7 @@
             const maxUses = document.getElementById('share-max-uses').value;
             const password = document.getElementById('share-password').value;
             const description = document.getElementById('share-description').value;
-            
+
             const data = {
                 resource_type: resourceType,
                 expires_hours: expiresHours,
@@ -4653,7 +4654,7 @@
                 password: password || null,
                 description: description || null,
             };
-            
+
             try {
                 const response = await fetch('/api/share/generate', {
                     method: 'POST',
@@ -4662,7 +4663,7 @@
                     },
                     body: JSON.stringify(data),
                 });
-                
+
                 if (response.ok) {
                     const result = await response.json();
                     document.getElementById('share-link-url').value = result.share_url;
@@ -4677,12 +4678,12 @@
                 alert('生成分享链接失败，请稍后重试');
             }
         }
-        
+
         function copyShareLink() {
             const input = document.getElementById('share-link-url');
             input.select();
             document.execCommand('copy');
-            
+
             const btn = document.getElementById('copy-share-btn');
             const originalText = btn.textContent;
             btn.textContent = '✅ 已复制';
@@ -4690,10 +4691,10 @@
                 btn.textContent = originalText;
             }, 2000);
         }
-        
+
         // Fuse event handling
         let currentFuseEventId = null;
-        
+
         async function checkFuseEvents() {
             try {
                 const response = await Auth.authFetch('/api/fuse/events/pending');
@@ -4713,33 +4714,33 @@
                 console.error('Error checking fuse events:', error);
             }
         }
-        
+
         // Add budget modal functions
         function openAddBudgetModal() {
             if (!currentFuseEventId) return;
             document.getElementById('add-budget-modal').classList.remove('hidden');
         }
-        
+
         function closeAddBudgetModal() {
             document.getElementById('add-budget-modal').classList.add('hidden');
         }
-        
+
         async function submitAddBudget() {
             const amount = parseFloat(document.getElementById('add-budget-amount').value);
             const reason = document.getElementById('add-budget-reason').value;
-            
+
             if (!amount || amount <= 0) {
                 alert('请输入有效的预算金额');
                 return;
             }
-            
+
             try {
                 const response = await Auth.authFetch(`/api/fuse/events/${currentFuseEventId}/resolve/add-budget`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ additional_budget: amount, reason: reason || '追加预算' })
                 });
-                
+
                 if (response.ok) {
                     const data = await response.json();
                     alert(data.message);
@@ -4755,18 +4756,18 @@
                 alert('操作失败，请稍后重试');
             }
         }
-        
+
         // Reassign modal functions
         async function openReassignModal() {
             if (!currentFuseEventId) return;
-            
+
             // Load available agents
             try {
                 const response = await Auth.authFetch('/api/agents?available_only=true');
                 if (response.ok) {
                     const agents = await response.json();
                     const select = document.getElementById('reassign-agent');
-                    select.innerHTML = agents.map(a => 
+                    select.innerHTML = agents.map(a =>
                         `<option value="${a.id}">${a.name} (${a.position_title})</option>`
                     ).join('');
                     document.getElementById('reassign-modal').classList.remove('hidden');
@@ -4775,27 +4776,27 @@
                 console.error('Error loading agents:', error);
             }
         }
-        
+
         function closeReassignModal() {
             document.getElementById('reassign-modal').classList.add('hidden');
         }
-        
+
         async function submitReassign() {
             const newAgentId = document.getElementById('reassign-agent').value;
             const reason = document.getElementById('reassign-reason').value;
-            
+
             if (!newAgentId) {
                 alert('请选择新 Agent');
                 return;
             }
-            
+
             try {
                 const response = await Auth.authFetch(`/api/fuse/events/${currentFuseEventId}/resolve/reassign`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ new_agent_id: newAgentId, reason: reason || '换人重做' })
                 });
-                
+
                 if (response.ok) {
                     const data = await response.json();
                     alert(data.message);
@@ -4811,17 +4812,17 @@
                 alert('操作失败，请稍后重试');
             }
         }
-        
+
         // Split task modal functions
         function openSplitTaskModal() {
             if (!currentFuseEventId) return;
             document.getElementById('split-task-modal').classList.remove('hidden');
         }
-        
+
         function closeSplitTaskModal() {
             document.getElementById('split-task-modal').classList.add('hidden');
         }
-        
+
         function addSubTaskField() {
             const container = document.getElementById('subtasks-container');
             const div = document.createElement('div');
@@ -4834,11 +4835,11 @@
             `;
             container.appendChild(div);
         }
-        
+
         async function submitSplitTask() {
             const reason = document.getElementById('split-reason').value;
             const subTasks = [];
-            
+
             document.querySelectorAll('#subtasks-container > div').forEach(div => {
                 const desc = div.querySelector('.subtask-desc').value;
                 const cost = parseFloat(div.querySelector('.subtask-cost').value) || 0;
@@ -4846,19 +4847,19 @@
                     subTasks.push({ description: desc, estimated_cost: cost });
                 }
             });
-            
+
             if (subTasks.length < 2) {
                 alert('至少需要拆分为2个子任务');
                 return;
             }
-            
+
             try {
                 const response = await Auth.authFetch(`/api/fuse/events/${currentFuseEventId}/resolve/split-task`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ sub_tasks: subTasks, reason: reason || '任务拆分' })
                 });
-                
+
                 if (response.ok) {
                     const data = await response.json();
                     alert(data.message);
@@ -4874,13 +4875,13 @@
                 alert('操作失败，请稍后重试');
             }
         }
-        
+
         async function handlePause() {
             try {
                 const response = await Auth.authFetch(`/api/fuse/events/${currentFuseEventId}/resolve/pause`, {
                     method: 'POST'
                 });
-                
+
                 if (response.ok) {
                     alert('已标记为暂停状态');
                     document.getElementById('fuse-alert').classList.add('hidden');
@@ -4889,8 +4890,37 @@
                 console.error('Error pausing:', error);
             }
         }
+
+        async function handleAssignToPartner() {
+            if (!currentFuseEventId) return;
+
+            if (!confirm('确定要将此任务分配给 Partner 处理吗？\n\nPartner 将使用公司共享资源完成该任务。')) {
+                return;
+            }
+
+            try {
+                const response = await Auth.authFetch(`/api/fuse/events/${currentFuseEventId}/resolve/assign-to-partner`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ note: '分配给 Partner 处理' })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    alert(data.message);
+                    document.getElementById('fuse-alert').classList.add('hidden');
+                    loadData();
+                } else {
+                    const error = await response.json();
+                    alert('操作失败: ' + (error.detail || '未知错误'));
+                }
+            } catch (error) {
+                console.error('Error assigning to partner:', error);
+                alert('操作失败，请稍后重试');
+            }
+        }
     </script>
-    
+
     <!-- Share Link Modal -->
     <div id="share-modal" class="modal hidden">
         <div class="modal-content" style="max-width: 500px;">
@@ -4907,7 +4937,7 @@
                         <option value="report">报告页面</option>
                     </select>
                 </div>
-                
+
                 <div class="form-group">
                     <label class="form-label">有效期</label>
                     <select id="share-expires" class="form-input">
@@ -4917,7 +4947,7 @@
                         <option value="168">7天</option>
                     </select>
                 </div>
-                
+
                 <div class="form-group">
                     <label class="form-label">权限</label>
                     <select id="share-permissions" class="form-input">
@@ -4925,22 +4955,22 @@
                         <option value="write">读写</option>
                     </select>
                 </div>
-                
+
                 <div class="form-group">
                     <label class="form-label">最大使用次数 (可选)</label>
                     <input type="number" id="share-max-uses" class="form-input" placeholder="无限制" min="1" max="1000">
                 </div>
-                
+
                 <div class="form-group">
                     <label class="form-label">密码保护 (可选)</label>
                     <input type="password" id="share-password" class="form-input" placeholder="不设置密码" minlength="4">
                 </div>
-                
+
                 <div class="form-group">
                     <label class="form-label">描述 (可选)</label>
                     <input type="text" id="share-description" class="form-input" placeholder="例如：给客户的临时访问链接">
                 </div>
-                
+
                 <div id="share-result" class="hidden" style="margin-top: 20px; padding: 16px; background: #1a2e1a; border-radius: 8px; border: 1px solid #2a4a2a;">
                     <label class="form-label" style="color: #4ade80;">✅ 分享链接已生成</label>
                     <input type="text" id="share-link-url" class="form-input" style="margin-top: 8px; font-family: monospace; font-size: 12px;" readonly>
@@ -4958,7 +4988,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Add Budget Modal -->
     <div id="add-budget-modal" class="modal hidden">
         <div class="modal-content" style="max-width: 450px;">
@@ -4982,7 +5012,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Reassign Modal -->
     <div id="reassign-modal" class="modal hidden">
         <div class="modal-content" style="max-width: 450px;">
@@ -5008,7 +5038,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Split Task Modal -->
     <div id="split-task-modal" class="modal hidden">
         <div class="modal-content" style="max-width: 500px;">
@@ -5021,7 +5051,7 @@
                     <label class="form-label">拆分原因</label>
                     <input type="text" id="split-reason" class="form-input" placeholder="例如: 任务过于复杂">
                 </div>
-                
+
                 <div id="subtasks-container">
                     <div class="form-group" style="border: 1px solid #2a2a4a; padding: 12px; border-radius: 8px; margin-bottom: 12px;">
                         <label class="form-label">子任务 1</label>
@@ -5034,7 +5064,7 @@
                         <input type="number" class="form-input subtask-cost" placeholder="预估成本" style="margin-top: 8px;">
                     </div>
                 </div>
-                
+
                 <button class="refresh-btn" style="background: #4b5563; width: 100%;" onclick="addSubTaskField()">+ 添加子任务</button>
             </div>
             <div class="modal-footer">
@@ -5043,7 +5073,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Avatar Modal -->
     <div class="modal-overlay" id="avatar-modal">
         <div class="modal" style="max-width: 500px;">
@@ -5058,7 +5088,7 @@
                     </div>
                     <div id="avatar-agent-name" style="margin-top: 12px; font-size: 16px; color: #667eea;"></div>
                 </div>
-                
+
                 <div class="form-group">
                     <label class="form-label">选择方式</label>
                     <div style="display: flex; gap: 8px; flex-wrap: wrap;">
@@ -5067,7 +5097,7 @@
                         <button class="refresh-btn" id="btn-ai" onclick="showAIOption()" style="flex: 1; opacity: 0.5;" disabled title="需要配置AI skill">🤖 AI生成</button>
                     </div>
                 </div>
-                
+
                 <!-- System Options -->
                 <div id="system-options" style="display: none;">
                     <div class="form-group">
@@ -5081,7 +5111,7 @@
                     </div>
                     <button class="refresh-btn" style="width: 100%; background: #667eea;" onclick="generateSystemAvatar()">🎲 随机生成</button>
                 </div>
-                
+
                 <!-- Upload Option -->
                 <div id="upload-option" style="display: none;">
                     <div class="form-group">
@@ -5090,7 +5120,7 @@
                     </div>
                     <button class="refresh-btn" style="width: 100%; background: #10b981;" onclick="uploadAvatar()">📤 确认上传</button>
                 </div>
-                
+
                 <!-- AI Option -->
                 <div id="ai-option" style="display: none;">
                     <div class="form-group">
@@ -5108,15 +5138,15 @@
             </div>
         </div>
     </div>
-    
+
     <script>
         // Avatar modal functions
         let currentAvatarAgentId = null;
-        
+
         async function openAvatarModal(agentId, agentName) {
             currentAvatarAgentId = agentId;
             document.getElementById('avatar-agent-name').textContent = agentName;
-            
+
             // Get agent info to determine avatar class
             try {
                 const agentsResponse = await Auth.authFetch(`${API_BASE}/api/agents`);
@@ -5128,7 +5158,7 @@
                         let avatarClass = 'default';
                         const position = (agent.position_title || '').toLowerCase();
                         const name = (agent.name || '').toLowerCase();
-                        
+
                         if (position.includes('前端') || name.includes('前端') || name.includes('frontend')) {
                             avatarClass = 'frontend';
                         } else if (position.includes('后端') || name.includes('后端') || name.includes('backend')) {
@@ -5140,7 +5170,7 @@
                         } else if (position.includes('合伙人') || name.includes('partner') || agent.emoji === '👑') {
                             avatarClass = 'partner';
                         }
-                        
+
                         const previewEl = document.getElementById('avatar-preview-pixel');
                         previewEl.className = 'pixel-avatar ' + avatarClass;
                     }
@@ -5148,7 +5178,7 @@
             } catch (error) {
                 console.error('Error loading agent info:', error);
             }
-            
+
             // Check options availability
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/avatars/${agentId}/options`);
@@ -5163,10 +5193,10 @@
             } catch (error) {
                 console.error('Error loading avatar options:', error);
             }
-            
+
             document.getElementById('avatar-modal').classList.add('visible');
         }
-        
+
         function closeAvatarModal() {
             document.getElementById('avatar-modal').classList.remove('visible');
             currentAvatarAgentId = null;
@@ -5175,25 +5205,25 @@
             document.getElementById('upload-option').style.display = 'none';
             document.getElementById('ai-option').style.display = 'none';
         }
-        
+
         function showSystemOptions() {
             document.getElementById('system-options').style.display = 'block';
             document.getElementById('upload-option').style.display = 'none';
             document.getElementById('ai-option').style.display = 'none';
         }
-        
+
         function showUploadOption() {
             document.getElementById('system-options').style.display = 'none';
             document.getElementById('upload-option').style.display = 'block';
             document.getElementById('ai-option').style.display = 'none';
         }
-        
+
         function showAIOption() {
             document.getElementById('system-options').style.display = 'none';
             document.getElementById('upload-option').style.display = 'none';
             document.getElementById('ai-option').style.display = 'block';
         }
-        
+
         function previewUpload() {
             const file = document.getElementById('avatar-file').files[0];
             if (file) {
@@ -5204,19 +5234,19 @@
                 reader.readAsDataURL(file);
             }
         }
-        
+
         async function generateSystemAvatar() {
             if (!currentAvatarAgentId) return;
-            
+
             const style = document.getElementById('avatar-style').value;
-            
+
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/avatars/${currentAvatarAgentId}/generate`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ style: style })
                 });
-                
+
                 if (response.ok) {
                     const data = await response.json();
                     document.getElementById('avatar-preview').src = data.url + '?t=' + Date.now();
@@ -5231,27 +5261,27 @@
                 alert('生成失败，请稍后重试');
             }
         }
-        
+
         async function uploadAvatar() {
             if (!currentAvatarAgentId) return;
-            
+
             const fileInput = document.getElementById('avatar-file');
             const file = fileInput.files[0];
-            
+
             if (!file) {
                 alert('请选择图片文件');
                 return;
             }
-            
+
             const formData = new FormData();
             formData.append('file', file);
-            
+
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/avatars/${currentAvatarAgentId}/upload`, {
                     method: 'POST',
                     body: formData
                 });
-                
+
                 if (response.ok) {
                     const data = await response.json();
                     document.getElementById('avatar-preview').src = data.url + '?t=' + Date.now();
@@ -5266,23 +5296,23 @@
                 alert('上传失败，请稍后重试');
             }
         }
-        
+
         async function requestAIAvatar() {
             if (!currentAvatarAgentId) return;
-            
+
             const prompt = document.getElementById('avatar-prompt').value;
             if (!prompt) {
                 alert('请输入头像描述');
                 return;
             }
-            
+
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/avatars/${currentAvatarAgentId}/ai-generate`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ prompt: prompt, skill_name: 'vivago-ai' })
                 });
-                
+
                 if (response.ok) {
                     const data = await response.json();
                     alert(data.message || 'AI生成请求已提交，请稍后查看结果');
@@ -5296,50 +5326,50 @@
                 alert('请求失败，请稍后重试');
             }
         }
-        
+
         // ============================================================
         // Agent Lifecycle Management (v0.3.0 P0 Feature)
         // ============================================================
-        
+
         let currentAutoCreateEmployeeId = null;
         let currentAutoCreateEmployeeName = null;
-        
+
         function openAutoCreateModal(employeeId, employeeName) {
             currentAutoCreateEmployeeId = employeeId;
             currentAutoCreateEmployeeName = employeeName;
-            
+
             document.getElementById('auto-create-employee-name').textContent = employeeName;
-            
+
             // Reset modal state
             document.getElementById('auto-create-step1').style.display = 'block';
             document.getElementById('auto-create-step2').style.display = 'none';
             document.getElementById('auto-create-step3').style.display = 'none';
             document.getElementById('auto-create-error').style.display = 'none';
             document.getElementById('auto-create-footer').style.display = 'flex';
-            
+
             // Update footer buttons
             document.getElementById('auto-create-footer').innerHTML = `
                 <button class="refresh-btn" style="background: #666;" onclick="closeAutoCreateModal()">取消</button>
                 <button class="refresh-btn" style="background: #8b5cf6;" onclick="stageAgentCreation()">确认创建</button>
             `;
-            
+
             document.getElementById('auto-create-modal').classList.add('visible');
         }
-        
+
         function closeAutoCreateModal() {
             document.getElementById('auto-create-modal').classList.remove('visible');
             currentAutoCreateEmployeeId = null;
             currentAutoCreateEmployeeName = null;
         }
-        
+
         async function stageAgentCreation() {
             if (!currentAutoCreateEmployeeId) return;
-            
+
             // Show loading
             document.getElementById('auto-create-step1').style.display = 'none';
             document.getElementById('auto-create-step2').style.display = 'block';
             document.getElementById('auto-create-footer').style.display = 'none';
-            
+
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/agents/lifecycle/create`, {
                     method: 'POST',
@@ -5349,15 +5379,15 @@
                         confirm: false
                     })
                 });
-                
+
                 if (response.ok) {
                     const data = await response.json();
-                    
+
                     // Show success with confirmation option
                     document.getElementById('auto-create-step2').style.display = 'none';
                     document.getElementById('auto-create-step3').style.display = 'block';
                     document.getElementById('auto-create-result-agent-id').textContent = data.agent_id;
-                    
+
                     // Update footer for confirmation
                     document.getElementById('auto-create-footer').style.display = 'flex';
                     document.getElementById('auto-create-footer').innerHTML = `
@@ -5380,14 +5410,14 @@
                 `;
             }
         }
-        
+
         async function confirmAgentCreation() {
             if (!currentAutoCreateEmployeeId) return;
-            
+
             document.getElementById('auto-create-step3').style.display = 'none';
             document.getElementById('auto-create-step2').style.display = 'block';
             document.getElementById('auto-create-footer').style.display = 'none';
-            
+
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/agents/lifecycle/create`, {
                     method: 'POST',
@@ -5397,10 +5427,10 @@
                         confirm: true
                     })
                 });
-                
+
                 if (response.ok) {
                     const data = await response.json();
-                    
+
                     document.getElementById('auto-create-step2').style.display = 'none';
                     document.getElementById('auto-create-step3').style.display = 'block';
                     document.getElementById('auto-create-footer').style.display = 'flex';
@@ -5408,7 +5438,7 @@
                         <button class="refresh-btn" style="background: #666;" onclick="closeAutoCreateModal()">关闭</button>
                         <button class="refresh-btn" style="background: #f59e0b;" onclick="restartGateway()">🔄 重启 Gateway</button>
                     `;
-                    
+
                     // Refresh data
                     loadData();
                 } else {
@@ -5426,24 +5456,24 @@
                 `;
             }
         }
-        
+
         // Pending Changes Modal
         function openPendingChangesModal() {
             document.getElementById('pending-changes-modal').classList.add('visible');
             loadPendingChanges();
         }
-        
+
         function closePendingChangesModal() {
             document.getElementById('pending-changes-modal').classList.remove('visible');
         }
-        
+
         async function loadPendingChanges() {
             const container = document.getElementById('pending-changes-content');
-            
+
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/agents/lifecycle/pending`);
                 const data = await response.json();
-                
+
                 if (!data.has_pending) {
                     container.innerHTML = `
                         <div style="text-align: center; padding: 40px;">
@@ -5454,7 +5484,7 @@
                     `;
                     return;
                 }
-                
+
                 container.innerHTML = `
                     <div style="background: #1a1a2e; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
@@ -5471,7 +5501,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div style="display: flex; gap: 12px;">
                         <button class="refresh-btn" style="flex: 1; background: #666;" onclick="cancelPendingChanges()">
                             取消变更
@@ -5490,13 +5520,13 @@
                 `;
             }
         }
-        
+
         async function confirmPendingChangesFromModal() {
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/agents/lifecycle/confirm`, {
                     method: 'POST'
                 });
-                
+
                 if (response.ok) {
                     alert('变更已应用！请重启 OpenClaw Gateway');
                     closePendingChangesModal();
@@ -5510,15 +5540,15 @@
                 alert('确认失败，请重试');
             }
         }
-        
+
         async function cancelPendingChanges() {
             if (!confirm('确定要取消所有 staged 变更吗？')) return;
-            
+
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/agents/lifecycle/cancel`, {
                     method: 'POST'
                 });
-                
+
                 if (response.ok) {
                     alert('变更已取消');
                     closePendingChangesModal();
@@ -5531,24 +5561,24 @@
                 alert('取消失败，请重试');
             }
         }
-        
+
         // Backup Manager Modal
         function openBackupManagerModal() {
             document.getElementById('backup-manager-modal').classList.add('visible');
             loadBackupList();
         }
-        
+
         function closeBackupManagerModal() {
             document.getElementById('backup-manager-modal').classList.remove('visible');
         }
-        
+
         async function loadBackupList() {
             const container = document.getElementById('backup-list-content');
-            
+
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/agents/lifecycle/backups`);
                 const backups = await response.json();
-                
+
                 if (backups.length === 0) {
                     container.innerHTML = `
                         <div style="text-align: center; padding: 40px; color: #888;">
@@ -5558,7 +5588,7 @@
                     `;
                     return;
                 }
-                
+
                 container.innerHTML = backups.map((backup, index) => `
                     <div style="background: #1a1a2e; border-radius: 8px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
                         <div>
@@ -5583,15 +5613,15 @@
                 `;
             }
         }
-        
+
         async function restoreBackup(filename) {
             if (!confirm(`确定要恢复到备份 "${filename}" 吗？\n\n⚠️ 当前配置将被覆盖，系统会自动创建新备份。`)) return;
-            
+
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/agents/lifecycle/restore?backup_filename=${encodeURIComponent(filename)}`, {
                     method: 'POST'
                 });
-                
+
                 if (response.ok) {
                     alert('备份恢复成功！请重启 OpenClaw Gateway');
                     closeBackupManagerModal();
@@ -5605,13 +5635,13 @@
                 alert('恢复失败，请重试');
             }
         }
-        
+
         // Check pending changes on page load
         async function checkPendingChanges() {
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/agents/lifecycle/pending`);
                 const data = await response.json();
-                
+
                 if (data.has_pending) {
                     // Show notification badge or indicator
                     console.log(`有 ${data.staged_agents} 个配置变更待确认`);
@@ -5620,7 +5650,7 @@
                 console.error('Error checking pending changes:', error);
             }
         }
-        
+
         // Add to initial load
         const originalLoadData = loadData;
         loadData = async function() {
@@ -5639,7 +5669,7 @@
                 </div>
                 <button class="transactions-close" onclick="closeTransactionsPanel()">×</button>
             </div>
-            
+
             <div class="transactions-filters">
                 <select class="filter-select" id="transaction-time-filter" onchange="loadTransactions()">
                     <option value="7">最近7天</option>
@@ -5647,11 +5677,11 @@
                     <option value="90">最近3个月</option>
                     <option value="all">全部</option>
                 </select>
-                
+
                 <select class="filter-select" id="transaction-agent-filter" onchange="loadTransactions()">
                     <option value="">全部员工</option>
                 </select>
-                
+
                 <select class="filter-select" id="transaction-type-filter" onchange="loadTransactions()">
                     <option value="">全部类型</option>
                     <option value="task">任务执行</option>
@@ -5660,14 +5690,14 @@
                     <option value="manual">手动调整</option>
                 </select>
             </div>
-            
+
             <div class="transactions-content" id="transactions-list">
                 <div class="loading">
                     <div class="spinner"></div>
                     <p>加载交易记录...</p>
                 </div>
             </div>
-            
+
             <div class="transactions-footer">
                 <div class="transactions-summary" id="transactions-summary">
                     共 0 条记录
