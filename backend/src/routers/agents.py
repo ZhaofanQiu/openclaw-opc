@@ -349,6 +349,51 @@ async def partner_hire_employee(
             db.commit()
             db.refresh(new_employee)
         
+        # Send avatar design task to Partner (async)
+        try:
+            from src.services.async_message_service import AsyncMessageService
+            async_service = AsyncMessageService(db)
+            
+            design_prompt = f"""请为我的新员工 {new_employee.name} 设计一个像素风格的头像。
+
+员工信息:
+- 姓名: {new_employee.name}
+- 职位: {new_employee.position_title or '员工'}
+- 预算: {new_employee.monthly_budget} OC币/月
+
+要求:
+1. 使用 ASCII 艺术或像素风格
+2. 符合该职位的专业形象
+3. 颜色搭配协调
+4. 简洁但有辨识度
+
+请直接回复头像的 SVG 代码，或者描述头像设计让我可以生成它。
+
+格式: 你可以直接写 SVG 代码，或者用文字详细描述头像的样子（颜色、形状、特征）。"""
+            
+            message = async_service.create_message(
+                sender_id="system",
+                sender_type="system",
+                sender_name="系统",
+                recipient_id=partner.id,
+                content=design_prompt,
+                message_type="task",
+                subject=f"为 {new_employee.name} 设计头像",
+                timeout_seconds=300  # 5 minutes for avatar design
+            )
+            
+            logger.info(
+                "avatar_design_task_sent",
+                employee_id=new_employee.id,
+                employee_name=new_employee.name,
+                partner_id=partner.id,
+                message_id=message.id
+            )
+            
+        except Exception as e:
+            logger.error("failed_to_send_avatar_design_task", error=str(e))
+            # Don't fail the hire if avatar design task fails
+        
         return {
             "success": True,
             "employee": {
@@ -359,7 +404,7 @@ async def partner_hire_employee(
                 "monthly_budget": new_employee.monthly_budget,
             },
             "hired_by": partner.name,
-            "message": f"{partner.name} 成功雇佣了 {new_employee.name} ({new_employee.position_title})!"
+            "message": f"{partner.name} 成功雇佣了 {new_employee.name} ({new_employee.position_title})!\\n\\n头像设计任务已发送给 Partner，请稍后查看。"
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
