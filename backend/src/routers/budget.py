@@ -38,6 +38,31 @@ async def get_company_budget(
     return service.get_company_budget()
 
 
+@router.get("/agents")
+async def list_agent_budgets(
+    db: Session = Depends(get_db),
+):
+    """Get budget for all agents."""
+    from src.models import Agent
+    
+    service = BudgetService(db)
+    agents = db.query(Agent).all()
+    
+    result = []
+    for agent in agents:
+        budget = service.get_agent_budget(agent.id)
+        result.append({
+            "id": agent.id,
+            "name": agent.name,
+            "agent_id": agent.agent_id,
+            "budget": budget.get("budget", 0),
+            "used": budget.get("used", 0),
+            "remaining": budget.get("remaining", 0),
+        })
+    
+    return {"agents": result}
+
+
 @router.get("/agents/{agent_id}")
 async def get_agent_budget(
     agent_id: str,

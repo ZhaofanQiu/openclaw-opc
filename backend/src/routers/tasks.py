@@ -4,9 +4,9 @@ Task API routes.
 
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, Dict
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, field_validator
 from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
