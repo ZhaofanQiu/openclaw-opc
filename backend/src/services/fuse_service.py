@@ -23,7 +23,7 @@ class FuseAction(str, PyEnum):
     PAUSE = "pause"            # Pause and wait
 
 
-class FuseEventStatus(str, PyPyEnum):
+class FuseEventStatus(str, PyEnum):
     """Fuse event status."""
     TRIGGERED = "triggered"    # Fuse just triggered
     PENDING = "pending"        # Waiting for user action
