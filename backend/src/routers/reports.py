@@ -113,3 +113,106 @@ async def get_recent_reports(
         "count": len(reports),
         "reports": reports
     }
+
+
+@router.get("/budget-trend")
+async def get_budget_trend(
+    days: int = 7,
+    db: Session = Depends(get_db)
+):
+    """
+    Get budget consumption trend for charts.
+
+    Args:
+        days: Number of days to include (default: 7)
+
+    Returns:
+        Budget trend data for charting
+    """
+    from datetime import datetime, timedelta
+    from sqlalchemy import func
+    from src.models import BudgetTransaction
+
+    if days < 1 or days > 30:
+        days = 7
+
+    end_date = datetime.utcnow()
+    start_date = end_date - timedelta(days=days)
+
+    # Get daily budget consumption
+    daily_data = db.query(
+        func.date(BudgetTransaction.created_at).label('date'),
+        func.sum(BudgetTransaction.amount).label('consumed')
+    ).filter(
+        BudgetTransaction.created_at >= start_date,
+        BudgetTransaction.amount < 0  # Only consumption (negative amounts)
+    ).group_by(
+        func.date(BudgetTransaction.created_at)
+    ).order_by('date').all()
+
+    return {
+        "days": days,
+        "data": [
+            {
+                "date": str(d.date),
+                "consumed": abs(d.consumed) if d.consumed else 0
+            }
+            for d in daily_data
+        ]
+    }
+
+
+@router.get("/agent-status")
+async def get_agent_status_distribution(
+    db: Session = Depends(get_db)
+):
+    """
+    Get agent status distribution for pie chart.
+
+    Returns:
+        Count of agents by status
+    """
+    from sqlalchemy import func
+    from src.models import Agent, AgentStatus
+
+    status_counts = db.query(
+        Agent.status,
+        func.count(Agent.id).label('count')
+    ).group_by(Agent.status).all()
+
+    result = {status.value: 0 for status in AgentStatus}
+    for status, count in status_counts:
+        result[status] = count
+
+    return {
+        "distribution": result,
+        "total": sum(result.values())
+    }
+
+
+@router.get("/task-status")
+async def get_task_status_distribution(
+    db: Session = Depends(get_db)
+):
+    """
+    Get task status distribution for pie chart.
+
+    Returns:
+        Count of tasks by status
+    """
+    from sqlalchemy import func
+    from src.models import Task, TaskStatus
+
+    status_counts = db.query(
+        Task.status,
+        func.count(Task.id).label('count')
+    ).group_by(Task.status).all()
+
+    result = {status.value: 0 for status in TaskStatus}
+    for status, count in status_counts:
+        result[status] = count
+
+    return {
+        "distribution": result,
+        "total": sum(result.values())
+    }
