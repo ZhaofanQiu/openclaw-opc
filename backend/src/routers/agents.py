@@ -48,6 +48,11 @@ class AgentReport(BaseModel):
     token_used: int = Field(..., ge=0)
     result_summary: str = ""
     status: str = "completed"  # completed, failed
+    # Exact token tracking fields
+    tokens_input: Optional[int] = Field(None, ge=0, description="Actual input tokens consumed")
+    tokens_output: Optional[int] = Field(None, ge=0, description="Actual output tokens consumed")
+    session_key: Optional[str] = Field(None, description="OpenClaw session identifier")
+    is_exact: bool = Field(False, description="Whether token values are exact from session_status")
 
 
 class AgentResponse(BaseModel):
@@ -232,6 +237,7 @@ async def report_task_completion(
     """
     Report task completion from Agent.
     Called by OPC Bridge Skill after task completion.
+    Supports both estimated and exact token consumption reporting.
     """
     service = AgentService(db)
     try:
@@ -241,6 +247,10 @@ async def report_task_completion(
             token_used=report.token_used,
             result_summary=report.result_summary,
             status=report.status,
+            tokens_input=report.tokens_input,
+            tokens_output=report.tokens_output,
+            session_key=report.session_key,
+            is_exact=report.is_exact,
         )
         return result
     except ValueError as e:

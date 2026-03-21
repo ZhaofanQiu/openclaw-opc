@@ -192,8 +192,24 @@ class AgentService:
         token_used: int,
         result_summary: str,
         status: str,
+        tokens_input: int = None,
+        tokens_output: int = None,
+        session_key: str = None,
+        is_exact: bool = False,
     ) -> dict:
-        """Process task completion report from agent."""
+        """Process task completion report from agent.
+        
+        Args:
+            agent_id: OpenClaw agent ID
+            task_id: Task ID
+            token_used: Total tokens (for backward compatibility)
+            result_summary: Task result description
+            status: "completed" or "failed"
+            tokens_input: Actual input tokens (for exact tracking)
+            tokens_output: Actual output tokens (for exact tracking)
+            session_key: OpenClaw session identifier
+            is_exact: Whether token values are exact from session_status
+        """
         agent = self.get_agent(agent_id)
         if not agent:
             raise ValueError(f"Agent '{agent_id}' not found")
@@ -222,11 +238,22 @@ class AgentService:
                 "message": f"Budget exceeded. Task cost {cost:.2f} OC币, remaining {agent.remaining_budget:.2f} OC币",
             }
         
-        # Update task
+        # Update task with token tracking
         task.actual_cost = cost
         task.result_summary = result_summary
         task.status = TaskStatus.COMPLETED.value if status == "completed" else TaskStatus.FAILED.value
         task.completed_at = __import__('datetime').datetime.utcnow()
+        
+        # Store exact token tracking if provided
+        if is_exact and tokens_input is not None and tokens_output is not None:
+            task.actual_tokens_input = tokens_input
+            task.actual_tokens_output = tokens_output
+            task.is_exact = "true"
+        else:
+            task.is_exact = "false"
+        
+        if session_key:
+            task.session_key = session_key
         
         # Update agent budget
         agent.used_budget += cost
@@ -234,7 +261,7 @@ class AgentService:
         agent.status = AgentStatus.IDLE.value
         agent.current_task_id = None
         
-        # Log transaction
+        # Log transaction with exact tracking if available
         transaction = BudgetTransaction(
             id=str(uuid.uuid4())[:8],
             agent_id=agent.id,
@@ -242,6 +269,10 @@ class AgentService:
             transaction_type=TransactionType.TASK_CONSUMPTION.value,
             amount=-cost,
             description=f"Task '{task.title}' consumption",
+            actual_tokens_input=tokens_input if is_exact else token_used,
+            actual_tokens_output=tokens_output if is_exact else 0,
+            is_exact="true" if is_exact else "false",
+            session_key=session_key,
         )
         self.db.add(transaction)
         
@@ -270,5 +301,9 @@ class AgentService:
             "fused": False,
             "cost": cost,
             "remaining_budget": agent.remaining_budget,
+            "is_exact": is_exact,
+            "tokens_input": tokens_input if is_exact else token_used,
+            "tokens_output": tokens_output if is_exact else 0,
+            "session_key": session_key,
             "message": f"Task completed. Consumed {cost:.2f} OC币.",
         }
