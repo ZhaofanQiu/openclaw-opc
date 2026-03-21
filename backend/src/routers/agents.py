@@ -72,6 +72,8 @@ class AgentResponse(BaseModel):
     remaining_budget: float = 0.0
     is_bound: str
     agent_id: Optional[str]
+    avatar_url: Optional[str] = None
+    avatar_source: str = "system"
     
     class Config:
         from_attributes = True

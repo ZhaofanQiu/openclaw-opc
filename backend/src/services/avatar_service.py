@@ -216,6 +216,16 @@ class AvatarService:
             
             self.db.commit()
             self.db.refresh(avatar)
+            
+            # Update Agent's avatar URL
+            from src.models.agent import Agent
+            agent = self.db.query(Agent).filter(Agent.id == agent_id).first()
+            if agent:
+                agent.avatar_url = self.get_avatar_url(avatar)
+                agent.avatar_source = "system"
+                self.db.commit()
+                logger.info(f"Updated Agent {agent_id} avatar_url to {agent.avatar_url}")
+            
             logger.info(f"Avatar record saved successfully for agent_id={agent_id}")
             
             return avatar
@@ -405,6 +415,15 @@ class AvatarService:
         
         self.db.commit()
         self.db.refresh(avatar)
+        
+        # Update Agent's avatar URL
+        from src.models.agent import Agent
+        agent = self.db.query(Agent).filter(Agent.id == agent_id).first()
+        if agent:
+            agent.avatar_url = self.get_avatar_url(avatar)
+            agent.avatar_source = "uploaded"
+            self.db.commit()
+            logger.info(f"Updated Agent {agent_id} avatar_url to {agent.avatar_url}")
         
         return avatar
     
