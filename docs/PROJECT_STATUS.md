@@ -1,8 +1,8 @@
 # OpenClaw OPC - 项目状态
 
-**日期**: 2026-03-21  
-**当前版本**: v0.2.1 ✅ **已完成**  
-**下一版本**: v0.3.0-beta 🔄 **规划中**
+**日期**: 2026-03-22  
+**当前版本**: v0.3.0-beta ✅ **功能完成，测试阶段**  
+**下一版本**: v0.3.0 正式版 / v0.4.0-alpha 🔄 **规划中**
 
 ---
 
@@ -12,82 +12,83 @@
 |------|------|----------|----------|
 | v0.1.0-alpha | ✅ 已发布 | 2026-03-07 | MVP基础功能 |
 | v0.2.0-alpha | ✅ 已发布 | 2026-03-21 | 完整演示版 |
-| **v0.2.1** | ✅ **已完成** | 2026-03-21 | 维护优化版 |
-| **v0.3.0-beta** | 🔄 **规划中** | - | 自动Agent+外网访问 |
+| v0.2.1 | ✅ 已发布 | 2026-03-21 | 维护优化版 |
+| **v0.3.0-beta** | ✅ **功能完成** | 2026-03-22 | 异步消息系统 |
+| v0.3.0 | ⏳ 待发布 | - | 正式版 |
+| v0.4.0-alpha | 📋 规划中 | - | 子任务+工作流 |
 
 ---
 
-## ✅ v0.2.1 完成总结
+## ✅ v0.3.0-beta 完成总结
 
-### 已完成功能
+### 已完成功能 (P0/P1 全部完成)
 
-| 功能 | 说明 |
-|------|------|
-| **结构化日志** | structlog集成，JSON/Text格式 |
-| **API限流** | slowapi，100/20/10 per minute |
-| **输入验证增强** | Pydantic validators，枚举类型 |
-| **错误处理完善** | 全局异常处理器，标准错误响应 |
-| **API文档** | 完整API_REFERENCE.md |
-| **项目文档** | CONTRIBUTING.md，PROJECT_STATUS.md |
+| 优先级 | 功能 | 状态 | 说明 |
+|--------|------|------|------|
+| 🔴 P0 | Partner自动创建Agent | ✅ | 3步确认流程，自动绑定 |
+| 🔴 P0 | Agent自动删除 | ✅ | 备份/归档机制 |
+| 🔴 P0 | Agent执行闭环 | ✅ | TaskExecutionService + 异步消息 |
+| 🔴 P0 | 精确Token追踪 | ✅ | session_status API 集成 |
+| 🔴 P0 | PostgreSQL迁移 | ✅ | 脚本 + docker-compose |
+| 🟠 P1 | 熔断后选项 | ✅ | 追加预算/拆分/重分配/暂停 |
+| 🟠 P1 | 像素头像V2 | ✅ | Partner设计 + 用户上传/AI |
+| 🟠 P1 | 图表可视化 | ✅ | Dashboard 3种图表 |
+| 🟠 P1 | 员工详情模态框 | ✅ | 3 Tab 设计 |
+| 🟠 P1 | Tab集成 | ✅ | Pixel Office 作为 Dashboard Tab |
+| 🟠 P1 | 模态框暂停刷新 | ✅ | 用户体验优化 |
+| 🟠 P1 | i18n多语言支持 | ✅ | 中英双语 |
+| 🟢 P2 | 异步消息系统 | ✅ | Phase 1-6 全部完成 |
+
+### 异步消息系统 (Phase 1-6)
+
+| Phase | 功能 | 说明 |
+|-------|------|------|
+| 1 | 基础架构 | AsyncMessage模型，30分钟超时，CRUD API |
+| 2 | 员工消息异步化 | 员工详情页聊天异步，5秒轮询 |
+| 3 | Partner聊天异步化 | 悬浮框异步API，浏览器通知 |
+| 4 | 任务分配异步化 | TaskExecutionService使用异步消息 |
+| 5 | 前端轮询优化 | MessageCenter统一轮询，减少API调用 |
+| 6 | 回调接收端点 | Agent主动报告任务完成/失败 |
 
 ### 关键提交
-- `1b5351b` - fix: version number and task update endpoint
-- `3470e6d` - feat: structured logging with structlog
-- `ad578a5` - feat: API rate limiting with slowapi
-- `f5b5c25` - feat: enhanced validation and error handling
-- `44e0da2` - docs: Complete functional review and updated roadmap
-
----
-
-## 🎯 v0.3.0-beta 规划
-
-### 核心目标（基于用户反馈）
-
-| 优先级 | 功能 | 说明 | 工作量 | 状态 |
-|--------|------|------|--------|------|
-| 🔴 P0 | **Partner自动创建Agent** | 无需手动编辑openclaw.json | 5天 | ✅ 已完成 |
-| 🔴 P0 | **外网安全访问** | API Key认证 + 分享链接 | 3天 | ✅ 已完成 |
-| 🔴 P0 | **精确Token统计** | 通过session_status获取真实消耗 | 3天 | ✅ 已完成 |
-| 🔴 P0 | **PostgreSQL迁移** | 多用户场景支持 | 5天 | ✅ **刚完成** |
-| 🟠 P1 | **像素头像V2** | 个性化AI生成头像 | 5天 | ✅ **刚完成** |
-| 🟠 P1 | **图表可视化** | 报表添加趋势图、饼图 | 3天 | ✅ **刚完成** |
-| 🟠 P1 | **熔断后选项** | 追加预算/拆分任务/换人 | 2天 | ✅ **刚完成** |
-| 🟡 P2 | **Agent间通信** | Partner通过sessions_send通知员工 | 3天 | ✅ **刚完成** |
-
-### 开发计划
-
-**Phase 1** (Week 1-2): Agent生命周期管理 - 自动创建/删除Agent  
-**Phase 2** (Week 3-4): 外网访问与安全 - API Key + HTTPS  
-**Phase 3** (Week 5-6): 架构升级 - PostgreSQL + 精确Token统计  
-**Phase 4** (Week 7-8): 功能增强 - 像素头像V2 + 图表 + 熔断选项  
-**Phase 5** (Week 9-10): 集成测试与发布
-
-详细计划: [V0.3.0_PLAN.md](./V0.3.0_PLAN.md)
+- `31e34a6` - feat(Phase 1): 异步消息系统基础
+- `81c1ee8` - feat(Phase 2+3): 员工消息和Partner聊天异步化
+- `eaaf501` - feat(Phase 4): 任务分配异步化
+- `41d3eee` - refactor(avatar): 头像管理重构
+- `9e66af7` - fix(avatar): 修复头像系统4个问题
+- `a0c451b` - feat(avatar): 头像系统最终优化
+- `21046c1` - fix(hire): 修复Partner未绑定问题
+- `e761086` - fix(hire): 雇佣前确保PARTNER_ID已加载
+- `42bee22` - fix(hire): 导入logger修复NameError
+- `049b3a2` - feat(Phase 5): 统一消息中心优化前端轮询
+- `b649592` - feat(Phase 6): 任务回调接收端点
+- `6e291cb` - fix(tasks): 任务报告端点使用正确的Agent ID
 
 ---
 
 ## 📋 功能完成度
 
-### 整体完成度: ~65%
+### 整体完成度: ~80%
 
 ```
-已实现功能    ████████████████████░░░░░  65%
-核心功能      ████████████████████████░  85%
-v0.3.0规划    ░░░░░░░░░░░░░░░░░░░░░░░░░   0%
+已实现功能    ████████████████████████░░   80%
+核心功能      █████████████████████████░   90%
+v0.3.0规划    ████████████████████████░░   95%
 ```
 
 ### 各模块完成度
 
 | 模块 | 完成度 | 状态 |
 |------|--------|------|
-| 员工系统 | 75% | ✅ 基础功能完整，待自动创建Agent |
-| 任务系统 | 70% | ✅ 基础功能完整，待子任务系统 |
-| 预算系统 | 80% | ✅ 基础功能完整，待精确统计 |
-| Partner系统 | 85% | ✅ 基础功能完整，待主动管理 |
-| 像素办公室 | 60% | ✅ V1完成，待V2个性化 |
-| 报告系统 | 60% | ✅ 基础功能完整，待图表 |
-| 通知系统 | 65% | ✅ 基础功能完整，待WebSocket |
-| 基础设施 | 75% | ✅ 基础功能完整，待PostgreSQL |
+| 员工系统 | 90% | ✅ 自动创建/删除，Partner设计头像 |
+| 任务系统 | 85% | ✅ 异步分配，回调报告 |
+| 预算系统 | 85% | ✅ 精确Token追踪，熔断选项 |
+| Partner系统 | 90% | ✅ 自动管理，异步通信 |
+| 像素办公室 | 85% | ✅ V2完成，Tab集成 |
+| 报告系统 | 75% | ✅ 图表可视化 |
+| 通知系统 | 70% | ✅ Toast + 浏览器通知 |
+| 异步消息 | 100% | ✅ Phase 1-6 全部完成 |
+| 基础设施 | 85% | ✅ PostgreSQL，日志，限流 |
 
 ---
 
@@ -115,15 +116,25 @@ cd openclaw-opc
 | [README.md](../README.md) | 项目介绍与快速开始 |
 | [CHANGELOG.md](../CHANGELOG.md) | 版本变更记录 |
 | [ROADMAP.md](./ROADMAP.md) | 未来开发路线图 |
-| [FUNCTIONAL_REVIEW.md](./FUNCTIONAL_REVIEW.md) | 功能Review报告 |
-| [V0.3.0_PLAN.md](./V0.3.0_PLAN.md) | v0.3.0详细开发计划 |
+| [FUTURE_PLAN.md](./FUTURE_PLAN.md) | 未来开发详细计划 |
 
 ### 技术文档
 | 文档 | 说明 |
 |------|------|
 | [TECHNICAL.md](./TECHNICAL.md) | 技术方案详细说明 |
 | [API_REFERENCE.md](./API_REFERENCE.md) | API接口文档 |
-| [DESIGN.md](../DESIGN.md) | 产品设计方案 |
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | 系统架构设计 |
+| [POSTGRESQL_MIGRATION.md](./POSTGRESQL_MIGRATION.md) | 数据库迁移指南 |
+
+### 测试文档
+| 文档 | 说明 |
+|------|------|
+| [TEST_PLAN_v0.3.0.md](./TEST_PLAN_v0.3.0.md) | v0.3.0测试计划 |
+| [TEST_REPORT_ROUND1.md](./TEST_REPORT_ROUND1.md) | 第一轮测试报告 |
+| [TEST_REPORT_ROUND2.md](./TEST_REPORT_ROUND2.md) | 第二轮测试报告 |
+| [TEST_FEEDBACK_ROUND3.md](./TEST_FEEDBACK_ROUND3.md) | 第三轮测试反馈 |
+| [BUGFIX_PLAN.md](./BUGFIX_PLAN.md) | Bug修复计划 |
+| [BUGFIX_REPORT.md](./BUGFIX_REPORT.md) | Bug修复报告 |
 
 ### 历史文档
 **已归档至**: [archive/](./archive/)
@@ -134,32 +145,32 @@ cd openclaw-opc
 
 - [x] **2026-03-07**: v0.1.0-alpha 发布（MVP）
 - [x] **2026-03-21**: v0.2.0-alpha 发布（完整演示版）
-- [x] **2026-03-21**: v0.2.1 完成（维护优化）
-- [ ] **2026-05月**: v0.3.0-beta 发布（自动Agent+外网访问）
-- [ ] **2026-06月**: v0.4.0 发布（子任务+游戏化）
-- [ ] **2026-09月**: v1.0.0 生产版发布
+- [x] **2026-03-21**: v0.2.1 发布（维护优化）
+- [x] **2026-03-22**: v0.3.0-beta 功能完成（异步消息系统）
+- [ ] **2026-03月底**: v0.3.0 正式版发布
+- [ ] **2026-04月**: v0.4.0-alpha（子任务+工作流）
+- [ ] **2026-06月**: v1.0.0 生产版发布
 
 ---
 
-## 💬 用户反馈驱动
+## 💬 开发总结
 
-### 本次规划调整
-基于用户反馈，v0.3.0优先级调整：
+### v0.3.0 开发周期
+- **开始时间**: 2026-03-21
+- **功能完成**: 2026-03-22
+- **主要工作量**: 异步消息系统 Phase 1-6
 
-**新增P0**:
-- Partner自动创建/删除Agent
-- 外网安全访问（API Key）
+### 核心技术突破
+1. **异步消息系统** - 支持30分钟超时，UI不阻塞
+2. **精确Token追踪** - 通过session_status API获取真实消耗
+3. **Agent生命周期** - 自动创建/删除，Partner管理
+4. **统一轮询** - MessageCenter减少API调用
 
-**保留P0**:
-- 精确Token统计
-- PostgreSQL迁移
-
-**推迟**:
-- 子任务系统（多Agent合作）→ v0.4.0
-- 员工成长系统 → v0.4.0
+### 已知问题
+详见 [FUTURE_PLAN.md](./FUTURE_PLAN.md) - 已知Bug部分
 
 ---
 
-**项目状态**: ✅ v0.2.1稳定可用，v0.3.0开发规划中
+**项目状态**: ✅ v0.3.0-beta 功能完成，待正式发布
 
-*Last Updated: 2026-03-21 - v0.2.1 Completed, v0.3.0 Planning*
+*Last Updated: 2026-03-22 - v0.3.0-beta Feature Complete*
