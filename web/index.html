@@ -3016,7 +3016,7 @@
                     // Use agent.avatar_url if set, otherwise use pixel avatar CSS
                     const avatarUrl = agent.avatar_url;
                     const avatarContent = avatarUrl
-                        ? `<img src="${avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">`
+                        ? `<img src="${avatarUrl}?t=${Date.now()}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" onerror="this.outerHTML='<div class=\'pixel-avatar ${avatarClass}\'></div>'">`
                         : `<div class="pixel-avatar ${avatarClass}"></div>`;
 
                     // Delete button (not for Partner)
@@ -5694,25 +5694,30 @@
                     const agents = await agentsResponse.json();
                     const agent = agents.find(a => a.id === agentId);
                     if (agent) {
-                        // Determine pixel avatar class based on position
-                        let avatarClass = 'default';
-                        const position = (agent.position_title || '').toLowerCase();
-                        const name = (agent.name || '').toLowerCase();
-
-                        if (position.includes('前端') || name.includes('前端') || name.includes('frontend')) {
-                            avatarClass = 'frontend';
-                        } else if (position.includes('后端') || name.includes('后端') || name.includes('backend')) {
-                            avatarClass = 'backend';
-                        } else if (position.includes('设计') || name.includes('设计') || name.includes('designer')) {
-                            avatarClass = 'designer';
-                        } else if (position.includes('测试') || name.includes('测试') || name.includes('qa')) {
-                            avatarClass = 'qa';
-                        } else if (position.includes('合伙人') || name.includes('partner') || agent.emoji === '👑') {
-                            avatarClass = 'partner';
-                        }
-
                         const previewEl = document.getElementById('avatar-preview-pixel');
-                        previewEl.className = 'pixel-avatar ' + avatarClass;
+                        
+                        // If agent has custom avatar, show it
+                        if (agent.avatar_url) {
+                            previewEl.outerHTML = `<img id="avatar-preview-pixel" src="${agent.avatar_url}?t=${Date.now()}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" alt="${agent.name}" onerror="this.outerHTML='\u003cdiv id=\'avatar-preview-pixel\' class=\'pixel-avatar default\' style=\'width:100%;height:100%\'\u003e\u003c/div\u003e'">`;
+                        } else {
+                            // Determine pixel avatar class based on position
+                            let avatarClass = 'default';
+                            const position = (agent.position_title || '').toLowerCase();
+                            const name = (agent.name || '').toLowerCase();
+
+                            if (position.includes('前端') || name.includes('前端') || name.includes('frontend')) {
+                                avatarClass = 'frontend';
+                            } else if (position.includes('后端') || name.includes('后端') || name.includes('backend')) {
+                                avatarClass = 'backend';
+                            } else if (position.includes('设计') || name.includes('设计') || name.includes('designer')) {
+                                avatarClass = 'designer';
+                            } else if (position.includes('测试') || name.includes('测试') || name.includes('qa')) {
+                                avatarClass = 'qa';
+                            } else if (position.includes('合伙人') || name.includes('partner') || agent.emoji === '👑') {
+                                avatarClass = 'partner';
+                            }
+                            previewEl.className = 'pixel-avatar ' + avatarClass;
+                        }
                     }
                 }
             } catch (error) {
@@ -5744,6 +5749,13 @@
             document.getElementById('system-options').style.display = 'none';
             document.getElementById('upload-option').style.display = 'none';
             document.getElementById('ai-option').style.display = 'none';
+            // Reset preview to div
+            const previewEl = document.getElementById('avatar-preview-pixel');
+            if (previewEl && previewEl.tagName === 'IMG') {
+                previewEl.outerHTML = '<div id="avatar-preview-pixel" class="pixel-avatar default" style="width: 100%; height: 100%;"></div>';
+            } else if (previewEl) {
+                previewEl.className = 'pixel-avatar default';
+            }
             resumeAutoRefresh();
         }
 
@@ -5809,8 +5821,8 @@
                 
                 // Use agent.avatar_url if set, otherwise use CSS pixel avatar
                 if (agent.avatar_url) {
-                    // Use custom avatar image
-                    avatarEl.outerHTML = `<img src="${agent.avatar_url}" style="width:100%;height:100%;object-fit:cover;" class="pixel-avatar" alt="${agent.name}">`;
+                    // Use custom avatar image with cache buster
+                    avatarEl.outerHTML = `<img src="${agent.avatar_url}?t=${Date.now()}" style="width:100%;height:100%;object-fit:cover;" class="pixel-avatar" alt="${agent.name}" onerror="this.outerHTML='\u003cdiv class=\'pixel-avatar ${avatarClass}\' style=\'width:100%;height:100%\'\u003e\u003c/div\u003e'">`;
                 } else {
                     // Use CSS pixel avatar
                     avatarEl.className = 'pixel-avatar ' + avatarClass;
@@ -6223,7 +6235,7 @@
                 if (response.ok) {
                     const data = await response.json();
                     document.getElementById('avatar-preview').src = data.url + '?t=' + Date.now();
-                    alert('头像生成成功！');
+                    alert('头像生成成功！\\n\\n如果新头像没有显示，请按 Ctrl+F5 强制刷新或清除浏览器缓存。');
                     loadData();
                 } else {
                     const error = await response.json();
@@ -6258,11 +6270,32 @@
                 if (response.ok) {
                     const data = await response.json();
                     document.getElementById('avatar-preview').src = data.url + '?t=' + Date.now();
-                    alert('头像上传成功！');
+                    alert('头像上传成功！\\n\\n如果新头像没有显示，请按 Ctrl+F5 强制刷新或清除浏览器缓存。');
                     loadData();
                 } else {
-                    const error = await response.json();
-                    alert('上传失败: ' + (error.detail || '未知错误'));
+                    // Try to parse error
+                    let errorMsg = '未知错误';
+                    try {
+                        const errorData = await response.json();
+                        errorMsg = errorData.detail || '未知错误';
+                    } catch (e) {
+                        errorMsg = `服务器错误 (${response.status})`;
+                    }
+                    // Check if avatar was actually updated despite error
+                    await loadData();
+                    setTimeout(async () => {
+                        const agentsResp = await Auth.authFetch(`${API_BASE}/api/agents`);
+                        if (agentsResp.ok) {
+                            const agents = await agentsResp.json();
+                            const agent = agents.find(a => a.id === currentAvatarAgentId);
+                            if (agent && agent.avatar_url && agent.avatar_source === 'uploaded') {
+                                alert('头像实际上传成功！\\n\\n如果新头像没有显示，请按 Ctrl+F5 强制刷新或清除浏览器缓存。');
+                                closeAvatarModal();
+                            } else {
+                                alert('上传失败: ' + errorMsg);
+                            }
+                        }
+                    }, 500);
                 }
             } catch (error) {
                 console.error('Error uploading avatar:', error);

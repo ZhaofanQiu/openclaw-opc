@@ -548,7 +548,7 @@
                     
                     // Use agent.avatar_url if set, otherwise use pixel avatar CSS
                     const avatarContent = agent.avatar_url
-                        ? `<img src="${agent.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:4px;">`
+                        ? `<img src="${agent.avatar_url}?t=${Date.now()}" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" onerror="this.outerHTML='\u003cdiv class=\'pixel-avatar ${avatarClass}\'>\u003c/div\u003e'">`
                         : `<div class="pixel-avatar ${avatarClass}"></div>`;
                     
                     html += `
