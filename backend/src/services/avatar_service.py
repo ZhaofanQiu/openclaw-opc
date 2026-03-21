@@ -63,47 +63,78 @@ class AvatarService:
     # Try absolute path first (for Docker), then relative from project root
     UPLOAD_DIR = Path("/usr/share/nginx/html/avatars") if Path("/usr/share/nginx/html/avatars").exists() else Path(__file__).parent.parent.parent.parent / "web" / "avatars"
     
-    # Pixel art templates (8x8 grid characters)
+    # Pixel art templates (8x8 grid characters) - Human-like designs
     PIXEL_TEMPLATES = {
         "humanoid": [
-            "........",
-            "...XX...",
-            "..XXXX..",
-            ".XXXXXX.",
-            ".XXXXXX.",
-            "..XXXX..",
-            "...XX...",
-            "........",
+            "..XXXX..",  # Head
+            ".XX..XX.",  # Face/ears
+            "..XXXX..",  # Neck/collar
+            ".XXXXXX.",  # Shoulders
+            "XXXXXXXX",  # Body
+            "XXXXXXXX",  # Body
+            "..XXXX..",  # Legs start
+            ".XX..XX.",  # Feet
         ],
         "robot": [
-            "..XXXX..",
-            ".X....X.",
-            "X.XXXX.X",
-            "X.X..X.X",
-            "X.X..X.X",
-            "X.XXXX.X",
-            ".X....X.",
-            "..XXXX..",
+            ".XXXXXX.",  # Head
+            "XX.XX.XX",  # Eyes/antenna
+            ".XXXXXX.",  # Face plate
+            "XXXXXXXX",  # Shoulders
+            "X.XXXX.X",  # Body with panel
+            "XXXXXXXX",  # Body
+            ".XX.XX..",  # Legs
+            ".XX.XX..",  # Feet
         ],
         "alien": [
-            "...XX...",
-            "..XXXX..",
-            ".XXXXXX.",
-            "XX.XX.XX",
-            "XXXXXXXX",
-            ".XXXXXX.",
-            "..XXXX..",
-            "...XX...",
+            "...XX...",  # Small head
+            "..XXXX..",  # Big eyes area
+            ".XXXXXX.",  # Face
+            "..XXXX..",  # Neck
+            ".XXXXXX.",  # Shoulders
+            "XXXXXXXX",  # Body
+            ".XX.XX..",  # Thin legs
+            ".XX.....",  # Feet
         ],
         "spirit": [
             "........",
-            "...XX...",
-            "..XXXX..",
-            ".XX..XX.",
-            ".XX..XX.",
-            ".XX..XX.",
-            "..XXXX..",
-            "...XX...",
+            "...XX...",  # Head
+            "..XXXX..",  # Face
+            ".XX..XX.",  # Shoulders
+            ".XX..XX.",  # Body
+            "..XXXX..",  # Lower body
+            "...XX...",  # Ghost tail start
+            "...XX...",  # Ghost tail
+        ],
+        # New human-like templates
+        "person1": [
+            "...XX...",  # Head
+            "..XXXX..",  # Face
+            "...XX...",  # Neck
+            ".XXXXXX.",  # Shoulders
+            "XXXXXXXX",  # Body
+            "XXXXXXXX",  # Body
+            ".XX..XX.",  # Legs
+            ".XX..XX.",  # Feet
+        ],
+        "person2": [
+            "..XXXX..",  # Head
+            ".X.XX.X.",  # Face with hair
+            "..XXXX..",  # Neck
+            ".XXXXXX.",  # Shoulders
+            "XXXXXXXX",  # Body
+            ".XXXXXX.",  # Waist
+            ".XX..XX.",  # Legs
+            "XX....XX",  # Feet
+        ],
+        "person3": [
+            "...XX...",  # Head
+            "..XXXX..",  # Face wide
+            "...XX...",  # Neck
+            "XXXXXXXX",  # Wide shoulders
+            "XXXXXXXX",  # Body
+            "XXXXXXXX",  # Body
+            ".XX..XX.",  # Legs
+            ".XX..XX.",  # Feet
         ],
     }
     
@@ -155,6 +186,13 @@ class AvatarService:
         
         try:
             logger.info(f"Generating system avatar for agent_id={agent_id}, style={style}, position={position}")
+            
+            # For random generation, prefer person-like templates
+            if style == "humanoid":
+                import random
+                person_styles = ["humanoid", "person1", "person2", "person3"]
+                style = random.choice(person_styles)
+                logger.info(f"Selected random person style: {style}")
             
             # Check if avatar exists
             avatar = self.get_avatar(agent_id)
@@ -218,13 +256,17 @@ class AvatarService:
             self.db.refresh(avatar)
             
             # Update Agent's avatar URL
-            from src.models.agent import Agent
-            agent = self.db.query(Agent).filter(Agent.id == agent_id).first()
-            if agent:
-                agent.avatar_url = self.get_avatar_url(avatar)
-                agent.avatar_source = "system"
-                self.db.commit()
-                logger.info(f"Updated Agent {agent_id} avatar_url to {agent.avatar_url}")
+            try:
+                from src.models.agent import Agent
+                agent_record = self.db.query(Agent).filter(Agent.id == agent_id).first()
+                if agent_record:
+                    avatar_url = self.get_avatar_url(avatar)
+                    agent_record.avatar_url = avatar_url
+                    agent_record.avatar_source = "system"
+                    self.db.commit()
+                    logger.info(f"Updated Agent {agent_id} avatar_url to {avatar_url}")
+            except Exception as e:
+                logger.error(f"Failed to update agent avatar_url: {e}")
             
             logger.info(f"Avatar record saved successfully for agent_id={agent_id}")
             
@@ -417,13 +459,18 @@ class AvatarService:
         self.db.refresh(avatar)
         
         # Update Agent's avatar URL
-        from src.models.agent import Agent
-        agent = self.db.query(Agent).filter(Agent.id == agent_id).first()
-        if agent:
-            agent.avatar_url = self.get_avatar_url(avatar)
-            agent.avatar_source = "uploaded"
-            self.db.commit()
-            logger.info(f"Updated Agent {agent_id} avatar_url to {agent.avatar_url}")
+        try:
+            from src.models.agent import Agent
+            agent_record = self.db.query(Agent).filter(Agent.id == agent_id).first()
+            if agent_record:
+                avatar_url = self.get_avatar_url(avatar)
+                agent_record.avatar_url = avatar_url
+                agent_record.avatar_source = "uploaded"
+                self.db.commit()
+                logger.info(f"Updated Agent {agent_id} avatar_url to {avatar_url}")
+        except Exception as e:
+            logger.error(f"Failed to update agent avatar_url: {e}")
+            # Don't fail the upload if this fails
         
         return avatar
     
@@ -476,6 +523,20 @@ class AvatarService:
         
         self.db.commit()
         self.db.refresh(avatar)
+        
+        # Update Agent's avatar URL
+        try:
+            from src.models.agent import Agent
+            agent_record = self.db.query(Agent).filter(Agent.id == agent_id).first()
+            if agent_record:
+                agent_record.avatar_url = external_url
+                agent_record.avatar_source = "ai"
+                self.db.commit()
+                logger.info(f"Updated Agent {agent_id} avatar_url to AI avatar: {external_url}")
+        except Exception as e:
+            logger.error(f"Failed to update agent avatar_url for AI avatar: {e}")
+        
+        return avatar
         
         return avatar
     
