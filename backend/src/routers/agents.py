@@ -1284,3 +1284,409 @@ async def get_gateway_status(
             status_code=500,
             detail=f"Failed to check gateway status: {str(e)}"
         )
+
+
+# ============================================================
+# Agent Lifecycle Management API (v0.3.0 P0 Feature)
+# ============================================================
+
+class AgentAutoCreateRequest(BaseModel):
+    """Auto-create OpenClaw agent for employee."""
+    employee_id: str = Field(..., description="Employee ID to bind")
+    confirm: bool = Field(False, description="Confirm after reviewing staged changes")
+
+
+class AgentAutoCreateResponse(BaseModel):
+    """Auto-create agent response."""
+    success: bool
+    employee_id: str
+    agent_id: str
+    agent_name: str
+    status: str
+    message: str
+    needs_restart: bool = True
+    needs_confirmation: bool = False
+    preview: Optional[dict] = None
+
+
+class AgentDeleteRequest(BaseModel):
+    """Delete/archive agent request."""
+    employee_id: str = Field(..., description="Employee ID")
+    archive: bool = Field(True, description="Archive instead of permanent delete")
+    confirm: bool = Field(False, description="Confirm after reviewing staged changes")
+
+
+class ConfigBackupInfo(BaseModel):
+    """Config backup information."""
+    filename: str
+    timestamp: str
+    reason: str
+    size: int
+
+
+class PendingChangesResponse(BaseModel):
+    """Pending changes response."""
+    has_pending: bool
+    current_agents: int
+    staged_agents: int
+    can_commit: bool
+    can_rollback: bool
+
+
+@router.post("/lifecycle/create", response_model=AgentAutoCreateResponse)
+@limiter.limit(RATE_LIMITS["create"])
+async def auto_create_agent(
+    request: Request,
+    req: AgentAutoCreateRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    Auto-create OpenClaw Agent for an employee.
+    
+    **Safety mechanism**:
+    - Creates backup before modification
+    - Stages changes for user confirmation
+    - Requires explicit confirmation to apply
+    
+    **Flow**:
+    1. Call with confirm=false to stage changes
+    2. Review staged changes via /lifecycle/pending
+    3. Call with confirm=true to apply
+    
+    **After confirmation**:
+    - OpenClaw Gateway restart is required
+    """
+    from src.services.agent_lifecycle_service import AgentLifecycleService, ConfigOperationError
+    
+    service = AgentLifecycleService(db)
+    
+    # Get employee
+    agent_service = AgentService(db)
+    employee = agent_service.get_agent_by_id(req.employee_id)
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    # Generate agent ID if not exists
+    agent_id = employee.agent_id or f"{employee.name.lower().replace(' ', '_')}_{employee.id[:4]}"
+    
+    if req.confirm:
+        # Apply staged changes
+        try:
+            result = service.confirm_operation()
+            if result["success"]:
+                # Update employee record
+                employee.agent_id = agent_id
+                employee.is_bound = "true"
+                db.commit()
+                
+                return AgentAutoCreateResponse(
+                    success=True,
+                    employee_id=req.employee_id,
+                    agent_id=agent_id,
+                    agent_name=employee.name,
+                    status="created",
+                    message="Agent configuration applied successfully. Please restart OpenClaw Gateway.",
+                    needs_restart=True,
+                    needs_confirmation=False
+                )
+            else:
+                raise HTTPException(status_code=400, detail=result["message"])
+        except ConfigOperationError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+    else:
+        # Stage changes for confirmation
+        try:
+            result = service.create_agent_config(
+                agent_id=agent_id,
+                name=employee.name,
+                position=employee.position_title or "Intern"
+            )
+            
+            return AgentAutoCreateResponse(
+                success=True,
+                employee_id=req.employee_id,
+                agent_id=agent_id,
+                agent_name=employee.name,
+                status="staged",
+                message="Agent configuration staged. Review and confirm to apply.",
+                needs_restart=True,
+                needs_confirmation=True,
+                preview={
+                    "agent_dir": result["agent_dir"],
+                    "workspace": result["workspace"]
+                }
+            )
+        except ConfigOperationError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/lifecycle/delete")
+@limiter.limit(RATE_LIMITS["create"])
+async def auto_delete_agent(
+    request: Request,
+    req: AgentDeleteRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    Delete/archive OpenClaw Agent for an employee.
+    
+    **Safety mechanism**:
+    - Creates backup before modification
+    - Archives agent directory by default (not permanent delete)
+    - Stages changes for user confirmation
+    
+    **Flow**:
+    1. Call with confirm=false to stage changes
+    2. Review via /lifecycle/pending
+    3. Call with confirm=true to apply
+    """
+    from src.services.agent_lifecycle_service import AgentLifecycleService, ConfigOperationError
+    
+    service = AgentLifecycleService(db)
+    
+    # Get employee
+    agent_service = AgentService(db)
+    employee = agent_service.get_agent_by_id(req.employee_id)
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    if not employee.agent_id:
+        raise HTTPException(status_code=400, detail="Employee has no bound agent")
+    
+    if req.confirm:
+        # Apply staged changes
+        try:
+            result = service.confirm_operation()
+            if result["success"]:
+                # Update employee record
+                employee.agent_id = None
+                employee.is_bound = "false"
+                db.commit()
+                
+                return {
+                    "success": True,
+                    "employee_id": req.employee_id,
+                    "agent_id": employee.agent_id,
+                    "status": "deleted" if not req.archive else "archived",
+                    "message": "Agent configuration removed successfully. Please restart OpenClaw Gateway.",
+                    "needs_restart": True
+                }
+            else:
+                raise HTTPException(status_code=400, detail=result["message"])
+        except ConfigOperationError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+    else:
+        # Stage changes for confirmation
+        try:
+            result = service.delete_agent_config(
+                agent_id=employee.agent_id,
+                archive=req.archive
+            )
+            
+            return {
+                "success": True,
+                "employee_id": req.employee_id,
+                "agent_id": employee.agent_id,
+                "status": "staged_for_deletion",
+                "archived": req.archive,
+                "message": "Agent deletion staged. Review and confirm to apply.",
+                "needs_restart": True,
+                "needs_confirmation": True
+            }
+        except ConfigOperationError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/lifecycle/pending", response_model=PendingChangesResponse)
+async def get_pending_changes(
+    db: Session = Depends(get_db),
+):
+    """
+    Get pending/staged configuration changes.
+    
+    Returns information about changes awaiting confirmation.
+    """
+    from src.services.agent_lifecycle_service import AgentLifecycleService
+    
+    service = AgentLifecycleService(db)
+    pending = service.get_pending_changes()
+    
+    if not pending:
+        return PendingChangesResponse(
+            has_pending=False,
+            current_agents=0,
+            staged_agents=0,
+            can_commit=False,
+            can_rollback=False
+        )
+    
+    return PendingChangesResponse(
+        has_pending=True,
+        current_agents=pending["current_agents"],
+        staged_agents=pending["staged_agents"],
+        can_commit=pending["can_commit"],
+        can_rollback=pending["can_rollback"]
+    )
+
+
+@router.post("/lifecycle/confirm")
+async def confirm_pending_changes(
+    db: Session = Depends(get_db),
+):
+    """
+    Confirm and apply pending configuration changes.
+    
+    **After confirmation**:
+    - Changes are written to openclaw.json
+    - OpenClaw Gateway restart is required
+    """
+    from src.services.agent_lifecycle_service import AgentLifecycleService
+    
+    service = AgentLifecycleService(db)
+    result = service.confirm_operation()
+    
+    if result["success"]:
+        return {
+            "success": True,
+            "message": result["message"],
+            "needs_restart": result["needs_restart"],
+            "note": result["note"]
+        }
+    else:
+        raise HTTPException(status_code=400, detail=result["message"])
+
+
+@router.post("/lifecycle/cancel")
+async def cancel_pending_changes(
+    db: Session = Depends(get_db),
+):
+    """
+    Cancel/rollback pending configuration changes.
+    
+    Removes staged changes without applying them.
+    """
+    from src.services.agent_lifecycle_service import AgentLifecycleService
+    
+    service = AgentLifecycleService(db)
+    result = service.cancel_operation()
+    
+    return {
+        "success": result["success"],
+        "message": result["message"]
+    }
+
+
+@router.get("/lifecycle/backups", response_model=List[ConfigBackupInfo])
+async def list_config_backups(
+    db: Session = Depends(get_db),
+):
+    """
+    List available configuration backups.
+    
+    Returns list of backups with timestamps and reasons.
+    """
+    from src.services.agent_lifecycle_service import AgentConfigManager
+    
+    manager = AgentConfigManager()
+    backups = manager.list_backups()
+    
+    return [
+        ConfigBackupInfo(
+            filename=b["filename"],
+            timestamp=b["timestamp"],
+            reason=b["reason"],
+            size=b["size"]
+        )
+        for b in backups
+    ]
+
+
+@router.post("/lifecycle/restore")
+async def restore_config_backup(
+    backup_filename: str,
+    db: Session = Depends(get_db),
+):
+    """
+    Restore configuration from backup.
+    
+    **Safety**:
+    - Creates new backup before restore
+    - Requires OpenClaw Gateway restart after restore
+    
+    Use /lifecycle/backups to get available backup filenames.
+    """
+    from src.services.agent_lifecycle_service import AgentConfigManager, ConfigOperationError
+    
+    manager = AgentConfigManager()
+    
+    # Construct full path
+    backup_path = manager.backup_dir / backup_filename
+    
+    try:
+        manager.restore_backup(str(backup_path))
+        return {
+            "success": True,
+            "message": f"Configuration restored from {backup_filename}",
+            "needs_restart": True,
+            "note": "OpenClaw Gateway restart required for changes to take effect"
+        }
+    except ConfigOperationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/lifecycle/status")
+async def get_lifecycle_status(
+    db: Session = Depends(get_db),
+):
+    """
+    Get comprehensive lifecycle management status.
+    
+    Returns:
+    - Pending changes status
+    - Backup count
+    - Gateway status
+    """
+    from src.services.agent_lifecycle_service import AgentConfigManager, AgentLifecycleService
+    import subprocess
+    import os
+    
+    # Pending changes
+    service = AgentLifecycleService(db)
+    pending = service.get_pending_changes()
+    
+    # Backups
+    manager = AgentConfigManager()
+    backups = manager.list_backups()
+    
+    # Gateway status
+    gateway_running = False
+    try:
+        result = subprocess.run(
+            ["pgrep", "-f", "openclaw-gateway|uvicorn.*8000"],
+            capture_output=True,
+            text=True
+        )
+        gateway_running = result.returncode == 0 and result.stdout.strip()
+    except:
+        pass
+    
+    return {
+        "pending_changes": {
+            "has_pending": pending is not None,
+            "current_agents": pending["current_agents"] if pending else 0,
+            "staged_agents": pending["staged_agents"] if pending else 0
+        },
+        "backups": {
+            "count": len(backups),
+            "latest": backups[0]["filename"] if backups else None
+        },
+        "gateway": {
+            "running": gateway_running
+        },
+        "safety_mechanisms": {
+            "auto_backup": True,
+            "user_confirmation": True,
+            "file_locking": True,
+            "archive_support": True
+        }
+    }
