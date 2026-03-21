@@ -386,49 +386,47 @@ curl -X POST -H "Authorization: Bearer YOUR_API_KEY" \
 
 ---
 
-## 🌐 外网访问（Cloudflare Tunnel）
+## 🌐 外网访问（实验性）
 
-无需公网 IP，安全地从任何地方访问你的 Dashboard！
+⚠️ **注意：以下方案尚未经验证，仅供测试参考**
 
-### 为什么使用 Cloudflare Tunnel？
+### Cloudflare Quick Tunnel（临时方案）
 
-| 特性 | 传统方案 | Cloudflare Tunnel |
-|------|---------|-------------------|
-| 公网 IP | ❌ 必需 | ✅ 不需要 |
-| 端口转发 | ❌ 需要 | ✅ 不需要 |
-| SSL 证书 | ❌ 手动配置 | ✅ 自动 HTTPS |
-| DDoS 防护 | ❌ 无 | ✅ 内置 |
-| 成本 | 💰 域名 + 服务 | ✅ **免费** |
-
-### 快速部署（一键脚本）
+无需公网 IP，无需域名，快速临时访问：
 
 ```bash
-# 1. 运行设置脚本
-./scripts/setup_tunnel.sh
+# 1. 安装 cloudflared
+curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+dpkg -x cloudflared.deb /tmp/
+cp /tmp/usr/bin/cloudflared /usr/local/bin/
 
-# 2. 按照提示登录 Cloudflare 并创建隧道
+# 2. 确保 OPC 在运行
+curl http://localhost:8080/health
 
-# 3. 启动生产环境
-docker-compose -f docker-compose.prod.yml up -d
+# 3. 启动临时隧道
+cloudflared tunnel --url http://localhost:8080
 ```
 
-### 手动部署
-
-```bash
-# 1. 配置环境变量
-cp .env.example .env
-# 编辑 .env，设置：
-#   API_KEY_AUTH_ENABLED=true
-#   CLOUDFLARE_TUNNEL_TOKEN=your-token-here
-
-# 2. 创建 API Key（用于登录）
-python3 create_api_key.py
-
-# 3. 启动生产环境
-docker-compose -f docker-compose.prod.yml up -d
+输出示例：
+```
+https://xxxxx.trycloudflare.com
 ```
 
-### 详细文档
+访问 Dashboard: `https://xxxxx.trycloudflare.com/dashboard`
 
-- 📖 [完整部署指南](docs/CLOUDFLARE_TUNNEL.md) - 包含故障排查、安全建议
-- 🔧 [生产配置](docker-compose.prod.yml) - 安全加固的生产环境配置
+### ⚠️ 已知问题
+
+- 连接不稳定，可能频繁断开
+- 可能遇到 530 错误
+- 约 1 小时后自动关闭
+- 无法使用自定义域名
+
+### 生产环境建议
+
+| 方案 | 说明 |
+|------|------|
+| **购买域名** | 阿里云/腾讯云 .top/.xyz 首年 1-10 元，配置正式 Tunnel |
+| **公网 IP 服务器** | 直接部署，配置 Let's Encrypt SSL |
+| **其他工具** | ngrok（需注册）、frp（需服务端） |
+
+详细说明：[docs/CLOUDFLARE_TUNNEL.md](./docs/CLOUDFLARE_TUNNEL.md)
