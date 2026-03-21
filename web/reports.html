@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>工作日报 - 星际工作室</title>
     <script src="auth.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -426,6 +427,49 @@
             background: rgba(248, 113, 113, 0.2);
             color: #f87171;
         }
+
+        /* Charts */
+        .chart-container {
+            margin: 20px 0;
+            padding: 16px;
+            background: #1a1a2e;
+            border-radius: 8px;
+            border: 1px solid #2a2a4a;
+        }
+
+        .chart-title {
+            font-size: 14px;
+            color: #667eea;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 250px;
+            margin: 0 auto;
+        }
+
+        .chart-wrapper.pie {
+            max-width: 300px;
+        }
+
+        .chart-wrapper.line {
+            max-width: 100%;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin: 20px 0;
+        }
+
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
@@ -574,6 +618,14 @@
                     </div>
 
                     ${report.agent_performance.length > 0 ? `
+                        <!-- Budget Distribution Chart -->
+                        <div class="chart-container">
+                            <div class="chart-title">💰 预算消耗分布</div>
+                            <div class="chart-wrapper pie">
+                                <canvas id="budgetChart"></canvas>
+                            </div>
+                        </div>
+
                         <div class="section-title">👥 员工表现</div>
                         <div class="agent-list">
                             ${report.agent_performance.map(agent => `
@@ -614,6 +666,61 @@
                     `}
                 </div>
             `;
+
+            // Render budget distribution chart
+            if (report.agent_performance.length > 0) {
+                renderBudgetChart(report.agent_performance);
+            }
+        }
+
+        // Render budget distribution pie chart
+        function renderBudgetChart(agents) {
+            const ctx = document.getElementById('budgetChart').getContext('2d');
+            
+            const labels = agents.map(a => a.name);
+            const data = agents.map(a => Math.round(a.budget_consumed));
+            const colors = [
+                '#667eea', '#f87171', '#fbbf24', '#4ade80', 
+                '#a78bfa', '#60a5fa', '#f472b6', '#34d399'
+            ];
+            
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors.slice(0, agents.length),
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#888',
+                                font: { size: 11 },
+                                padding: 10
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.parsed || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return `${label}: ${value} OC (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
         }
 
         // Render recent reports summary
@@ -628,6 +735,12 @@
                 totalTasks += r.summary.total_tasks_completed;
                 totalBudget += r.summary.total_budget_consumed;
             });
+
+            // Prepare chart data (reverse to show oldest first)
+            const chartData = [...reports].reverse();
+            const dates = chartData.map(r => r.date.slice(5)); // MM-DD
+            const tasksData = chartData.map(r => r.summary.total_tasks_completed);
+            const budgetData = chartData.map(r => Math.round(r.summary.total_budget_consumed));
 
             container.innerHTML = `
                 <div class="report-card">
@@ -655,6 +768,14 @@
                         </div>
                     </div>
 
+                    <!-- 7-Day Trend Chart -->
+                    <div class="chart-container">
+                        <div class="chart-title">📊 7天趋势</div>
+                        <div class="chart-wrapper line">
+                            <canvas id="trendChart"></canvas>
+                        </div>
+                    </div>
+
                     <div class="section-title">📅 每日详情</div>
                     <div class="agent-list">
                         ${reports.map(r => `
@@ -671,6 +792,116 @@
                     </div>
                 </div>
             `;
+
+            // Render trend chart
+            renderTrendChart(dates, tasksData, budgetData);
+        }
+
+        // Render 7-day trend line chart
+        function renderTrendChart(dates, tasksData, budgetData) {
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [
+                        {
+                            label: '完成任务',
+                            data: tasksData,
+                            borderColor: '#4ade80',
+                            backgroundColor: 'rgba(74, 222, 128, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.3,
+                            fill: true,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'OC币消耗',
+                            data: budgetData,
+                            borderColor: '#fbbf24',
+                            backgroundColor: 'rgba(251, 191, 36, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.3,
+                            fill: true,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                color: '#888',
+                                font: { size: 11 },
+                                usePointStyle: true
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(26, 26, 46, 0.95)',
+                            titleColor: '#667eea',
+                            bodyColor: '#e0e0e0',
+                            borderColor: '#2a2a4a',
+                            borderWidth: 1,
+                            padding: 10
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                color: '#2a2a4a'
+                            },
+                            ticks: {
+                                color: '#888',
+                                font: { size: 10 }
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: '任务数',
+                                color: '#4ade80',
+                                font: { size: 10 }
+                            },
+                            grid: {
+                                color: '#2a2a4a'
+                            },
+                            ticks: {
+                                color: '#888',
+                                font: { size: 10 }
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'OC币',
+                                color: '#fbbf24',
+                                font: { size: 10 }
+                            },
+                            grid: {
+                                drawOnChartArea: false
+                            },
+                            ticks: {
+                                color: '#888',
+                                font: { size: 10 }
+                            }
+                        }
+                    }
+                }
+            });
         }
 
         // Load initial report
