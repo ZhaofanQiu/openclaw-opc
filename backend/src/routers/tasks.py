@@ -538,3 +538,46 @@ async def batch_record_exact_tokens(
         "failed": len(results["failed"]),
         "details": results
     }
+
+
+@router.delete("/{task_id}")
+async def delete_task(
+    task_id: str,
+    db: Session = Depends(get_db),
+):
+    """
+    Delete a task.
+    
+    Args:
+        task_id: Task ID to delete
+    
+    Returns:
+        Deletion result
+    """
+    from src.models import Task, Agent
+    
+    # Get task
+    task = db.query(Task).filter(Task.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    task_title = task.title
+    agent_id = task.agent_id
+    
+    # Update agent's current_task_id if this was their current task
+    if agent_id and task.status in ["assigned", "in_progress"]:
+        agent = db.query(Agent).filter(Agent.id == agent_id).first()
+        if agent and agent.current_task_id == task_id:
+            agent.current_task_id = None
+            agent.status = "idle"
+    
+    # Delete task
+    db.delete(task)
+    db.commit()
+    
+    return {
+        "success": True,
+        "message": f"Task '{task_title}' has been deleted",
+        "task_id": task_id,
+        "task_title": task_title
+    }

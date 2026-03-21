@@ -3029,6 +3029,11 @@
                         ? `<img src="${customAvatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">`
                         : `<div class="pixel-avatar ${avatarClass}"></div>`;
 
+                    // Delete button (not for Partner)
+                    const deleteButton = agent.position_level !== 5
+                        ? `<button class="assign-btn" onclick="event.stopPropagation(); confirmDeleteAgent('${agent.id}', '${agent.name}')" style="background: #ef4444; margin-left: 8px;" title="删除员工">🗑️</button>`
+                        : '';
+
                     return `
                         <div class="agent-item" onclick="openAgentModal('${agent.id}')" style="cursor: pointer;">
                             <div class="agent-avatar-container ${statusClass}" style="position:relative;" onclick="event.stopPropagation(); openAvatarModal('${agent.id}', '${agent.name}')" title="点击更换头像">
@@ -3037,7 +3042,7 @@
                             </div>
                             <div class="agent-info">
                                 <div class="agent-name">${agent.name}${boundBadge}</div>
-                                <div class="agent-role">${agent.position_title} · ${agent.status}${bindButton}</div>
+                                <div class="agent-role">${agent.position_title} · ${agent.status}${bindButton}${deleteButton}</div>
                             </div>
                             <div class="agent-budget">
                                 <div class="budget-bar">
@@ -3178,6 +3183,7 @@
                                     ${canAssign ? `<button class="assign-btn" onclick="openAssignModal('${task.id}')">分配</button>` : ''}
                                     ${resendButton}
                                     ${fetchExactButton}
+                                    <button class="assign-btn" onclick="event.stopPropagation(); confirmDeleteTask('${task.id}', '${task.title.replace(/'/g, "\\'")}')" style="background: #ef4444; margin-left: 8px;" title="删除任务">🗑️</button>
                                 </div>
                             </div>
                             <div class="task-desc">${task.description || '暂无描述'}</div>
@@ -5718,6 +5724,52 @@
 
             } catch (error) {
                 console.error('Error loading agent details:', error);
+            }
+        }
+
+        // Delete agent functions
+        async function confirmDeleteAgent(agentId, agentName) {
+            const confirmed = confirm(`确定要删除员工 "${agentName}" 吗？\n\n其任务将重新分配给 Partner。\n此操作不可撤销！`);
+            if (!confirmed) return;
+
+            try {
+                const response = await Auth.authFetch(`${API_BASE}/api/agents/${agentId}?task_action=reassign`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    alert(`员工 "${agentName}" 已删除`);
+                    loadData();
+                } else {
+                    const error = await response.json();
+                    alert('删除失败: ' + (error.detail || '未知错误'));
+                }
+            } catch (error) {
+                console.error('Error deleting agent:', error);
+                alert('删除失败，请稍后重试');
+            }
+        }
+
+        // Delete task function
+        async function confirmDeleteTask(taskId, taskTitle) {
+            const confirmed = confirm(`确定要删除任务 "${taskTitle}" 吗？\n\n此操作不可撤销！`);
+            if (!confirmed) return;
+
+            try {
+                const response = await Auth.authFetch(`${API_BASE}/api/tasks/${taskId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    alert(`任务 "${taskTitle}" 已删除`);
+                    loadData();
+                } else {
+                    const error = await response.json();
+                    alert('删除失败: ' + (error.detail || '未知错误'));
+                }
+            } catch (error) {
+                console.error('Error deleting task:', error);
+                alert('删除失败，请稍后重试');
             }
         }
 

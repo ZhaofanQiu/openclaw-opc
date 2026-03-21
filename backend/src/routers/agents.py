@@ -870,6 +870,96 @@ async def get_agent(
     return AgentResponse.model_validate(agent)
 
 
+@router.delete("/{agent_id}")
+async def delete_agent(
+    agent_id: str,
+    task_action: str = "reassign",  # "reassign", "delete", "cancel"
+    db: Session = Depends(get_db),
+):
+    """
+    Delete an employee (agent).
+    
+    Args:
+        agent_id: Employee ID to delete
+        task_action: How to handle assigned tasks:
+            - "reassign": Reassign to Partner (default)
+            - "delete": Delete all tasks
+            - "cancel": Cancel and keep tasks unassigned
+    
+    Returns:
+        Deletion result with task handling summary
+    """
+    from src.models import Task, TaskStatus
+    
+    service = AgentService(db)
+    
+    # Get agent
+    agent = service.get_agent_by_id(agent_id)
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    
+    # Cannot delete Partner
+    if agent.position_level == PositionLevel.PARTNER.value:
+        raise HTTPException(status_code=403, detail="Cannot delete Partner. Use company reset instead.")
+    
+    agent_name = agent.name
+    
+    # Handle assigned tasks
+    tasks = db.query(Task).filter(Task.agent_id == agent_id).all()
+    task_summary = {
+        "total": len(tasks),
+        "reassigned": 0,
+        "deleted": 0,
+        "cancelled": 0
+    }
+    
+    if tasks:
+        if task_action == "reassign":
+            # Find Partner
+            partner = db.query(Agent).filter(Agent.position_level == PositionLevel.PARTNER.value).first()
+            partner_id = partner.id if partner else None
+            
+            for task in tasks:
+                if task.status in [TaskStatus.PENDING.value, TaskStatus.ASSIGNED.value]:
+                    if partner_id:
+                        task.agent_id = partner_id
+                        task_summary["reassigned"] += 1
+                    else:
+                        task.status = TaskStatus.PENDING.value
+                        task.agent_id = None
+                        task_summary["cancelled"] += 1
+                else:
+                    # Keep completed/failed tasks with null agent
+                    task.agent_id = None
+                    task_summary["cancelled"] += 1
+                    
+        elif task_action == "delete":
+            for task in tasks:
+                db.delete(task)
+                task_summary["deleted"] += 1
+                
+        else:  # cancel
+            for task in tasks:
+                if task.status in [TaskStatus.PENDING.value, TaskStatus.ASSIGNED.value]:
+                    task.status = TaskStatus.PENDING.value
+                    task.agent_id = None
+                    task_summary["cancelled"] += 1
+                else:
+                    task.agent_id = None
+    
+    # Delete agent
+    db.delete(agent)
+    db.commit()
+    
+    return {
+        "success": True,
+        "message": f"Employee '{agent_name}' has been deleted",
+        "agent_id": agent_id,
+        "agent_name": agent_name,
+        "task_summary": task_summary
+    }
+
+
 # Partner auto-assignment endpoints
 
 @router.get("/partner/status")
