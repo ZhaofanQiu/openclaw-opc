@@ -211,6 +211,65 @@
             background: #2a2a4a;
         }
 
+        /* Avatar status indicators */
+        .agent-avatar-img {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            object-fit: cover;
+            transition: all 0.3s ease;
+        }
+
+        /* Breathing animation for idle/busy */
+        .agent-avatar-img.status-idle {
+            box-shadow: 0 0 0 2px #4ade80, 0 0 20px rgba(74, 222, 128, 0.3);
+            animation: breathe-idle 3s ease-in-out infinite;
+        }
+
+        .agent-avatar-img.status-busy {
+            box-shadow: 0 0 0 2px #fbbf24, 0 0 20px rgba(251, 191, 36, 0.3);
+            animation: breathe-busy 2s ease-in-out infinite;
+        }
+
+        .agent-avatar-img.status-offline {
+            box-shadow: 0 0 0 2px #6b7280;
+            opacity: 0.6;
+            filter: grayscale(0.8);
+        }
+
+        .agent-avatar-img.status-fused {
+            box-shadow: 0 0 0 2px #f87171, 0 0 30px rgba(248, 113, 113, 0.5);
+            animation: pulse-fused 1s ease-in-out infinite;
+        }
+
+        @keyframes breathe-idle {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 2px #4ade80, 0 0 20px rgba(74, 222, 128, 0.3); }
+            50% { transform: scale(1.05); box-shadow: 0 0 0 3px #4ade80, 0 0 30px rgba(74, 222, 128, 0.5); }
+        }
+
+        @keyframes breathe-busy {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 2px #fbbf24, 0 0 20px rgba(251, 191, 36, 0.3); }
+            50% { transform: scale(1.03); box-shadow: 0 0 0 3px #fbbf24, 0 0 25px rgba(251, 191, 36, 0.5); }
+        }
+
+        @keyframes pulse-fused {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 2px #f87171, 0 0 20px rgba(248, 113, 113, 0.3); }
+            50% { transform: scale(1.08); box-shadow: 0 0 0 4px #f87171, 0 0 40px rgba(248, 113, 113, 0.6); }
+        }
+
+        /* Avatar editor badge */
+        .avatar-edit-badge {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            background: #667eea;
+            color: #fff;
+            font-size: 10px;
+            padding: 2px 4px;
+            border-radius: 4px;
+            pointer-events: none;
+        }
+
         .agent-info {
             flex: 1;
         }
@@ -1208,11 +1267,21 @@
                     
                     const avatarUrl = avatarMap[agent.id] || '/avatars/default.svg';
                     
+                    // Determine status class for avatar animation
+                    let statusClass = 'status-idle';
+                    if (agent.status === 'fused' || (agent.remaining_budget <= 0 && agent.status === 'busy')) {
+                        statusClass = 'status-fused';
+                    } else if (agent.status === 'busy') {
+                        statusClass = 'status-busy';
+                    } else if (agent.status === 'offline') {
+                        statusClass = 'status-offline';
+                    }
+                    
                     return `
                         <div class="agent-item">
                             <div class="agent-avatar" style="cursor:pointer;position:relative;" onclick="openAvatarModal('${agent.id}', '${agent.name}')" title="点击更换头像">
-                                <img src="${avatarUrl}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;" onerror="this.src='/avatars/default.svg'">
-                                <div style="position:absolute;bottom:0;right:0;background:#667eea;color:#fff;font-size:10px;padding:2px 4px;border-radius:4px;">编辑</div>
+                                <img src="${avatarUrl}" class="agent-avatar-img ${statusClass}" onerror="this.src='/avatars/default.svg'">
+                                <div class="avatar-edit-badge">编辑</div>
                             </div>
                             <div class="agent-info">
                                 <div class="agent-name">${agent.name}${boundBadge}</div>

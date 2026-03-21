@@ -2,6 +2,7 @@
 Agent service layer.
 """
 
+import json
 import uuid
 from typing import List, Optional
 
@@ -306,4 +307,68 @@ class AgentService:
             "tokens_output": tokens_output if is_exact else 0,
             "session_key": session_key,
             "message": f"Task completed. Consumed {cost:.2f} OC币.",
+        }
+    
+    def trigger_avatar_generation(
+        self,
+        agent_id: str,
+        prompt: str,
+        skill_name: str = "vivago-ai",
+    ) -> dict:
+        """
+        Trigger avatar generation via Partner Agent using configured skill.
+        
+        This method attempts to:
+        1. Find the Partner Agent
+        2. Create a task for avatar generation
+        3. The Partner will use the skill to generate the image
+        4. Update avatar record when complete
+        
+        Args:
+            agent_id: Employee ID needing avatar
+            prompt: Generation prompt
+            skill_name: Skill to use (default: vivago-ai)
+        
+        Returns:
+            Dict with success status and task_id
+        """
+        # Get the target agent
+        agent = self.db.query(Agent).filter(Agent.id == agent_id).first()
+        if not agent:
+            return {"success": False, "error": "Agent not found"}
+        
+        # Find Partner Agent
+        partner = self.db.query(Agent).filter(
+            Agent.position_level == "PARTNER"
+        ).first()
+        
+        if not partner:
+            return {"success": False, "error": "No Partner Agent found"}
+        
+        # Create a special task for avatar generation
+        task = Task(
+            id=str(uuid.uuid4())[:8],
+            title=f"生成头像: {agent.name}",
+            description=f"为员工 {agent.name} 生成AI头像\\n\\n提示词: {prompt}\\n\\n技能: {skill_name}",
+            estimated_cost=50.0,  # Estimated cost for image generation
+            required_skills=json.dumps([skill_name]),
+            priority="normal",
+            status="pending",
+            assigned_to=partner.id,
+        )
+        self.db.add(task)
+        self.db.commit()
+        
+        # Note: In a real implementation, we would:
+        # 1. Send notification to Partner via sessions_send
+        # 2. Partner calls the skill to generate image
+        # 3. Partner uploads the result to /api/avatars/{agent_id}/ai-update
+        
+        # For now, return task info
+        return {
+            "success": True,
+            "task_id": task.id,
+            "message": f"Avatar generation task created for Partner Agent",
+            "partner_id": partner.id,
+            "skill": skill_name,
         }
