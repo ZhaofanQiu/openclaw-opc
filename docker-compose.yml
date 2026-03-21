@@ -1,6 +1,29 @@
 version: '3.8'
 
 services:
+  # PostgreSQL Database (optional - for production)
+  postgres:
+    image: postgres:16-alpine
+    container_name: opc-postgres
+    environment:
+      POSTGRES_USER: ${PG_USER:-opc}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:-opc_password}
+      POSTGRES_DB: ${PG_DATABASE:-openclaw_opc}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${PG_PORT:-5432}:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER:-opc}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # Only start if USE_POSTGRES=true
+    profiles:
+      - postgres
+      - full
+
   # Core Service (FastAPI)
   backend:
     build:
@@ -12,8 +35,18 @@ services:
     volumes:
       - ./data:/app/data
     environment:
-      - DATABASE_URL=${DATABASE_URL:-sqlite:///data/opc.db}
+      # Database configuration
+      - DB_TYPE=${DB_TYPE:-sqlite}
+      - DATABASE_URL=${DATABASE_URL:-}
+      - OPC_DB_PATH=${OPC_DB_PATH:-./data/opc.db}
+      - PG_HOST=${PG_HOST:-postgres}
+      - PG_PORT=${PG_PORT:-5432}
+      - PG_USER=${PG_USER:-opc}
+      - PG_PASSWORD=${PG_PASSWORD:-opc_password}
+      - PG_DATABASE=${PG_DATABASE:-openclaw_opc}
+      # Other settings
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=${LOG_FORMAT:-text}
       - CORS_ORIGINS=${CORS_ORIGINS:-*}
       - TOKEN_RATE=${TOKEN_RATE:-100}
       - BUDGET_WARNING_THRESHOLD=${BUDGET_WARNING_THRESHOLD:-80}
@@ -22,7 +55,13 @@ services:
       - HEARTBEAT_INTERVAL=${HEARTBEAT_INTERVAL:-30}
       - HEARTBEAT_TIMEOUT=${HEARTBEAT_TIMEOUT:-60}
       - AUTO_ASSIGN_STRATEGY=${AUTO_ASSIGN_STRATEGY:-budget}
+      - PARTNER_AGENT_ID=${PARTNER_AGENT_ID:-main}
+      - API_KEY_AUTH_ENABLED=${API_KEY_AUTH_ENABLED:-false}
     restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+        required: false
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
@@ -52,34 +91,6 @@ networks:
   default:
     name: opc-network
 
-# Optional: Add PostgreSQL for production
-# Uncomment below for PostgreSQL support
-#
-#  postgres:
-#    image: postgres:16-alpine
-#    container_name: opc-postgres
-#    environment:
-#      POSTGRES_USER: ${POSTGRES_USER:-opc}
-#      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
-#      POSTGRES_DB: ${POSTGRES_DB:-opc}
-#    volumes:
-#      - postgres_data:/var/lib/postgresql/data
-#    restart: unless-stopped
-#    healthcheck:
-#      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-opc}"]
-#      interval: 10s
-#      timeout: 5s
-#      retries: 5
-#
-#  redis:
-#    image: redis:7-alpine
-#    container_name: opc-redis
-#    restart: unless-stopped
-#    healthcheck:
-#      test: ["CMD", "redis-cli", "ping"]
-#      interval: 10s
-#      timeout: 5s
-#      retries: 5
-#
-#volumes:
-#  postgres_data:
+volumes:
+  postgres_data:
+    driver: local

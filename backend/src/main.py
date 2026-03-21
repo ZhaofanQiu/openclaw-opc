@@ -16,7 +16,7 @@ from slowapi.util import get_remote_address
 
 from pydantic import ValidationError
 
-from src.database import init_db
+from src.database import init_db, check_database_connection, get_database_info
 from src.routers import agents, budget, config, monitor, notifications, reports, skills, tasks, api_keys, share, fuse
 from src.utils.logging_config import configure_logging, get_logger
 from src.utils.rate_limit import limiter, RATE_LIMITS
@@ -40,8 +40,17 @@ async def lifespan(app: FastAPI):
     """Application lifespan handler."""
     # Startup
     logger.info("Application starting", api_key_auth=API_KEY_AUTH_ENABLED)
+    
+    # Check database connection
+    db_info = get_database_info()
+    logger.info("Database configuration", **db_info)
+    
+    if not db_info["connected"]:
+        logger.error("Failed to connect to database", url=db_info["url"])
+        raise RuntimeError(f"Database connection failed: {db_info['url']}")
+    
     init_db()
-    logger.info("Application ready")
+    logger.info("Application ready", database_type=db_info["type"])
     yield
     # Shutdown
     logger.info("Application stopping")
@@ -211,7 +220,15 @@ async def root():
 @app.get("/health")
 async def health():
     """Health check endpoint."""
-    return {"status": "healthy"}
+    db_info = get_database_info()
+    return {
+        "status": "healthy",
+        "database": {
+            "type": db_info["type"],
+            "connected": db_info["connected"],
+        },
+        "version": "0.2.0-alpha",
+    }
 
 
 # Mount static files (dashboard UI)
