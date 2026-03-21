@@ -2772,6 +2772,16 @@
                         `;
                     }
                     
+                    // Fetch exact tokens button for completed tasks without exact data
+                    let fetchExactButton = '';
+                    if ((task.status === 'completed' || task.status === 'failed') && 
+                        task.execution_session_id && 
+                        task.is_exact !== 'true') {
+                        fetchExactButton = `
+                            <button class="assign-btn" onclick="event.stopPropagation(); fetchExactTokens('${task.id}', '${task.execution_session_id}')" style="background: #8b5cf6; margin-left: 8px;" title="获取精确Token数据">🎯 精确Token</button>
+                        `;
+                    }
+                    
                     // Build token display
                     
                     // Build token display
@@ -2816,6 +2826,7 @@
                                     ${executionBadge}
                                     ${canAssign ? `<button class="assign-btn" onclick="openAssignModal('${task.id}')">分配</button>` : ''}
                                     ${resendButton}
+                                    ${fetchExactButton}
                                 </div>
                             </div>
                             <div class="task-desc">${task.description || '暂无描述'}</div>
@@ -4524,6 +4535,42 @@
             } catch (error) {
                 console.error('Error resending task:', error);
                 alert('重发失败，请重试');
+            }
+        }
+        
+        // ============================================================
+        // Exact Token Tracking (v0.3.0 P0 #4)
+        // ============================================================
+        
+        async function fetchExactTokens(taskId, sessionKey) {
+            if (!confirm('确定要获取精确Token数据吗？\n\n这将调用 OpenClaw session_status API 获取准确的Token消耗。')) {
+                return;
+            }
+            
+            try {
+                const response = await Auth.authFetch(`${API_BASE}/api/tasks/${taskId}/exact-tokens`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_key: sessionKey })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    alert(`✅ 精确Token数据已获取\n\n` +
+                          `输入: ${data.input_tokens} tokens\n` +
+                          `输出: ${data.output_tokens} tokens\n` +
+                          `总计: ${data.total_tokens} tokens\n` +
+                          `模型: ${data.model}\n` +
+                          `实际成本: ${data.exact_cost.toFixed(2)} OC币`);
+                    loadTasks();
+                } else {
+                    const error = await response.json();
+                    alert('获取精确Token失败: ' + (error.detail || '未知错误') + 
+                          '\n\n可能原因：\n- Session 已过期\n- Gateway 不可用\n- Session Key 无效');
+                }
+            } catch (error) {
+                console.error('Error fetching exact tokens:', error);
+                alert('获取精确Token失败，请重试');
             }
         }
         

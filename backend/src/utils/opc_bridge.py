@@ -103,34 +103,6 @@ def opc_report(
         - remaining_budget: Updated budget
         - fused: True if budget exceeded (task failed)
         - is_exact: Whether exact token tracking was recorded
-    
-    Example:
-        ```python
-        # Report with estimated tokens
-        result = opc_report(
-            task_id="abc123",
-            token_used=1500,
-            result_summary="完成了登录页重构",
-            status="completed"
-        )
-        
-        # Report with exact tokens from session_status
-        result = opc_report(
-            task_id="abc123",
-            token_used=1523,
-            result_summary="完成了登录页重构",
-            status="completed",
-            tokens_input=850,
-            tokens_output=673,
-            session_key="session_abc123",
-            is_exact=True
-        )
-        
-        if result["success"]:
-            print(f"任务完成，消耗 {result['cost']} OC币")
-        elif result.get("fused"):
-            print(f"预算熔断: {result['message']}")
-        ```
     """
     # Get agent_id from environment if not provided
     # In OpenClaw, this could be set via session context
