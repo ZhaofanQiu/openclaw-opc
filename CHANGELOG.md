@@ -7,6 +7,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- **Chart Visualization** - Data visualization for reports
+  - Dashboard: 7-day budget usage trend chart
+  - Daily report: Budget distribution pie chart by employee
+  - Weekly report: 7-day trend line chart (tasks + budget)
+  - Dark theme styling with Chart.js
 - **PostgreSQL Migration** - Production database support
   - Dual database support (SQLite for dev, PostgreSQL for prod)
   - Environment-based configuration (DB_TYPE, DATABASE_URL)
