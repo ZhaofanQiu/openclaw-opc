@@ -1845,10 +1845,6 @@
                     </span>
                     <span style="margin-left: 16px; color: #666;">|</span>
                     <span style="margin-left: 16px;">实时更新中...</span>
-                    <span style="margin-left: 16px; color: #666;">|</span>
-                    <span style="margin-left: 16px; color: #667eea; text-decoration: none;">
-                        <a href="/dashboard/pixel-office" style="color: #667eea; text-decoration: none;">🏢 <span data-i18n="nav.pixelOffice">像素办公室 →</span></a>
-                    </span>
                 </p>
             </div>
             <div style="display: flex; gap: 12px; align-items: center;">
@@ -1867,6 +1863,19 @@
                 </button>
             </div>
         </header>
+
+        <!-- Tab Navigation -->
+        <div style="display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 2px solid #2a2a4a; padding-bottom: 8px;">
+            <button class="refresh-btn dashboard-tab active" data-tab="dashboard" onclick="switchDashboardTab('dashboard')" style="background: #667eea;">
+                📊 Dashboard
+            </button>
+            <button class="refresh-btn dashboard-tab" data-tab="pixel-office" onclick="switchDashboardTab('pixel-office')">
+                🏢 像素办公室
+            </button>
+        </div>
+
+        <!-- Dashboard Tab Content -->
+        <div id="dashboard-tab-content" class="dashboard-content">
 
         <!-- Overdue Alert -->
         <div class="overdue-alert hidden" id="overdue-alert">
@@ -2150,6 +2159,17 @@
             <span id="notification-btn-text">通知</span>
             <span class="notification-badge hidden" id="notification-badge">0</span>
         </button>
+    </div>
+
+    <!-- Pixel Office Tab Content -->
+    <div id="pixel-office-tab-content" class="dashboard-content" style="display: none;">
+        <!-- Pixel Office Container -->
+        <div id="pixel-office-container">
+            <div style="text-align: center; padding: 40px;">
+                <div class="spinner"></div>
+                <p style="color: #888; margin-top: 16px;">加载像素办公室...</p>
+            </div>
+        </div>
     </div>
 
     <!-- Notification Panel -->
@@ -2470,6 +2490,44 @@
 
         function isModalOpen() {
             return document.querySelectorAll('.modal-overlay.visible').length > 0;
+        }
+
+        // Dashboard Tab Switching
+        function switchDashboardTab(tab) {
+            // Update tab buttons
+            document.querySelectorAll('.dashboard-tab').forEach(btn => {
+                btn.classList.remove('active');
+                btn.style.background = '#4b5563';
+            });
+            document.querySelector(`.dashboard-tab[data-tab="${tab}"]`).classList.add('active');
+            document.querySelector(`.dashboard-tab[data-tab="${tab}"]`).style.background = '#667eea';
+
+            // Show/hide content
+            document.querySelectorAll('.dashboard-content').forEach(el => {
+                el.style.display = 'none';
+            });
+            document.getElementById(`${tab}-tab-content`).style.display = 'block';
+
+            // Load pixel office if switching to that tab
+            if (tab === 'pixel-office') {
+                loadPixelOffice();
+            }
+        }
+
+        // Load Pixel Office via iframe or inline
+        async function loadPixelOffice() {
+            const container = document.getElementById('pixel-office-container');
+
+            // Check if already loaded
+            if (container.querySelector('iframe')) return;
+
+            // Load pixel office in iframe
+            container.innerHTML = `
+                <iframe src="/dashboard/pixel-office" 
+                        style="width: 100%; height: calc(100vh - 250px); border: none; border-radius: 8px;"
+                        id="pixel-office-iframe">
+                </iframe>
+            `;
         }
 
         // Format number
