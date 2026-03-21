@@ -71,6 +71,12 @@ class Task(Base):
 
     # Result
     result_summary = Column(Text, default="")
+    
+    # Execution tracking (v0.3.0 P0 - Agent execution loop)
+    execution_status = Column(String, default="")  # sent, acked, running, completed, failed, timeout
+    sent_to_agent_at = Column(DateTime, nullable=True)  # When task was sent to agent
+    execution_session_id = Column(String, nullable=True)  # OpenClaw session ID
+    token_used = Column(Integer, default=0)  # Actual tokens consumed (reported by agent)
 
     # Relationships
     skill_requirements = relationship("TaskSkillRequirement", back_populates="task",
