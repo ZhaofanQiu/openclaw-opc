@@ -2074,6 +2074,31 @@
             </div>
         </div>
 
+        <!-- Dashboard Charts Grid -->
+        <div class="charts-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 20px;">
+            <!-- Agent Status Distribution -->
+            <div class="chart-container">
+                <div class="chart-title">
+                    <span>👥</span>
+                    员工状态分布
+                </div>
+                <div class="chart-wrapper" style="height: 250px;">
+                    <canvas id="agentStatusChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Task Status Distribution -->
+            <div class="chart-container">
+                <div class="chart-title">
+                    <span>📋</span>
+                    任务状态分布
+                </div>
+                <div class="chart-wrapper" style="height: 250px;">
+                    <canvas id="taskStatusChart"></canvas>
+                </div>
+            </div>
+        </div>
+
         <!-- Main Content -->
         <div class="main-grid">
             <!-- Agents Section -->
@@ -2579,6 +2604,179 @@
             }
         }
 
+        // Load agent status distribution pie chart
+        async function loadAgentStatusChart() {
+            try {
+                const response = await Auth.authFetch(`${API_BASE}/api/agents`);
+                if (!response.ok) throw new Error('Failed to load agents');
+
+                const agents = await response.json();
+
+                // Count by status
+                const statusCounts = {
+                    'idle': agents.filter(a => a.status === 'idle').length,
+                    'working': agents.filter(a => a.status === 'working').length,
+                    'offline': agents.filter(a => a.status === 'offline').length,
+                    'fused': agents.filter(a => a.status === 'fused' || a.remaining_budget <= 0).length
+                };
+
+                const ctx = document.getElementById('agentStatusChart');
+                if (!ctx) return;
+
+                // Destroy existing chart if any
+                if (window.agentStatusChartInstance) {
+                    window.agentStatusChartInstance.destroy();
+                }
+
+                const labels = ['空闲', '工作中', '离线', '熔断'];
+                const data = [statusCounts.idle, statusCounts.working, statusCounts.offline, statusCounts.fused];
+                const colors = ['#4ade80', '#667eea', '#9ca3af', '#f87171'];
+
+                // Only show chart if there's data
+                if (data.reduce((a, b) => a + b, 0) === 0) {
+                    ctx.style.display = 'none';
+                    return;
+                }
+                ctx.style.display = 'block';
+
+                window.agentStatusChartInstance = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: data,
+                            backgroundColor: colors,
+                            borderWidth: 0,
+                            hoverOffset: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    color: '#888',
+                                    font: { size: 11 },
+                                    padding: 10,
+                                    usePointStyle: true
+                                }
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(26, 26, 46, 0.95)',
+                                titleColor: '#667eea',
+                                bodyColor: '#e0e0e0',
+                                borderColor: '#2a2a4a',
+                                borderWidth: 1,
+                                callbacks: {
+                                    label: function(context) {
+                                        const label = context.label || '';
+                                        const value = context.parsed || 0;
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                        return `${label}: ${value}人 (${percentage}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading agent status chart:', error);
+            }
+        }
+
+        // Load task status distribution chart
+        async function loadTaskStatusChart() {
+            try {
+                const response = await Auth.authFetch(`${API_BASE}/api/tasks?limit=100`);
+                if (!response.ok) throw new Error('Failed to load tasks');
+
+                const tasks = await response.json();
+
+                // Count by status
+                const statusCounts = {
+                    'pending': tasks.filter(t => t.status === 'pending').length,
+                    'assigned': tasks.filter(t => t.status === 'assigned').length,
+                    'in_progress': tasks.filter(t => t.status === 'in_progress').length,
+                    'completed': tasks.filter(t => t.status === 'completed').length,
+                    'failed': tasks.filter(t => t.status === 'failed').length
+                };
+
+                const ctx = document.getElementById('taskStatusChart');
+                if (!ctx) return;
+
+                // Destroy existing chart if any
+                if (window.taskStatusChartInstance) {
+                    window.taskStatusChartInstance.destroy();
+                }
+
+                const labels = ['待分配', '已分配', '进行中', '已完成', '失败'];
+                const data = [statusCounts.pending, statusCounts.assigned, statusCounts.in_progress, statusCounts.completed, statusCounts.failed];
+                const colors = ['#fbbf24', '#60a5fa', '#667eea', '#4ade80', '#f87171'];
+
+                // Only show chart if there's data
+                if (data.reduce((a, b) => a + b, 0) === 0) {
+                    ctx.style.display = 'none';
+                    return;
+                }
+                ctx.style.display = 'block';
+
+                window.taskStatusChartInstance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: '任务数',
+                            data: data,
+                            backgroundColor: colors,
+                            borderRadius: 4,
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(26, 26, 46, 0.95)',
+                                titleColor: '#667eea',
+                                bodyColor: '#e0e0e0',
+                                borderColor: '#2a2a4a',
+                                borderWidth: 1
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: {
+                                    display: false
+                                },
+                                ticks: {
+                                    color: '#888',
+                                    font: { size: 11 }
+                                }
+                            },
+                            y: {
+                                grid: {
+                                    color: '#2a2a4a'
+                                },
+                                ticks: {
+                                    color: '#888',
+                                    stepSize: 1
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading task status chart:', error);
+            }
+        }
+
         // Load agents
         async function loadAgents() {
             const container = document.getElementById('agents-list');
@@ -2879,6 +3077,12 @@
 
             // Load budget trend chart
             loadBudgetTrendChart();
+
+            // Load agent status chart
+            loadAgentStatusChart();
+
+            // Load task status chart
+            loadTaskStatusChart();
 
             // Load skill map
             loadSkillMap();
