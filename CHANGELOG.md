@@ -7,6 +7,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- **Post-Fuse Options** - Actions when budget fuse is triggered
+  - 💰 Add Budget - Increase agent's monthly budget
+  - ✂️ Split Task - Break into smaller sub-tasks
+  - 🔄 Reassign - Move task to another agent
+  - ⏸️ Pause - Keep paused for later decision
+  - Dashboard UI with fuse alert banner
+  - API endpoints: /api/fuse/events/*
 - **Share Link System** - JWT-signed temporary access links
   - Support expiration (1h to 7d)
   - Optional password protection
