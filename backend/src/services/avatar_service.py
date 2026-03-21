@@ -146,40 +146,84 @@ class AvatarService:
         
         Returns:
             Created avatar record
+        
+        Raises:
+            Exception: If avatar generation fails
         """
-        # Check if avatar exists
-        avatar = self.get_avatar(agent_id)
-        if not avatar:
-            avatar = EmployeeAvatar(
-                id=str(uuid.uuid4())[:8],
-                agent_id=agent_id,
-            )
-            self.db.add(avatar)
+        import logging
+        logger = logging.getLogger(__name__)
         
-        # Select template and colors
-        template = self.PIXEL_TEMPLATES.get(style, self.PIXEL_TEMPLATES["humanoid"])
-        colors = self.COLOR_PALETTES.get(position, self.COLOR_PALETTES["default"])
-        
-        # Generate SVG
-        svg_content = self._generate_svg_avatar(template, colors)
-        
-        # Save to file with unique filename including style and timestamp
-        import time
-        timestamp = int(time.time()) % 10000  # Short timestamp for uniqueness
-        filename = f"{agent_id}_{style}_{timestamp}.svg"
-        filepath = self.UPLOAD_DIR / filename
-        filepath.write_text(svg_content)
-        
-        # Update record
-        avatar.source = AvatarSource.SYSTEM.value
-        avatar.storage_path = str(filepath)
-        avatar.style_params = f'{{"template": "{style}", "colors": {colors}}}'
-        avatar.updated_at = datetime.utcnow()
-        
-        self.db.commit()
-        self.db.refresh(avatar)
-        
-        return avatar
+        try:
+            logger.info(f"Generating system avatar for agent_id={agent_id}, style={style}, position={position}")
+            
+            # Check if avatar exists
+            avatar = self.get_avatar(agent_id)
+            if not avatar:
+                logger.info(f"Creating new avatar record for agent_id={agent_id}")
+                avatar = EmployeeAvatar(
+                    id=str(uuid.uuid4())[:8],
+                    agent_id=agent_id,
+                )
+                self.db.add(avatar)
+            else:
+                logger.info(f"Updating existing avatar record for agent_id={agent_id}")
+            
+            # Select template and colors
+            template = self.PIXEL_TEMPLATES.get(style, self.PIXEL_TEMPLATES["humanoid"])
+            colors = self.COLOR_PALETTES.get(position, self.COLOR_PALETTES["default"])
+            logger.debug(f"Using template={style}, colors={colors}")
+            
+            # Generate SVG
+            try:
+                svg_content = self._generate_svg_avatar(template, colors)
+                logger.debug(f"Generated SVG content length={len(svg_content)}")
+            except Exception as svg_error:
+                logger.error(f"Failed to generate SVG: {svg_error}")
+                raise ValueError(f"SVG generation failed: {svg_error}") from svg_error
+            
+            # Save to file with unique filename including style and timestamp
+            import time
+            timestamp = int(time.time()) % 10000  # Short timestamp for uniqueness
+            filename = f"{agent_id}_{style}_{timestamp}.svg"
+            filepath = self.UPLOAD_DIR / filename
+            
+            # Ensure upload directory exists and is writable
+            try:
+                self.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+                logger.info(f"Upload directory ensured: {self.UPLOAD_DIR}")
+            except Exception as dir_error:
+                logger.error(f"Failed to create upload directory {self.UPLOAD_DIR}: {dir_error}")
+                raise IOError(f"Cannot create upload directory: {dir_error}") from dir_error
+            
+            # Check if directory is writable
+            if not os.access(self.UPLOAD_DIR, os.W_OK):
+                logger.error(f"Upload directory is not writable: {self.UPLOAD_DIR}")
+                raise IOError(f"Upload directory is not writable: {self.UPLOAD_DIR}")
+            
+            # Write file
+            try:
+                filepath.write_text(svg_content)
+                logger.info(f"Avatar saved to: {filepath}")
+            except Exception as write_error:
+                logger.error(f"Failed to write avatar file {filepath}: {write_error}")
+                raise IOError(f"Cannot write avatar file: {write_error}") from write_error
+            
+            # Update record
+            avatar.source = AvatarSource.SYSTEM.value
+            avatar.storage_path = str(filepath)
+            avatar.style_params = f'{{"template": "{style}", "colors": {colors}}}'
+            avatar.updated_at = datetime.utcnow()
+            
+            self.db.commit()
+            self.db.refresh(avatar)
+            logger.info(f"Avatar record saved successfully for agent_id={agent_id}")
+            
+            return avatar
+            
+        except Exception as e:
+            logger.error(f"Failed to generate system avatar for agent_id={agent_id}: {e}", exc_info=True)
+            self.db.rollback()
+            raise
     
     def _generate_svg_avatar(self, template: list, colors: list) -> str:
         """
@@ -422,24 +466,51 @@ class AvatarService:
     ) -> EmployeeAvatar:
         """
         Regenerate system avatar with random variations.
-        
+
         Args:
             agent_id: Employee ID
-        
+
         Returns:
             Updated avatar
+
+        Raises:
+            Exception: If avatar regeneration fails
         """
+        import logging
         import random
-        
-        # Pick random style
-        style = random.choice(list(self.PIXEL_TEMPLATES.keys()))
-        
-        # Get agent position for colors
-        from src.models import Agent
-        agent = self.db.query(Agent).filter(Agent.id == agent_id).first()
-        position = agent.position_title if agent else "default"
-        
-        return self.generate_system_avatar(agent_id, style=style, position=position)
+
+        logger = logging.getLogger(__name__)
+
+        try:
+            logger.info(f"Regenerating system avatar for agent_id={agent_id}")
+
+            # Pick random style
+            available_styles = list(self.PIXEL_TEMPLATES.keys())
+            style = random.choice(available_styles)
+            logger.debug(f"Randomly selected style: {style}")
+
+            # Get agent position for colors
+            from src.models.agent import Agent
+            agent = self.db.query(Agent).filter(Agent.id == agent_id).first()
+
+            if agent:
+                position = agent.position_title if agent.position_title else "default"
+                logger.debug(f"Using agent position_title: {position}")
+            else:
+                position = "default"
+                logger.warning(f"Agent {agent_id} not found, using default position")
+
+            # Check if position exists in COLOR_PALETTES
+            if position not in self.COLOR_PALETTES:
+                logger.debug(f"Position '{position}' not found in COLOR_PALETTES, using default")
+                position = "default"
+
+            return self.generate_system_avatar(agent_id, style=style, position=position)
+
+        except Exception as e:
+            logger.error(f"Failed to regenerate system avatar for agent_id={agent_id}: {e}", exc_info=True)
+            # Re-raise with more context for better error handling
+            raise Exception(f"头像生成失败: {str(e)}") from e
     
     def _validate_file_signature(self, file_data: bytes, content_type: str) -> None:
         """

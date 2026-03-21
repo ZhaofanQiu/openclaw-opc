@@ -1648,9 +1648,84 @@
             color: #888;
         }
 
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+        .partner-onboarding-card {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+            border: 2px solid rgba(102, 126, 234, 0.5);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            animation: slideDown 0.3s ease;
+        }
+
+        .partner-onboarding-card.hidden {
+            display: none;
+        }
+
+        .partner-onboarding-icon {
+            font-size: 48px;
+            width: 72px;
+            height: 72px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .partner-onboarding-content {
+            flex: 1;
+        }
+
+        .partner-onboarding-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+
+        .partner-onboarding-description {
+            font-size: 14px;
+            color: #888;
+            line-height: 1.6;
+        }
+
+        .partner-onboarding-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .partner-onboarding-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+        }
+
+        .partner-onboarding-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        @media (max-width: 768px) {
+            .partner-onboarding-card {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .partner-onboarding-btn {
+                width: 100%;
+            }
         }
 
         /* Config Panel */
@@ -1876,6 +1951,21 @@
 
         <!-- Dashboard Tab Content -->
         <div id="dashboard-tab-content" class="dashboard-content">
+
+        <!-- Partner Onboarding Card (shown when no Partner exists) -->
+        <div class="partner-onboarding-card hidden" id="partner-onboarding-card">
+            <div class="partner-onboarding-icon">👑</div>
+            <div class="partner-onboarding-content">
+                <div class="partner-onboarding-title">设置 Partner 助理</div>
+                <div class="partner-onboarding-description">
+                    Partner 是你的管理助手，可以帮助你分配任务、监控预算、协调团队工作。
+                    <br>创建 Partner 后，你将获得更智能的任务分配和团队协作体验。
+                </div>
+            </div>
+            <button class="partner-onboarding-btn" id="create-partner-btn" onclick="createPartner()">
+                🤖 创建 Partner
+            </button>
+        </div>
 
         <!-- Overdue Alert -->
         <div class="overdue-alert hidden" id="overdue-alert">
@@ -3131,6 +3221,9 @@
                 }
             }
 
+            // Check for Partner and show onboarding card if missing
+            await checkAndShowPartnerOnboarding();
+
             // Load budget trend chart
             loadBudgetTrendChart();
 
@@ -3148,6 +3241,62 @@
 
             btn.disabled = false;
             btn.textContent = '🔄 刷新';
+        }
+
+        // Check if Partner exists and show onboarding card if not
+        async function checkAndShowPartnerOnboarding() {
+            try {
+                const response = await Auth.authFetch(`${API_BASE}/api/agents`);
+                if (!response.ok) return;
+
+                const agents = await response.json();
+                const hasPartner = agents.some(agent => agent.position_level === 5);
+
+                const onboardingCard = document.getElementById('partner-onboarding-card');
+                if (onboardingCard) {
+                    if (hasPartner) {
+                        onboardingCard.classList.add('hidden');
+                    } else {
+                        onboardingCard.classList.remove('hidden');
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking Partner existence:', error);
+            }
+        }
+
+        // Create Partner employee
+        async function createPartner() {
+            const btn = document.getElementById('create-partner-btn');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '创建中...';
+
+            try {
+                const response = await Auth.authFetch(`${API_BASE}/api/agents/partner/setup-auto`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ monthly_budget: 10000 })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    alert('✅ Partner 创建成功！\n\n名称: ' + (data.name || 'Partner') + '\n预算: 10000 OC币/月');
+                    // Hide onboarding card
+                    document.getElementById('partner-onboarding-card').classList.add('hidden');
+                    // Refresh data
+                    loadData();
+                } else {
+                    const error = await response.json();
+                    alert('❌ 创建失败: ' + (error.detail || '未知错误'));
+                }
+            } catch (error) {
+                console.error('Error creating Partner:', error);
+                alert('❌ 创建失败: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
         }
 
         // Utility Functions
@@ -3551,10 +3700,41 @@
 
         let partnerState = 'standby'; // standby | awake
         let partnerChatOpen = false;
-        const PARTNER_ID = 'partner_001';
+        let PARTNER_ID = null; // Will be loaded dynamically from API
         const AUTO_SLEEP_MS = 5 * 60 * 1000; // 5 minutes
 
+        // Load Partner ID from agents list
+        async function loadPartnerId() {
+            try {
+                const response = await Auth.authFetch(`${API_BASE}/api/agents`);
+                if (response.ok) {
+                    const agents = await response.json();
+                    const partner = agents.find(a => a.position_level === 5);
+                    if (partner) {
+                        PARTNER_ID = partner.id;
+                        console.log('Partner ID loaded:', PARTNER_ID);
+                        return true;
+                    } else {
+                        console.warn('No Partner found in agents list');
+                        return false;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading Partner ID:', error);
+            }
+            return false;
+        }
+
         async function loadPartnerState() {
+            // Ensure Partner ID is loaded first
+            if (!PARTNER_ID) {
+                const loaded = await loadPartnerId();
+                if (!loaded) {
+                    console.warn('Cannot load Partner state: No Partner found');
+                    return;
+                }
+            }
+            
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/agents/partner/state?partner_id=${PARTNER_ID}`);
                 if (response.ok) {
@@ -3632,6 +3812,21 @@
         }
 
         async function wakePartner() {
+            // Ensure Partner ID is loaded first
+            if (!PARTNER_ID) {
+                const loaded = await loadPartnerId();
+                if (!loaded) {
+                    const messagesContainer = document.getElementById('partner-chat-messages');
+                    messagesContainer.innerHTML = `
+                        <div style="text-align: center; padding: 20px; color: #f87171;">
+                            <p>⚠️ 未找到 Partner</p>
+                            <p style="font-size: 12px; color: #888; margin-top: 8px;">请先创建 Partner 员工</p>
+                        </div>
+                    `;
+                    return false;
+                }
+            }
+            
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/agents/partner/wake?partner_id=${PARTNER_ID}`, {
                     method: 'POST'
@@ -4453,6 +4648,12 @@
                 return;
             }
 
+            // Show loading state
+            const confirmBtn = document.querySelector('#assign-modal .modal-btn.primary');
+            const originalText = confirmBtn.textContent;
+            confirmBtn.textContent = '分配中...';
+            confirmBtn.disabled = true;
+
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/tasks/${currentAssignTaskId}/assign`, {
                     method: 'POST',
@@ -4472,6 +4673,10 @@
             } catch (error) {
                 console.error('Error assigning task:', error);
                 alert('分配失败，请稍后重试');
+            } finally {
+                // Restore button state
+                confirmBtn.textContent = originalText;
+                confirmBtn.disabled = false;
             }
         }
 
