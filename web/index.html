@@ -1837,14 +1837,14 @@
         <!-- Header -->
         <header style="display: flex; justify-content: space-between; align-items: flex-start;">
             <div>
-                <h1>🚀 星际工作室</h1>
+                <h1>🚀 <span data-i18n="app.title">星际工作室</span></h1>
                 <p class="subtitle">
                     <span class="status-indicator">
                         <span class="status-dot"></span>
-                        系统运行中
+                        <span data-i18n="header.systemStatus">系统运行中</span>
                     </span>
                     <span style="margin-left: 16px; color: #666;">|</span>
-                    <span style="margin-left: 16px;">实时更新中...</span>
+                    <span style="margin-left: 16px;" data-i18n="header.realtimeUpdate">实时更新中...</span>
                 </p>
             </div>
             <div style="display: flex; gap: 12px; align-items: center;">
@@ -1867,10 +1867,10 @@
         <!-- Tab Navigation -->
         <div style="display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 2px solid #2a2a4a; padding-bottom: 8px;">
             <button class="refresh-btn dashboard-tab active" data-tab="dashboard" onclick="switchDashboardTab('dashboard')" style="background: #667eea;">
-                📊 Dashboard
+                📊 <span data-i18n="nav.tabs.dashboard">Dashboard</span>
             </button>
             <button class="refresh-btn dashboard-tab" data-tab="pixel-office" onclick="switchDashboardTab('pixel-office')">
-                🏢 像素办公室
+                🏢 <span data-i18n="nav.tabs.pixelOffice">像素办公室</span>
             </button>
         </div>
 
@@ -1881,27 +1881,27 @@
         <div class="overdue-alert hidden" id="overdue-alert">
             <span class="overdue-icon">⏰</span>
             <div class="overdue-text">
-                <span class="overdue-count" id="overdue-count">0</span> 个任务已超时
+                <span class="overdue-count" id="overdue-count">0</span> <span data-i18n="alerts.overdue.count">个任务已超时</span>
                 <span style="color: #888; font-size: 13px;">（超过设定时间未开始）</span>
             </div>
-            <button class="refresh-btn" onclick="checkOverdueTasks()">检查任务</button>
+            <button class="refresh-btn" onclick="checkOverdueTasks()" data-i18n="alerts.overdue.check">检查任务</button>
         </div>
 
         <!-- Fuse Alert -->
         <div class="fuse-alert hidden" id="fuse-alert">
             <span class="fuse-icon">🚨</span>
             <div class="fuse-text">
-                <strong>预算熔断警报</strong>
+                <strong data-i18n="alerts.fuse.title">预算熔断警报</strong>
                 <div style="font-size: 13px; color: #888; margin-top: 4px;">
-                    <span id="fuse-agent-name">某员工</span> 的预算已用尽，需要您采取行动
+                    <span id="fuse-agent-name">某员工</span> <span data-i18n="alerts.fuse.description">的预算已用尽，需要您采取行动</span>
                 </div>
             </div>
             <div class="fuse-actions">
-                <button class="fuse-btn add-budget" onclick="openAddBudgetModal()">💰 追加预算</button>
-                <button class="fuse-btn split" onclick="openSplitTaskModal()">✂️ 拆分任务</button>
-                <button class="fuse-btn reassign" onclick="openReassignModal()">🔄 换人</button>
-                <button class="fuse-btn partner" onclick="handleAssignToPartner()" style="background: linear-gradient(135deg, #8b5cf6, #a855f7);">👑 Partner接管</button>
-                <button class="fuse-btn pause" onclick="handlePause()">⏸️ 暂停</button>
+                <button class="fuse-btn add-budget" onclick="openAddBudgetModal()" data-i18n="alerts.fuse.actions.addBudget">💰 追加预算</button>
+                <button class="fuse-btn split" onclick="openSplitTaskModal()" data-i18n="alerts.fuse.actions.splitTask">✂️ 拆分任务</button>
+                <button class="fuse-btn reassign" onclick="openReassignModal()" data-i18n="alerts.fuse.actions.reassign">🔄 换人</button>
+                <button class="fuse-btn partner" onclick="handleAssignToPartner()" style="background: linear-gradient(135deg, #8b5cf6, #a855f7);" data-i18n="alerts.fuse.actions.partner">👑 Partner接管</button>
+                <button class="fuse-btn pause" onclick="handlePause()" data-i18n="alerts.fuse.actions.pause">⏸️ 暂停</button>
             </div>
         </div>
 
@@ -2115,14 +2115,14 @@
                 <div class="section-header">
                     <div class="section-title">
                         <span class="section-icon">👥</span>
-                        员工列表
+                        <span data-i18n="dashboard.sections.employees.title">员工列表</span>
                     </div>
                     <span class="badge" id="agent-badge">0</span>
                 </div>
                 <div class="section-content" id="agents-list">
                     <div class="loading">
                         <div class="spinner"></div>
-                        <p>加载中...</p>
+                        <p data-i18n="common.loading">加载中...</p>
                     </div>
                 </div>
             </div>
@@ -2132,17 +2132,17 @@
                 <div class="section-header">
                     <div class="section-title">
                         <span class="section-icon">📋</span>
-                        任务列表
+                        <span data-i18n="dashboard.sections.tasks.title">任务列表</span>
                     </div>
                     <div style="display: flex; gap: 8px;">
-                        <button class="refresh-btn" onclick="openCreateTaskModal()" style="background: #10b981;">➕ 新建任务</button>
-                        <button class="refresh-btn" onclick="loadData()" id="refresh-btn">🔄 刷新</button>
+                        <button class="refresh-btn" onclick="openCreateTaskModal()" style="background: #10b981;" data-i18n="dashboard.sections.tasks.create">➕ 新建任务</button>
+                        <button class="refresh-btn" onclick="loadData()" id="refresh-btn">🔄 <span data-i18n="common.refresh">刷新</span></button>
                     </div>
                 </div>
                 <div class="section-content" id="tasks-list">
                     <div class="loading">
                         <div class="spinner"></div>
-                        <p>加载中...</p>
+                        <p data-i18n="common.loading">加载中...</p>
                     </div>
                 </div>
             </div>
