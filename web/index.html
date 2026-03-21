@@ -3023,10 +3023,16 @@
                         statusClass = 'status-offline';
                     }
 
+                    // Get custom avatar URL if exists
+                    const customAvatarUrl = avatarMap[agent.id];
+                    const avatarContent = customAvatarUrl
+                        ? `<img src="${customAvatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">`
+                        : `<div class="pixel-avatar ${avatarClass}"></div>`;
+
                     return `
                         <div class="agent-item" onclick="openAgentModal('${agent.id}')" style="cursor: pointer;">
                             <div class="agent-avatar-container ${statusClass}" style="position:relative;" onclick="event.stopPropagation(); openAvatarModal('${agent.id}', '${agent.name}')" title="点击更换头像">
-                                <div class="pixel-avatar ${avatarClass}"></div>
+                                ${avatarContent}
                                 <div class="avatar-edit-badge">编辑</div>
                             </div>
                             <div class="agent-info">
