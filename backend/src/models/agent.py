@@ -68,6 +68,10 @@ class Agent(Base):
     last_heartbeat = Column(DateTime, nullable=True)
     is_online = Column(String, default="unknown")  # online, offline, unknown
     
+    # Avatar URL (stored path or external URL)
+    avatar_url = Column(String, nullable=True)
+    avatar_source = Column(String, default="system")  # system, uploaded, ai
+    
     # Relationships
     skills = relationship("Skill", secondary="agent_skills", back_populates="agents")
     

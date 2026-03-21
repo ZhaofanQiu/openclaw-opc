@@ -2972,19 +2972,7 @@
                     return;
                 }
 
-                // Load avatars for all agents - fetch custom avatars
-                const avatarPromises = agents.map(agent =>
-                    Auth.authFetch(`${API_BASE}/api/avatars/${agent.id}`).then(r => r.ok ? r.json() : null).catch(() => null)
-                );
-                const avatars = await Promise.all(avatarPromises);
-                const avatarMap = {};
-                avatars.forEach((avatar, idx) => {
-                    // Only use non-system avatars (user uploaded or AI generated)
-                    if (avatar && avatar.source !== 'system') {
-                        avatarMap[agents[idx].id] = avatar.url;
-                    }
-                });
-
+                // No need to load avatars separately - now included in agent data
                 container.innerHTML = agents.map(agent => {
                     const totalBudget = agent.total_budget || 10000;
                     const budgetPercent = totalBudget > 0 ? (agent.remaining_budget / totalBudget) * 100 : 0;
@@ -2998,7 +2986,7 @@
                         ? `<button class="assign-btn" onclick="event.stopPropagation(); openAutoCreateModal('${agent.id}', '${agent.name}')" style="background: #8b5cf6; margin-right: 4px;">🤖 创建Agent</button><button class="assign-btn" onclick="event.stopPropagation(); openBindModal('${agent.id}', '${agent.name}')">绑定Agent</button>`
                         : '';
 
-                    // Determine pixel avatar class based on position (same as pixel office)
+                    // Determine pixel avatar class based on position (fallback)
                     let avatarClass = 'default';
                     const position = (agent.position_title || '').toLowerCase();
                     const name = (agent.name || '').toLowerCase();
@@ -3025,10 +3013,10 @@
                         statusClass = 'status-offline';
                     }
 
-                    // Use custom avatar if uploaded/AI-generated, otherwise use pixel avatar CSS
-                    const customAvatarUrl = avatarMap[agent.id];
-                    const avatarContent = customAvatarUrl
-                        ? `<img src="${customAvatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">`
+                    // Use agent.avatar_url if set, otherwise use pixel avatar CSS
+                    const avatarUrl = agent.avatar_url;
+                    const avatarContent = avatarUrl
+                        ? `<img src="${avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">`
                         : `<div class="pixel-avatar ${avatarClass}"></div>`;
 
                     // Delete button (not for Partner)
@@ -5819,22 +5807,12 @@
 
                 const avatarEl = document.querySelector('#agent-modal-avatar .pixel-avatar');
                 
-                // Try to load custom avatar first
-                try {
-                    const avatarResponse = await Auth.authFetch(`${API_BASE}/api/avatars/${agentId}`);
-                    if (avatarResponse.ok) {
-                        const avatarData = await avatarResponse.json();
-                        if (avatarData.source !== 'system' && avatarData.url) {
-                            // Use custom avatar image
-                            avatarEl.outerHTML = `<img src="${avatarData.url}" style="width:100%;height:100%;object-fit:cover;" class="pixel-avatar" alt="${agent.name}">`;
-                        } else {
-                            // Use CSS pixel avatar
-                            avatarEl.className = 'pixel-avatar ' + avatarClass;
-                        }
-                    } else {
-                        avatarEl.className = 'pixel-avatar ' + avatarClass;
-                    }
-                } catch (e) {
+                // Use agent.avatar_url if set, otherwise use CSS pixel avatar
+                if (agent.avatar_url) {
+                    // Use custom avatar image
+                    avatarEl.outerHTML = `<img src="${agent.avatar_url}" style="width:100%;height:100%;object-fit:cover;" class="pixel-avatar" alt="${agent.name}">`;
+                } else {
+                    // Use CSS pixel avatar
                     avatarEl.className = 'pixel-avatar ' + avatarClass;
                 }
 
