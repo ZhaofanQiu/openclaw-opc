@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- **Pixel Avatar V2** - Three-mode avatar system
+  - System-generated: 4 pixel art styles (humanoid, robot, alien, spirit)
+  - User upload: Support PNG/JPG/SVG, max 5MB
+  - AI-generated: Pending mode for external skill integration
+  - Avatar editor modal with live preview
+  - Position-based color palettes
 - **Chart Visualization** - Data visualization for reports
   - Dashboard: 7-day budget usage trend chart
   - Daily report: Budget distribution pie chart by employee
