@@ -5547,24 +5547,9 @@
                 <div class="form-group">
                     <label class="form-label">选择方式</label>
                     <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <button class="refresh-btn" id="btn-system" onclick="showSystemOptions()" style="flex: 1;">🎲 系统生成</button>
                         <button class="refresh-btn" id="btn-upload" onclick="showUploadOption()" style="flex: 1;">📤 上传图片</button>
                         <button class="refresh-btn" id="btn-ai" onclick="showAIOption()" style="flex: 1; opacity: 0.5;" disabled title="需要配置AI skill">🤖 AI生成</button>
                     </div>
-                </div>
-
-                <!-- System Options -->
-                <div id="system-options" style="display: none;">
-                    <div class="form-group">
-                        <label class="form-label">选择风格</label>
-                        <select id="avatar-style" class="form-input">
-                            <option value="humanoid">人形 (Humanoid)</option>
-                            <option value="robot">机器人 (Robot)</option>
-                            <option value="alien">外星人 (Alien)</option>
-                            <option value="spirit">精灵 (Spirit)</option>
-                        </select>
-                    </div>
-                    <button class="refresh-btn" style="width: 100%; background: #667eea;" onclick="generateSystemAvatar()">🎲 随机生成</button>
                 </div>
 
                 <!-- Upload Option -->
@@ -5746,7 +5731,6 @@
             document.getElementById('avatar-modal').classList.remove('visible');
             currentAvatarAgentId = null;
             // Reset views
-            document.getElementById('system-options').style.display = 'none';
             document.getElementById('upload-option').style.display = 'none';
             document.getElementById('ai-option').style.display = 'none';
             // Reset preview to div
@@ -6191,20 +6175,12 @@
             }, 3000);
         }
 
-        function showSystemOptions() {
-            document.getElementById('system-options').style.display = 'block';
-            document.getElementById('upload-option').style.display = 'none';
-            document.getElementById('ai-option').style.display = 'none';
-        }
-
         function showUploadOption() {
-            document.getElementById('system-options').style.display = 'none';
             document.getElementById('upload-option').style.display = 'block';
             document.getElementById('ai-option').style.display = 'none';
         }
 
         function showAIOption() {
-            document.getElementById('system-options').style.display = 'none';
             document.getElementById('upload-option').style.display = 'none';
             document.getElementById('ai-option').style.display = 'block';
         }
@@ -6237,6 +6213,8 @@
                     document.getElementById('avatar-preview').src = data.url + '?t=' + Date.now();
                     alert('头像生成成功！\\n\\n如果新头像没有显示，请按 Ctrl+F5 强制刷新或清除浏览器缓存。');
                     loadData();
+                    // Refresh avatar modal to show new avatar
+                    await refreshAvatarModalPreview();
                 } else {
                     const error = await response.json();
                     alert('生成失败: ' + (error.detail || '未知错误'));
@@ -6244,6 +6222,54 @@
             } catch (error) {
                 console.error('Error generating avatar:', error);
                 alert('生成失败，请稍后重试');
+            }
+        }
+
+        async function refreshAvatarModalPreview() {
+            if (!currentAvatarAgentId) return;
+            
+            try {
+                const agentsResp = await Auth.authFetch(`${API_BASE}/api/agents`);
+                if (agentsResp.ok) {
+                    const agents = await agentsResp.json();
+                    const agent = agents.find(a => a.id === currentAvatarAgentId);
+                    if (agent) {
+                        // Update the preview in avatar modal
+                        const previewEl = document.getElementById('avatar-preview-pixel');
+                        if (previewEl) {
+                            if (agent.avatar_url) {
+                                // Show custom avatar
+                                const avatarClass = 'default';
+                                previewEl.outerHTML = `<img id="avatar-preview-pixel" src="${agent.avatar_url}?t=${Date.now()}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" alt="${agent.name}" onerror="this.outerHTML='<div id=\'avatar-preview-pixel\' class=\'pixel-avatar ${avatarClass}\' style=\'width:100%;height:100%\'></div>'">`;
+                            } else {
+                                // Show pixel avatar based on position
+                                let avatarClass = 'default';
+                                const position = (agent.position_title || '').toLowerCase();
+                                const name = (agent.name || '').toLowerCase();
+
+                                if (position.includes('前端') || name.includes('前端') || name.includes('frontend')) {
+                                    avatarClass = 'frontend';
+                                } else if (position.includes('后端') || name.includes('后端') || name.includes('backend')) {
+                                    avatarClass = 'backend';
+                                } else if (position.includes('设计') || name.includes('设计') || name.includes('designer')) {
+                                    avatarClass = 'designer';
+                                } else if (position.includes('测试') || name.includes('测试') || name.includes('qa')) {
+                                    avatarClass = 'qa';
+                                } else if (position.includes('合伙人') || name.includes('partner') || agent.emoji === '👑') {
+                                    avatarClass = 'partner';
+                                }
+                                
+                                if (previewEl.tagName === 'IMG') {
+                                    previewEl.outerHTML = `<div id="avatar-preview-pixel" class="pixel-avatar ${avatarClass}" style="width:100%;height:100%"></div>`;
+                                } else {
+                                    previewEl.className = 'pixel-avatar ' + avatarClass;
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error refreshing avatar modal:', error);
             }
         }
 
@@ -6272,6 +6298,8 @@
                     document.getElementById('avatar-preview').src = data.url + '?t=' + Date.now();
                     alert('头像上传成功！\\n\\n如果新头像没有显示，请按 Ctrl+F5 强制刷新或清除浏览器缓存。');
                     loadData();
+                    // Refresh avatar modal to show new avatar
+                    await refreshAvatarModalPreview();
                 } else {
                     // Try to parse error
                     let errorMsg = '未知错误';
@@ -6290,7 +6318,7 @@
                             const agent = agents.find(a => a.id === currentAvatarAgentId);
                             if (agent && agent.avatar_url && agent.avatar_source === 'uploaded') {
                                 alert('头像实际上传成功！\\n\\n如果新头像没有显示，请按 Ctrl+F5 强制刷新或清除浏览器缓存。');
-                                closeAvatarModal();
+                                await refreshAvatarModalPreview();
                             } else {
                                 alert('上传失败: ' + errorMsg);
                             }
