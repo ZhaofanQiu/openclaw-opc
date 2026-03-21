@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- **Share Link System** - JWT-signed temporary access links
+  - Support expiration (1h to 7d)
+  - Optional password protection
+  - Max usage limits
+  - Dashboard UI with share modal
+  - API endpoints: POST /api/share/generate, GET /api/share/validate
 - **Dashboard Login Protection** - API Key authentication for Dashboard and Reports pages
   - Login page with API Key input
   - Automatic Authorization header injection for all API requests
