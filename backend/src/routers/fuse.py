@@ -76,11 +76,11 @@ async def get_fuse_events(
 ):
     """
     Get fuse events.
-    
+
     Filter by agent_id and/or status.
     """
     service = FuseService(db)
-    
+
     if status in ["pending", "triggered"]:
         events = service.get_pending_events(agent_id=agent_id)
     else:
@@ -90,7 +90,7 @@ async def get_fuse_events(
         if agent_id:
             query = query.filter(BudgetFuseEvent.agent_id == agent_id)
         events = query.order_by(BudgetFuseEvent.created_at.desc()).all()
-    
+
     # Enrich with agent names
     from src.models import Agent
     result = []
@@ -111,7 +111,7 @@ async def get_fuse_events(
             resolved_at=event.resolved_at.isoformat() if event.resolved_at else None,
             resolution_note=event.resolution_note,
         ))
-    
+
     return result
 
 
@@ -121,12 +121,12 @@ async def get_pending_fuse_events(
 ):
     """
     Get all pending fuse events that need user action.
-    
+
     Returns events with status 'triggered' or 'pending'.
     """
     service = FuseService(db)
     events = service.get_pending_events()
-    
+
     from src.models import Agent
     result = []
     for event in events:
@@ -147,10 +147,11 @@ async def get_pending_fuse_events(
                 {"action": "add_budget", "label": "💰 追加预算", "description": "为该员工增加月度预算"},
                 {"action": "split_task", "label": "✂️ 拆分任务", "description": "将当前任务拆分为多个小任务"},
                 {"action": "reassign", "label": "🔄 换人重做", "description": "将任务分配给其他员工"},
+                {"action": "assign_to_partner", "label": "👑 Partner接管", "description": "分配给Partner使用公司资源处理"},
                 {"action": "pause", "label": "⏸️ 暂停", "description": "保持暂停状态，稍后处理"},
             ],
         })
-    
+
     return result
 
 
@@ -162,13 +163,13 @@ async def get_fuse_event(
     """Get a specific fuse event."""
     service = FuseService(db)
     event = service.get_event(event_id)
-    
+
     if not event:
         raise HTTPException(status_code=404, detail="Fuse event not found")
-    
+
     from src.models import Agent
     agent = db.query(Agent).filter(Agent.id == event.agent_id).first()
-    
+
     return {
         "id": event.id,
         "agent_id": event.agent_id,
@@ -205,27 +206,27 @@ async def resolve_add_budget(
 ):
     """
     Resolve fuse event by adding budget.
-    
+
     Increases the agent's monthly budget by the specified amount.
     """
     service = FuseService(db)
-    
+
     # TODO: Get actual employee ID from auth
     resolved_by = "system"
-    
+
     result = service.add_budget_resolution(
         event_id=event_id,
         additional_budget=data.additional_budget,
         reason=data.reason,
         resolved_by=resolved_by,
     )
-    
+
     if not result:
         raise HTTPException(status_code=404, detail="Fuse event not found")
-    
+
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])
-    
+
     return {
         "success": True,
         "message": f"已为 {result['agent_name']} 追加 {data.additional_budget} OC币预算",
@@ -243,26 +244,26 @@ async def resolve_reassign(
 ):
     """
     Resolve fuse event by reassigning task.
-    
+
     Moves the task to another agent.
     """
     service = FuseService(db)
-    
+
     resolved_by = "system"
-    
+
     result = service.reassign_resolution(
         event_id=event_id,
         new_agent_id=data.new_agent_id,
         reason=data.reason,
         resolved_by=resolved_by,
     )
-    
+
     if not result:
         raise HTTPException(status_code=404, detail="Fuse event not found")
-    
+
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])
-    
+
     return {
         "success": True,
         "message": f"任务已重新分配给 {result['new_agent']}",
@@ -280,29 +281,29 @@ async def resolve_split_task(
 ):
     """
     Resolve fuse event by splitting task.
-    
+
     Creates sub-tasks from the original task.
     """
     service = FuseService(db)
-    
+
     resolved_by = "system"
-    
+
     # Convert Pydantic models to dicts
     sub_tasks = [{"description": st.description, "estimated_cost": st.estimated_cost} for st in data.sub_tasks]
-    
+
     result = service.split_task_resolution(
         event_id=event_id,
         sub_tasks=sub_tasks,
         reason=data.reason,
         resolved_by=resolved_by,
     )
-    
+
     if not result:
         raise HTTPException(status_code=404, detail="Fuse event not found")
-    
+
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])
-    
+
     return {
         "success": True,
         "message": f"任务已拆分为 {result['sub_task_count']} 个子任务",
@@ -318,28 +319,70 @@ async def resolve_pause(
 ):
     """
     Resolve fuse event by pausing (no immediate action).
-    
+
     Marks the event as acknowledged but keeps the task paused.
     """
     service = FuseService(db)
-    
+
     resolved_by = "system"
-    
+
     event = service.resolve_event(
         event_id=event_id,
         action=FuseAction.PAUSE.value,
         resolved_by=resolved_by,
         resolution_note=note or "用户选择暂停，稍后处理",
     )
-    
+
     if not event:
         raise HTTPException(status_code=404, detail="Fuse event not found")
-    
+
     return {
         "success": True,
         "message": "已标记为暂停状态，您可以稍后处理",
         "event_id": event.id,
         "status": event.status,
+    }
+
+
+@router.post("/events/{event_id}/resolve/assign-to-partner")
+@limiter.limit(RATE_LIMITS["create"])
+async def resolve_assign_to_partner(
+    request: Request,
+    event_id: str,
+    data: ResolveRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    Resolve fuse event by assigning task to Partner Agent.
+
+    When a regular employee's budget is fused, the Partner can take over
+    the task and complete it using the company's shared resources.
+
+    This is useful when:
+    - No other employee has the required skills
+    - The task is critical and needs immediate attention
+    - The task requires Partner-level decision making
+    """
+    service = FuseService(db)
+
+    resolved_by = "system"
+
+    result = service.assign_to_partner_resolution(
+        event_id=event_id,
+        reason=data.note or "分配给 Partner 处理",
+        resolved_by=resolved_by,
+    )
+
+    if not result:
+        raise HTTPException(status_code=404, detail="Fuse event not found")
+
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+
+    return {
+        "success": True,
+        "message": result["message"],
+        "result": result,
     }
 
 
@@ -350,11 +393,11 @@ async def get_fuse_stats(
 ):
     """
     Get fuse event statistics.
-    
+
     Shows summary of fuse events and resolution patterns.
     """
     if days < 1 or days > 365:
         raise HTTPException(status_code=400, detail="Days must be between 1 and 365")
-    
+
     service = FuseService(db)
     return service.get_fuse_stats(days=days)
