@@ -354,7 +354,16 @@ async def partner_hire_employee(
             from src.services.async_message_service import AsyncMessageService
             async_service = AsyncMessageService(db)
             
-            design_prompt = f"""请为我的新员工 {new_employee.name} 设计一个像素风格的头像。
+            # Check if Partner has agent_id bound
+            if not partner.agent_id:
+                logger.warning(
+                    "partner_not_bound_skipping_avatar_design",
+                    partner_id=partner.id,
+                    partner_name=partner.name,
+                    employee_id=new_employee.id
+                )
+            else:
+                design_prompt = f"""请为我的新员工 {new_employee.name} 设计一个像素风格的头像。
 
 员工信息:
 - 姓名: {new_employee.name}
@@ -370,25 +379,25 @@ async def partner_hire_employee(
 请直接回复头像的 SVG 代码，或者描述头像设计让我可以生成它。
 
 格式: 你可以直接写 SVG 代码，或者用文字详细描述头像的样子（颜色、形状、特征）。"""
-            
-            message = async_service.create_message(
-                sender_id="system",
-                sender_type="system",
-                sender_name="系统",
-                recipient_id=partner.id,
-                content=design_prompt,
-                message_type="task",
-                subject=f"为 {new_employee.name} 设计头像",
-                timeout_seconds=300  # 5 minutes for avatar design
-            )
-            
-            logger.info(
-                "avatar_design_task_sent",
-                employee_id=new_employee.id,
-                employee_name=new_employee.name,
-                partner_id=partner.id,
-                message_id=message.id
-            )
+                
+                message = async_service.create_message(
+                    sender_id="system",
+                    sender_type="system",
+                    sender_name="系统",
+                    recipient_id=partner.id,
+                    content=design_prompt,
+                    message_type="task",
+                    subject=f"为 {new_employee.name} 设计头像",
+                    timeout_seconds=300  # 5 minutes for avatar design
+                )
+                
+                logger.info(
+                    "avatar_design_task_sent",
+                    employee_id=new_employee.id,
+                    employee_name=new_employee.name,
+                    partner_id=partner.id,
+                    message_id=message.id
+                )
             
         except Exception as e:
             logger.error("failed_to_send_avatar_design_task", error=str(e))
