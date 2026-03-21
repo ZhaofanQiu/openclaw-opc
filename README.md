@@ -383,3 +383,52 @@ curl -X POST -H "Authorization: Bearer YOUR_API_KEY" \
 curl -X POST -H "Authorization: Bearer YOUR_API_KEY" \
   http://localhost:8080/api/keys/{key_id}/revoke
 ```
+
+---
+
+## 🌐 外网访问（Cloudflare Tunnel）
+
+无需公网 IP，安全地从任何地方访问你的 Dashboard！
+
+### 为什么使用 Cloudflare Tunnel？
+
+| 特性 | 传统方案 | Cloudflare Tunnel |
+|------|---------|-------------------|
+| 公网 IP | ❌ 必需 | ✅ 不需要 |
+| 端口转发 | ❌ 需要 | ✅ 不需要 |
+| SSL 证书 | ❌ 手动配置 | ✅ 自动 HTTPS |
+| DDoS 防护 | ❌ 无 | ✅ 内置 |
+| 成本 | 💰 域名 + 服务 | ✅ **免费** |
+
+### 快速部署（一键脚本）
+
+```bash
+# 1. 运行设置脚本
+./scripts/setup_tunnel.sh
+
+# 2. 按照提示登录 Cloudflare 并创建隧道
+
+# 3. 启动生产环境
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+### 手动部署
+
+```bash
+# 1. 配置环境变量
+cp .env.example .env
+# 编辑 .env，设置：
+#   API_KEY_AUTH_ENABLED=true
+#   CLOUDFLARE_TUNNEL_TOKEN=your-token-here
+
+# 2. 创建 API Key（用于登录）
+python3 create_api_key.py
+
+# 3. 启动生产环境
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+### 详细文档
+
+- 📖 [完整部署指南](docs/CLOUDFLARE_TUNNEL.md) - 包含故障排查、安全建议
+- 🔧 [生产配置](docker-compose.prod.yml) - 安全加固的生产环境配置
