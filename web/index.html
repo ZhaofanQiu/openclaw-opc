@@ -670,6 +670,64 @@
             display: none;
         }
 
+        /* Fuse Warning */
+        .fuse-alert {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .fuse-alert.hidden {
+            display: none;
+        }
+
+        .fuse-icon {
+            font-size: 24px;
+        }
+
+        .fuse-text {
+            flex: 1;
+        }
+
+        .fuse-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .fuse-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .fuse-btn.add-budget {
+            background: #10b981;
+            color: white;
+        }
+
+        .fuse-btn.split {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .fuse-btn.reassign {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .fuse-btn.pause {
+            background: #6b7280;
+            color: white;
+        }
+
         .overdue-icon {
             font-size: 24px;
         }
@@ -719,6 +777,23 @@
                 <span style="color: #888; font-size: 13px;">（超过设定时间未开始）</span>
             </div>
             <button class="refresh-btn" onclick="checkOverdueTasks()">检查任务</button>
+        </div>
+
+        <!-- Fuse Alert -->
+        <div class="fuse-alert hidden" id="fuse-alert">
+            <span class="fuse-icon">🚨</span>
+            <div class="fuse-text">
+                <strong>预算熔断警报</strong>
+                <div style="font-size: 13px; color: #888; margin-top: 4px;">
+                    <span id="fuse-agent-name">某员工</span> 的预算已用尽，需要您采取行动
+                </div>
+            </div>
+            <div class="fuse-actions">
+                <button class="fuse-btn add-budget" onclick="openAddBudgetModal()">💰 追加预算</button>
+                <button class="fuse-btn split" onclick="openSplitTaskModal()">✂️ 拆分任务</button>
+                <button class="fuse-btn reassign" onclick="openReassignModal()">🔄 换人</button>
+                <button class="fuse-btn pause" onclick="handlePause()">⏸️ 暂停</button>
+            </div>
         </div>
 
         <!-- Config Panel -->
@@ -1098,6 +1173,9 @@
                 loadPartnerHealth(),
                 loadExactTokenStats()
             ]);
+            
+            // Check for pending fuse events
+            await checkFuseEvents();
             
             btn.disabled = false;
             btn.textContent = '🔄 刷新';
@@ -1565,6 +1643,205 @@
                 btn.textContent = originalText;
             }, 2000);
         }
+        
+        // Fuse event handling
+        let currentFuseEventId = null;
+        
+        async function checkFuseEvents() {
+            try {
+                const response = await Auth.authFetch('/api/fuse/events/pending');
+                if (response.ok) {
+                    const events = await response.json();
+                    if (events && events.length > 0) {
+                        // Show first pending fuse event
+                        const event = events[0];
+                        currentFuseEventId = event.id;
+                        document.getElementById('fuse-agent-name').textContent = event.agent_name;
+                        document.getElementById('fuse-alert').classList.remove('hidden');
+                    } else {
+                        document.getElementById('fuse-alert').classList.add('hidden');
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking fuse events:', error);
+            }
+        }
+        
+        // Add budget modal functions
+        function openAddBudgetModal() {
+            if (!currentFuseEventId) return;
+            document.getElementById('add-budget-modal').classList.remove('hidden');
+        }
+        
+        function closeAddBudgetModal() {
+            document.getElementById('add-budget-modal').classList.add('hidden');
+        }
+        
+        async function submitAddBudget() {
+            const amount = parseFloat(document.getElementById('add-budget-amount').value);
+            const reason = document.getElementById('add-budget-reason').value;
+            
+            if (!amount || amount <= 0) {
+                alert('请输入有效的预算金额');
+                return;
+            }
+            
+            try {
+                const response = await Auth.authFetch(`/api/fuse/events/${currentFuseEventId}/resolve/add-budget`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ additional_budget: amount, reason: reason || '追加预算' })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    alert(data.message);
+                    closeAddBudgetModal();
+                    document.getElementById('fuse-alert').classList.add('hidden');
+                    loadData();
+                } else {
+                    const error = await response.json();
+                    alert('操作失败: ' + (error.detail || '未知错误'));
+                }
+            } catch (error) {
+                console.error('Error adding budget:', error);
+                alert('操作失败，请稍后重试');
+            }
+        }
+        
+        // Reassign modal functions
+        async function openReassignModal() {
+            if (!currentFuseEventId) return;
+            
+            // Load available agents
+            try {
+                const response = await Auth.authFetch('/api/agents?available_only=true');
+                if (response.ok) {
+                    const agents = await response.json();
+                    const select = document.getElementById('reassign-agent');
+                    select.innerHTML = agents.map(a => 
+                        `<option value="${a.id}">${a.name} (${a.position_title})</option>`
+                    ).join('');
+                    document.getElementById('reassign-modal').classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Error loading agents:', error);
+            }
+        }
+        
+        function closeReassignModal() {
+            document.getElementById('reassign-modal').classList.add('hidden');
+        }
+        
+        async function submitReassign() {
+            const newAgentId = document.getElementById('reassign-agent').value;
+            const reason = document.getElementById('reassign-reason').value;
+            
+            if (!newAgentId) {
+                alert('请选择新 Agent');
+                return;
+            }
+            
+            try {
+                const response = await Auth.authFetch(`/api/fuse/events/${currentFuseEventId}/resolve/reassign`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ new_agent_id: newAgentId, reason: reason || '换人重做' })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    alert(data.message);
+                    closeReassignModal();
+                    document.getElementById('fuse-alert').classList.add('hidden');
+                    loadData();
+                } else {
+                    const error = await response.json();
+                    alert('操作失败: ' + (error.detail || '未知错误'));
+                }
+            } catch (error) {
+                console.error('Error reassigning:', error);
+                alert('操作失败，请稍后重试');
+            }
+        }
+        
+        // Split task modal functions
+        function openSplitTaskModal() {
+            if (!currentFuseEventId) return;
+            document.getElementById('split-task-modal').classList.remove('hidden');
+        }
+        
+        function closeSplitTaskModal() {
+            document.getElementById('split-task-modal').classList.add('hidden');
+        }
+        
+        function addSubTaskField() {
+            const container = document.getElementById('subtasks-container');
+            const div = document.createElement('div');
+            div.className = 'form-group';
+            div.style.cssText = 'border: 1px solid #2a2a4a; padding: 12px; border-radius: 8px; margin-bottom: 12px;';
+            div.innerHTML = `
+                <label class="form-label">子任务 ${container.children.length + 1}</label>
+                <input type="text" class="form-input subtask-desc" placeholder="子任务描述" required>
+                <input type="number" class="form-input subtask-cost" placeholder="预估成本" style="margin-top: 8px;">
+            `;
+            container.appendChild(div);
+        }
+        
+        async function submitSplitTask() {
+            const reason = document.getElementById('split-reason').value;
+            const subTasks = [];
+            
+            document.querySelectorAll('#subtasks-container > div').forEach(div => {
+                const desc = div.querySelector('.subtask-desc').value;
+                const cost = parseFloat(div.querySelector('.subtask-cost').value) || 0;
+                if (desc) {
+                    subTasks.push({ description: desc, estimated_cost: cost });
+                }
+            });
+            
+            if (subTasks.length < 2) {
+                alert('至少需要拆分为2个子任务');
+                return;
+            }
+            
+            try {
+                const response = await Auth.authFetch(`/api/fuse/events/${currentFuseEventId}/resolve/split-task`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sub_tasks: subTasks, reason: reason || '任务拆分' })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    alert(data.message);
+                    closeSplitTaskModal();
+                    document.getElementById('fuse-alert').classList.add('hidden');
+                    loadData();
+                } else {
+                    const error = await response.json();
+                    alert('操作失败: ' + (error.detail || '未知错误'));
+                }
+            } catch (error) {
+                console.error('Error splitting task:', error);
+                alert('操作失败，请稍后重试');
+            }
+        }
+        
+        async function handlePause() {
+            try {
+                const response = await Auth.authFetch(`/api/fuse/events/${currentFuseEventId}/resolve/pause`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    alert('已标记为暂停状态');
+                    document.getElementById('fuse-alert').classList.add('hidden');
+                }
+            } catch (error) {
+                console.error('Error pausing:', error);
+            }
+        }
     </script>
     
     <!-- Share Link Modal -->
@@ -1631,6 +1908,91 @@
             <div class="modal-footer">
                 <button class="refresh-btn" style="background: #666;" onclick="closeShareModal()">取消</button>
                 <button class="refresh-btn" onclick="generateShareLink()">生成链接</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add Budget Modal -->
+    <div id="add-budget-modal" class="modal hidden">
+        <div class="modal-content" style="max-width: 450px;">
+            <div class="modal-header">
+                <h3 class="modal-title">💰 追加预算</h3>
+                <button class="modal-close" onclick="closeAddBudgetModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">追加金额 (OC币)</label>
+                    <input type="number" id="add-budget-amount" class="form-input" placeholder="例如: 1000" min="100" step="100">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">原因</label>
+                    <input type="text" id="add-budget-reason" class="form-input" placeholder="例如: 任务复杂度超出预期">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="refresh-btn" style="background: #666;" onclick="closeAddBudgetModal()">取消</button>
+                <button class="refresh-btn" style="background: #10b981;" onclick="submitAddBudget()">确认追加</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Reassign Modal -->
+    <div id="reassign-modal" class="modal hidden">
+        <div class="modal-content" style="max-width: 450px;">
+            <div class="modal-header">
+                <h3 class="modal-title">🔄 换人重做</h3>
+                <button class="modal-close" onclick="closeReassignModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">选择新 Agent</label>
+                    <select id="reassign-agent" class="form-input">
+                        <option value="">加载中...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">原因</label>
+                    <input type="text" id="reassign-reason" class="form-input" placeholder="例如: 需要其他技能">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="refresh-btn" style="background: #666;" onclick="closeReassignModal()">取消</button>
+                <button class="refresh-btn" style="background: #3b82f6;" onclick="submitReassign()">确认换人</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Split Task Modal -->
+    <div id="split-task-modal" class="modal hidden">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 class="modal-title">✂️ 拆分任务</h3>
+                <button class="modal-close" onclick="closeSplitTaskModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">拆分原因</label>
+                    <input type="text" id="split-reason" class="form-input" placeholder="例如: 任务过于复杂">
+                </div>
+                
+                <div id="subtasks-container">
+                    <div class="form-group" style="border: 1px solid #2a2a4a; padding: 12px; border-radius: 8px; margin-bottom: 12px;">
+                        <label class="form-label">子任务 1</label>
+                        <input type="text" class="form-input subtask-desc" placeholder="子任务描述" required>
+                        <input type="number" class="form-input subtask-cost" placeholder="预估成本" style="margin-top: 8px;">
+                    </div>
+                    <div class="form-group" style="border: 1px solid #2a2a4a; padding: 12px; border-radius: 8px; margin-bottom: 12px;">
+                        <label class="form-label">子任务 2</label>
+                        <input type="text" class="form-input subtask-desc" placeholder="子任务描述" required>
+                        <input type="number" class="form-input subtask-cost" placeholder="预估成本" style="margin-top: 8px;">
+                    </div>
+                </div>
+                
+                <button class="refresh-btn" style="background: #4b5563; width: 100%;" onclick="addSubTaskField()">+ 添加子任务</button>
+            </div>
+            <div class="modal-footer">
+                <button class="refresh-btn" style="background: #666;" onclick="closeSplitTaskModal()">取消</button>
+                <button class="refresh-btn" style="background: #f59e0b;" onclick="submitSplitTask()">确认拆分</button>
             </div>
         </div>
     </div>
