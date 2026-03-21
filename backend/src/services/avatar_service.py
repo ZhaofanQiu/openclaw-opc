@@ -229,14 +229,20 @@ class AvatarService:
         """
         Request AI-generated avatar via skill.
         
+        Two modes:
+        1. If skill is available: Partner will call skill to generate immediately
+        2. If skill not available: Record pending request for manual generation
+        
         Args:
             agent_id: Employee ID
             prompt: Generation prompt
             skill_name: Skill to use for generation
         
         Returns:
-            Status dict with pending flag
+            Status dict with pending flag or immediate result
         """
+        from src.services.agent_service import AgentService
+        
         # Check if avatar exists
         avatar = self.get_avatar(agent_id)
         if not avatar:
@@ -254,13 +260,34 @@ class AvatarService:
         
         self.db.commit()
         
+        # Try to trigger generation via Partner Agent
+        try:
+            agent_service = AgentService(self.db)
+            result = agent_service.trigger_avatar_generation(
+                agent_id=agent_id,
+                prompt=prompt,
+                skill_name=skill_name,
+            )
+            
+            if result.get("success"):
+                return {
+                    "status": "generating",
+                    "agent_id": agent_id,
+                    "prompt": prompt,
+                    "skill": skill_name,
+                    "message": "头像生成任务已发送给Partner，请稍后刷新查看结果",
+                    "task_id": result.get("task_id"),
+                }
+        except Exception as e:
+            # Skill not available or generation failed, keep as pending
+            pass
+        
         return {
             "status": "pending",
             "agent_id": agent_id,
             "prompt": prompt,
             "skill": skill_name,
-            "message": f"Avatar generation requested via {skill_name}. "
-                       f"Please trigger generation manually or configure auto-generation.",
+            "message": f"头像生成请求已记录。请确保已配置 {skill_name} skill，然后让Partner执行生成任务。",
         }
     
     def save_uploaded_avatar(
