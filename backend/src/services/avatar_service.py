@@ -161,8 +161,10 @@ class AvatarService:
         # Generate SVG
         svg_content = self._generate_svg_avatar(template, colors)
         
-        # Save to file
-        filename = f"{agent_id}_system.svg"
+        # Save to file with unique filename including style and timestamp
+        import time
+        timestamp = int(time.time()) % 10000  # Short timestamp for uniqueness
+        filename = f"{agent_id}_{style}_{timestamp}.svg"
         filepath = self.UPLOAD_DIR / filename
         filepath.write_text(svg_content)
         
@@ -314,6 +316,9 @@ class AvatarService:
         if len(file_data) > MAX_FILE_SIZE:
             raise ValueError(f"File size exceeds 5MB limit. Got {len(file_data) / 1024 / 1024:.2f}MB")
         
+        # Validate file signature (magic bytes)
+        self._validate_file_signature(file_data, content_type)
+        
         # Validate content type
         allowed_types = ["image/png", "image/jpeg", "image/jpg", "image/svg+xml"]
         if content_type not in allowed_types:
@@ -433,6 +438,43 @@ class AvatarService:
         position = agent.position_title if agent else "default"
         
         return self.generate_system_avatar(agent_id, style=style, position=position)
+    
+    def _validate_file_signature(self, file_data: bytes, content_type: str) -> None:
+        """
+        Validate file signature (magic bytes) matches content type.
+        
+        Args:
+            file_data: Raw file bytes
+            content_type: Declared MIME type
+        
+        Raises:
+            ValueError: If signature doesn't match
+        """
+        # File signatures (magic bytes)
+        SIGNATURES = {
+            "image/png": [b'\x89PNG\r\n\x1a\n'],
+            "image/jpeg": [b'\xff\xd8\xff'],
+            "image/jpg": [b'\xff\xd8\xff'],
+            "image/svg+xml": [b'<?xml', b'<svg'],  # SVG can start with either
+        }
+        
+        expected_signatures = SIGNATURES.get(content_type)
+        if not expected_signatures:
+            return  # Unknown type, skip validation
+        
+        # Check if file starts with any valid signature
+        is_valid = False
+        for sig in expected_signatures:
+            if file_data.startswith(sig):
+                is_valid = True
+                break
+        
+        if not is_valid:
+            actual_start = file_data[:20] if len(file_data) >= 20 else file_data
+            raise ValueError(
+                f"File signature mismatch. Expected {content_type} signature, "
+                f"got bytes: {actual_start[:10]}..."
+            )
     
     def get_avatar_options(self, agent_id: str) -> Dict[str, Any]:
         """
