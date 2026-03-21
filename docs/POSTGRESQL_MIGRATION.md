@@ -1,213 +1,202 @@
 # PostgreSQL Migration Guide
 
-This guide explains how to migrate OpenClaw OPC from SQLite (default) to PostgreSQL for production use.
+This guide explains how to migrate OpenClaw OPC from SQLite (development) to PostgreSQL (production).
 
 ## Why PostgreSQL?
 
-- **Concurrent Access**: Multiple users can access the database simultaneously
-- **Better Performance**: Handles larger datasets more efficiently
-- **Production Ready**: More robust for external deployments
-- **Backup/Recovery**: Better tooling for backups and point-in-time recovery
+- **Better concurrency**: Supports multiple simultaneous connections
+- **Production-ready**: More robust for production deployments
+- **Scalability**: Better performance with large datasets
+- **Features**: Advanced querying, indexing, and backup capabilities
 
-## Quick Start with Docker
+## Quick Start
 
-The easiest way to run PostgreSQL is using Docker Compose:
-
-```bash
-# Start with PostgreSQL support
-docker-compose --profile postgres up -d
-
-# Or use the full profile (includes all services)
-docker-compose --profile full up -d
-```
-
-This will start:
-- PostgreSQL database on port 5432
-- Backend API on port 8080
-- Frontend dashboard on port 3000
-
-## Manual Setup
-
-### 1. Install PostgreSQL
-
-**macOS:**
-```bash
-brew install postgresql@16
-brew services start postgresql@16
-```
-
-**Ubuntu/Debian:**
-```bash
-sudo apt update
-sudo apt install postgresql-16
-sudo systemctl start postgresql
-```
-
-### 2. Create Database and User
+### Option 1: Using the Setup Script (Recommended)
 
 ```bash
-sudo -u postgres psql
+# 1. Initialize PostgreSQL
+./scripts/setup_postgres.sh init
+
+# 2. Migrate data from SQLite (optional)
+./scripts/setup_postgres.sh migrate
+
+# 3. Switch to PostgreSQL
+./scripts/setup_postgres.sh switch-postgres
+
+# 4. Restart the application
+docker-compose up -d
 ```
 
-```sql
-CREATE USER opc WITH PASSWORD 'your_secure_password';
-CREATE DATABASE openclaw_opc OWNER opc;
-GRANT ALL PRIVILEGES ON DATABASE openclaw_opc TO opc;
-\q
-```
+### Option 2: Manual Setup
 
-### 3. Configure Environment
-
-Create or update your `.env` file:
+#### Step 1: Start PostgreSQL
 
 ```bash
-# Switch to PostgreSQL
-DB_TYPE=postgresql
+# Start PostgreSQL container
+docker-compose --profile postgres up -d postgres
 
-# Connection details
-PG_HOST=localhost
-PG_PORT=5432
-PG_USER=opc
-PG_PASSWORD=your_secure_password
-PG_DATABASE=openclaw_opc
-
-# Or use a full URL (overrides above)
-# DATABASE_URL=postgresql://opc:password@localhost:5432/openclaw_opc
+# Wait for it to be ready
+docker-compose ps
 ```
 
-### 4. Run Migration
+#### Step 2: Create Tables
+
+```bash
+cd backend
+python3 -c "
+from src.database import init_db
+init_db()
+print('Tables created')
+"
+```
+
+#### Step 3: Migrate Data (Optional)
 
 If you have existing data in SQLite:
 
 ```bash
 cd backend
-
-# Install psycopg2 if not already installed
-pip install psycopg2-binary
-
-# Run migration
-python migrations/migrate_sqlite_to_postgres.py \
-  --source ./data/opc.db \
-  --target postgresql://opc:password@localhost:5432/openclaw_opc
+python3 migrations/migrate_sqlite_to_postgres.py \
+    --source ./data/opc.db \
+    --target postgresql://opc:opc_password@localhost:5432/openclaw_opc \
+    --yes
 ```
 
-### 5. Start Application
+#### Step 4: Update Configuration
+
+Edit `.env` file:
 
 ```bash
-cd backend
-python -m uvicorn src.main:app --reload
+# Switch to PostgreSQL
+DB_TYPE=postgresql
+PG_HOST=localhost
+PG_PORT=5432
+PG_USER=opc
+PG_PASSWORD=opc_password
+PG_DATABASE=openclaw_opc
 ```
 
-## Environment Variables
+#### Step 5: Restart Application
+
+```bash
+docker-compose up -d
+```
+
+## Configuration Reference
+
+### Environment Variables
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `DB_TYPE` | Database type: `sqlite` or `postgresql` | `sqlite` |
+| `DB_TYPE` | Database type (`sqlite` or `postgresql`) | `sqlite` |
 | `DATABASE_URL` | Full database URL (overrides other settings) | - |
+| `OPC_DB_PATH` | SQLite database file path | `./data/opc.db` |
 | `PG_HOST` | PostgreSQL host | `localhost` |
 | `PG_PORT` | PostgreSQL port | `5432` |
 | `PG_USER` | PostgreSQL username | `opc` |
 | `PG_PASSWORD` | PostgreSQL password | `opc_password` |
 | `PG_DATABASE` | PostgreSQL database name | `openclaw_opc` |
-| `OPC_DB_PATH` | SQLite database path | `./data/opc.db` |
 
-## Migration Script Options
+### Docker Compose Profiles
 
-```bash
-python migrations/migrate_sqlite_to_postgres.py --help
+- **Default**: `docker-compose up -d` - SQLite only
+- **With PostgreSQL**: `docker-compose --profile postgres up -d` - Both PostgreSQL and backend
+- **Full stack**: `docker-compose --profile full up -d` - Everything including PostgreSQL
 
-Options:
-  --source TEXT   Source SQLite database path (default: ./data/opc.db)
-  --target TEXT   Target PostgreSQL URL (required)
-  -y, --yes       Skip confirmation prompts
-```
-
-## Verification
-
-Check the health endpoint to verify PostgreSQL is connected:
+## Migration Script Usage
 
 ```bash
-curl http://localhost:8080/health
+# Basic migration
+python3 migrations/migrate_sqlite_to_postgres.py --target postgresql://user:pass@host/db
+
+# With custom source
+python3 migrations/migrate_sqlite_to_postgres.py \
+    --source ./custom/path/opc.db \
+    --target postgresql://user:pass@host/db
+
+# Skip confirmation prompts
+python3 migrations/migrate_sqlite_to_postgres.py \
+    --target postgresql://user:pass@host/db \
+    --yes
 ```
 
-Expected response:
-```json
-{
-  "status": "healthy",
-  "database": {
-    "type": "postgresql",
-    "connected": true
-  },
-  "version": "0.2.0-alpha"
-}
+## Switching Back to SQLite
+
+```bash
+# Using the helper script
+./scripts/setup_postgres.sh switch-sqlite
+
+# Or manually edit .env
+DB_TYPE=sqlite
+OPC_DB_PATH=./data/opc.db
 ```
+
+Then restart the application.
 
 ## Troubleshooting
 
 ### Connection Refused
 
 ```
-psycopg2.OperationalError: connection to server at "localhost", port 5432 failed
+Error: Connection refused to PostgreSQL
 ```
 
-**Solution:**
-- Ensure PostgreSQL is running: `sudo systemctl status postgresql`
-- Check port: `sudo netstat -tlnp | grep 5432`
-- Verify credentials in `.env`
+**Solution**: Ensure PostgreSQL is running:
+```bash
+docker-compose --profile postgres ps
+docker-compose logs postgres
+```
 
 ### Authentication Failed
 
 ```
-psycopg2.OperationalError: FATAL: password authentication failed
+Error: authentication failed for user "opc"
 ```
 
-**Solution:**
-- Verify password in `.env` matches the one set in PostgreSQL
-- Check pg_hba.conf for authentication method
+**Solution**: Check credentials in `.env` and ensure they match docker-compose.yml
 
-### Database Does Not Exist
+### Migration Fails
 
-```
-psycopg2.OperationalError: FATAL: database "openclaw_opc" does not exist
-```
+If migration fails mid-way:
 
-**Solution:**
-```bash
-sudo -u postgres psql -c "CREATE DATABASE openclaw_opc OWNER opc;"
-```
+1. Check the error message for the specific table
+2. Fix any data issues in SQLite
+3. Drop and recreate PostgreSQL database:
+   ```bash
+   docker-compose down -v
+   docker-compose --profile postgres up -d postgres
+   ```
+4. Retry migration
 
-## Backup and Restore
+## Production Deployment
 
-### Backup
+For production, ensure:
 
-```bash
-pg_dump -h localhost -U opc -d openclaw_opc > opc_backup.sql
-```
+1. **Secure passwords**: Change default `opc_password`
+2. **SSL/TLS**: Enable encryption for database connections
+3. **Backups**: Set up regular PostgreSQL backups
+4. **Monitoring**: Monitor database performance and connections
+5. **Firewall**: Restrict database access to application servers only
 
-### Restore
-
-```bash
-psql -h localhost -U opc -d openclaw_opc < opc_backup.sql
-```
-
-## Production Considerations
-
-1. **Use strong passwords** for database users
-2. **Enable SSL** for database connections
-3. **Set up regular backups**
-4. **Monitor database connections** (pool size is set to 5 with max 10 overflow)
-5. **Use connection pooling** (PgBouncer) for high-traffic deployments
-
-## Switching Back to SQLite
-
-To switch back to SQLite:
+Example production `.env`:
 
 ```bash
-# Update .env
-DB_TYPE=sqlite
-# Remove or comment out PG_* variables
-
-# Restart application
+DB_TYPE=postgresql
+PG_HOST=db.internal.company.com
+PG_PORT=5432
+PG_USER=opc_production
+PG_PASSWORD=your-very-secure-password-here
+PG_DATABASE=openclaw_opc_prod
 ```
 
-SQLite data remains in `./data/opc.db` and is not affected by PostgreSQL migration.
+## Data Type Differences
+
+| SQLite | PostgreSQL | Notes |
+|--------|------------|-------|
+| `INTEGER` | `INTEGER` | Same |
+| `REAL` | `REAL` | Same |
+| `TEXT` | `TEXT` | Same |
+| `BOOLEAN` (0/1) | `BOOLEAN` | Auto-converted during migration |
+| `DATETIME` | `TIMESTAMP` | Auto-converted |
+
+The migration script handles all type conversions automatically.
