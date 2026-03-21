@@ -655,7 +655,7 @@ async def report_task_completion(
         # If exact token tracking is requested and session_key provided
         if report.is_exact and report.session_key:
             result = service.report_task_completion(
-                agent_id=agent.id,
+                agent_id=agent.agent_id,  # Pass OpenClaw Agent ID
                 task_id=task_id,
                 token_used=report.token_used,
                 result_summary=report.result_summary,
@@ -668,7 +668,7 @@ async def report_task_completion(
         else:
             # Use estimated tokens
             result = service.report_task_completion(
-                agent_id=agent.id,
+                agent_id=agent.agent_id,  # Pass OpenClaw Agent ID
                 task_id=task_id,
                 token_used=report.token_used,
                 result_summary=report.result_summary,
