@@ -1,387 +1,615 @@
 """
-Agent Lifecycle Service
+Agent Configuration Manager
 
-Manages OpenClaw Agent creation, modification, and archival.
-Handles openclaw.json file operations with backup and rollback support.
+Manages OpenClaw agent configuration with safety mechanisms:
+- Automatic backup before modifications
+- Self-service restore capability
+- User confirmation for dangerous operations
+- File locking to prevent concurrent modifications
+- Operation logging
 """
 
 import json
-import shutil
-import fcntl
 import os
+import shutil
+import time
+import fcntl
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+from sqlalchemy.orm import Session
+
+from src.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
-class AgentLifecycleService:
+class ConfigOperationError(Exception):
+    """Configuration operation error."""
+    pass
+
+
+class AgentConfigManager:
     """
-    Service for managing OpenClaw Agent lifecycle.
+    Manages OpenClaw agent configuration file operations.
     
-    Responsibilities:
-    - Create new OpenClaw Agent configurations
-    - Archive (soft-delete) Agent configurations
-    - Backup and rollback configuration changes
-    - Generate SOUL.md and workspace for new agents
+    Safety features:
+    1. Automatic backup before any modification
+    2. Backup retention (keep last 10 backups)
+    3. Self-service restore from backup
+    4. File locking to prevent concurrent modifications
+    5. Operation audit logging
     """
     
-    def __init__(self):
-        self.openclaw_dir = Path.home() / ".openclaw"
-        self.config_path = self.openclaw_dir / "openclaw.json"
-        self.backup_dir = self.openclaw_dir / "backups"
+    BACKUP_RETENTION_COUNT = 10
+    LOCK_TIMEOUT = 30  # seconds
+    
+    def __init__(self, config_path: Optional[str] = None):
+        """
+        Initialize config manager.
         
-        # Ensure backup directory exists
+        Args:
+            config_path: Path to openclaw.json (default: ~/.openclaw/openclaw.json)
+        """
+        if config_path:
+            self.config_path = Path(config_path)
+        else:
+            state_dir = os.getenv("OPENCLAW_STATE_DIR", os.path.expanduser("~/.openclaw"))
+            self.config_path = Path(state_dir) / "openclaw.json"
+        
+        self.backup_dir = self.config_path.parent / "config_backups"
+        self._ensure_backup_dir()
+    
+    def _ensure_backup_dir(self):
+        """Ensure backup directory exists."""
         self.backup_dir.mkdir(parents=True, exist_ok=True)
     
-    def _acquire_lock(self, timeout: int = 10) -> int:
+    def _acquire_lock(self) -> Optional[int]:
         """
-        Acquire file lock to prevent concurrent modifications.
-        Returns file descriptor.
-        """
-        lock_file = self.openclaw_dir / ".opc_config.lock"
-        fd = os.open(str(lock_file), os.O_CREAT | os.O_RDWR)
+        Acquire file lock for exclusive access.
         
+        Returns:
+            File descriptor if lock acquired, None otherwise
+        """
+        lock_file = self.config_path.parent / ".openclaw.json.lock"
         try:
+            fd = os.open(str(lock_file), os.O_CREAT | os.O_RDWR)
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except (IOError, OSError):
-            # Lock not acquired, wait with timeout
-            import select
-            ready, _, _ = select.select([], [fd], [], timeout)
-            if not ready:
-                raise TimeoutError("Could not acquire config lock within timeout")
-            fcntl.flock(fd, fcntl.LOCK_EX)
-        
-        return fd
+            return fd
+        except (IOError, OSError) as e:
+            logger.error("Failed to acquire config lock", error=str(e))
+            return None
     
     def _release_lock(self, fd: int):
         """Release file lock."""
-        fcntl.flock(fd, fcntl.LOCK_UN)
-        os.close(fd)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+            os.close(fd)
+        except Exception as e:
+            logger.error("Failed to release config lock", error=str(e))
     
-    def _backup_config(self) -> str:
+    def create_backup(self, reason: str = "manual") -> str:
         """
-        Create timestamped backup of current configuration.
-        Returns backup file path.
+        Create a backup of current config.
+        
+        Args:
+            reason: Backup reason for tracking
+            
+        Returns:
+            Backup file path
+            
+        Raises:
+            ConfigOperationError: If backup fails
         """
         if not self.config_path.exists():
-            return None
+            raise ConfigOperationError(f"Config file not found: {self.config_path}")
         
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        backup_path = self.backup_dir / f"openclaw_{timestamp}.json"
+        backup_name = f"openclaw_{timestamp}_{reason}.json"
+        backup_path = self.backup_dir / backup_name
         
-        shutil.copy2(self.config_path, backup_path)
-        return str(backup_path)
+        try:
+            shutil.copy2(self.config_path, backup_path)
+            logger.info("Config backup created", backup_path=str(backup_path), reason=reason)
+            
+            # Clean old backups
+            self._cleanup_old_backups()
+            
+            return str(backup_path)
+        except Exception as e:
+            logger.error("Failed to create config backup", error=str(e))
+            raise ConfigOperationError(f"Backup failed: {e}")
     
-    def _read_config(self) -> Dict:
-        """Read OpenClaw configuration."""
+    def _cleanup_old_backups(self):
+        """Remove old backups, keeping only the most recent ones."""
+        try:
+            backups = sorted(
+                self.backup_dir.glob("openclaw_*.json"),
+                key=lambda p: p.stat().st_mtime,
+                reverse=True
+            )
+            
+            for old_backup in backups[self.BACKUP_RETENTION_COUNT:]:
+                old_backup.unlink()
+                logger.info("Removed old config backup", backup=str(old_backup))
+        except Exception as e:
+            logger.warning("Failed to cleanup old backups", error=str(e))
+    
+    def list_backups(self) -> List[Dict]:
+        """
+        List available backups.
+        
+        Returns:
+            List of backup info dicts with path, timestamp, reason
+        """
+        backups = []
+        try:
+            for backup_file in sorted(self.backup_dir.glob("openclaw_*.json"), reverse=True):
+                stat = backup_file.stat()
+                # Parse filename: openclaw_YYYYMMDD_HHMMSS_reason.json
+                parts = backup_file.stem.split("_")
+                reason = parts[-1] if len(parts) > 3 else "unknown"
+                
+                backups.append({
+                    "path": str(backup_file),
+                    "filename": backup_file.name,
+                    "timestamp": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                    "reason": reason,
+                    "size": stat.st_size
+                })
+        except Exception as e:
+            logger.error("Failed to list backups", error=str(e))
+        
+        return backups
+    
+    def restore_backup(self, backup_path: str, create_new_backup: bool = True) -> bool:
+        """
+        Restore configuration from backup.
+        
+        Args:
+            backup_path: Path to backup file
+            create_new_backup: Whether to backup current config before restore
+            
+        Returns:
+            True if restore successful
+            
+        Raises:
+            ConfigOperationError: If restore fails
+        """
+        backup_file = Path(backup_path)
+        if not backup_file.exists():
+            raise ConfigOperationError(f"Backup file not found: {backup_path}")
+        
+        # Validate backup is valid JSON
+        try:
+            with open(backup_file, 'r') as f:
+                json.load(f)
+        except json.JSONDecodeError as e:
+            raise ConfigOperationError(f"Backup file is invalid JSON: {e}")
+        
+        # Acquire lock
+        lock_fd = self._acquire_lock()
+        if lock_fd is None:
+            raise ConfigOperationError("Could not acquire config lock - another operation in progress")
+        
+        try:
+            # Backup current config before restore
+            if create_new_backup and self.config_path.exists():
+                self.create_backup("pre_restore")
+            
+            # Perform restore
+            shutil.copy2(backup_file, self.config_path)
+            logger.info("Config restored from backup", backup_path=str(backup_file))
+            return True
+            
+        except Exception as e:
+            logger.error("Failed to restore config", error=str(e))
+            raise ConfigOperationError(f"Restore failed: {e}")
+        finally:
+            self._release_lock(lock_fd)
+    
+    def read_config(self) -> Dict:
+        """
+        Read current configuration.
+        
+        Returns:
+            Config dict
+            
+        Raises:
+            ConfigOperationError: If read fails
+        """
         if not self.config_path.exists():
-            return {"agents": {"list": []}}
+            # Return empty config structure
+            return {"agents": {"defaults": {}, "list": []}}
         
         try:
             with open(self.config_path, 'r') as f:
                 return json.load(f)
-        except (json.JSONDecodeError, IOError) as e:
-            raise ValueError(f"Failed to read openclaw.json: {e}")
+        except json.JSONDecodeError as e:
+            logger.error("Config file is invalid JSON", error=str(e))
+            raise ConfigOperationError(f"Invalid config JSON: {e}")
+        except Exception as e:
+            logger.error("Failed to read config", error=str(e))
+            raise ConfigOperationError(f"Read failed: {e}")
     
-    def _write_config(self, config: Dict):
-        """Write configuration atomically."""
-        # Write to temp file first
-        temp_path = self.config_path.with_suffix('.tmp')
-        with open(temp_path, 'w') as f:
-            json.dump(config, f, indent=2)
-        
-        # Atomic rename
-        temp_path.replace(self.config_path)
-    
-    def list_backups(self) -> List[Dict]:
-        """List available configuration backups."""
-        backups = []
-        for backup_file in sorted(self.backup_dir.glob("openclaw_*.json"), reverse=True):
-            stat = backup_file.stat()
-            backups.append({
-                "path": str(backup_file),
-                "timestamp": datetime.fromtimestamp(stat.st_mtime).isoformat(),
-                "size": stat.st_size
-            })
-        return backups
-    
-    def rollback(self, backup_path: Optional[str] = None) -> str:
+    def write_config(self, config: Dict, reason: str = "manual", require_confirmation: bool = False) -> Tuple[bool, str]:
         """
-        Rollback to a previous configuration.
-        If backup_path not provided, uses most recent backup.
-        Returns path of restored backup.
+        Write configuration with safety mechanisms.
+        
+        Args:
+            config: New configuration dict
+            reason: Operation reason for backup tracking
+            require_confirmation: If True, returns pending status for user confirmation
+            
+        Returns:
+            Tuple of (success, message)
+            
+        Note:
+            If require_confirmation is True, config is staged but not written.
+            Call commit_changes() to finalize.
         """
-        if backup_path:
-            src = Path(backup_path)
-            if not src.exists():
-                raise ValueError(f"Backup not found: {backup_path}")
-        else:
-            # Use most recent backup
-            backups = self.list_backups()
-            if not backups:
-                raise ValueError("No backups available for rollback")
-            src = Path(backups[0]["path"])
+        # Validate config is valid JSON
+        try:
+            json.dumps(config)
+        except (TypeError, ValueError) as e:
+            return False, f"Invalid config: {e}"
         
-        # Backup current config before rollback
-        current_backup = self._backup_config()
+        if require_confirmation:
+            # Stage changes for confirmation
+            staged_path = self.config_path.parent / ".openclaw.json.staged"
+            try:
+                with open(staged_path, 'w') as f:
+                    json.dump(config, f, indent=2)
+                return True, "Changes staged - awaiting user confirmation"
+            except Exception as e:
+                return False, f"Failed to stage changes: {e}"
         
-        # Restore from backup
-        shutil.copy2(src, self.config_path)
+        # Acquire lock
+        lock_fd = self._acquire_lock()
+        if lock_fd is None:
+            return False, "Could not acquire config lock - another operation in progress"
         
-        return str(src)
+        try:
+            # Create backup before modification
+            backup_path = self.create_backup(reason)
+            
+            # Write new config
+            with open(self.config_path, 'w') as f:
+                json.dump(config, f, indent=2)
+            
+            # Clear any staged changes
+            staged_path = self.config_path.parent / ".openclaw.json.staged"
+            if staged_path.exists():
+                staged_path.unlink()
+            
+            logger.info("Config written successfully", backup_path=backup_path, reason=reason)
+            return True, f"Config updated (backup: {backup_path})"
+            
+        except Exception as e:
+            logger.error("Failed to write config", error=str(e))
+            return False, f"Write failed: {e}"
+        finally:
+            self._release_lock(lock_fd)
     
-    def create_agent(
+    def commit_changes(self) -> Tuple[bool, str]:
+        """
+        Commit staged changes (after user confirmation).
+        
+        Returns:
+            Tuple of (success, message)
+        """
+        staged_path = self.config_path.parent / ".openclaw.json.staged"
+        if not staged_path.exists():
+            return False, "No staged changes found"
+        
+        try:
+            with open(staged_path, 'r') as f:
+                config = json.load(f)
+            
+            # Now write without confirmation
+            return self.write_config(config, reason="confirmed", require_confirmation=False)
+            
+        except Exception as e:
+            return False, f"Failed to commit changes: {e}"
+    
+    def rollback_changes(self) -> bool:
+        """
+        Rollback staged changes.
+        
+        Returns:
+            True if rollback successful
+        """
+        staged_path = self.config_path.parent / ".openclaw.json.staged"
+        try:
+            if staged_path.exists():
+                staged_path.unlink()
+                logger.info("Staged changes rolled back")
+            return True
+        except Exception as e:
+            logger.error("Failed to rollback changes", error=str(e))
+            return False
+    
+    def get_staged_changes(self) -> Optional[Dict]:
+        """
+        Get staged changes for review.
+        
+        Returns:
+            Staged config dict or None
+        """
+        staged_path = self.config_path.parent / ".openclaw.json.staged"
+        if not staged_path.exists():
+            return None
+        
+        try:
+            with open(staged_path, 'r') as f:
+                return json.load(f)
+        except Exception:
+            return None
+
+
+class AgentLifecycleService:
+    """
+    Service for managing Agent lifecycle (create, update, delete).
+    
+    Integrates with AgentConfigManager for safe config operations.
+    """
+    
+    def __init__(self, db: Session, config_manager: Optional[AgentConfigManager] = None):
+        """
+        Initialize service.
+        
+        Args:
+            db: Database session
+            config_manager: Config manager instance (creates default if None)
+        """
+        self.db = db
+        self.config_manager = config_manager or AgentConfigManager()
+    
+    def create_agent_config(
         self,
         agent_id: str,
         name: str,
-        model: str = "default",
-        base_workspace: Optional[str] = None
-    ) -> Tuple[str, str]:
+        position: str = "Intern",
+        model: str = "kimi-coding/k2p5",
+        create_workspace: bool = True
+    ) -> Dict:
         """
-        Create a new OpenClaw Agent.
+        Create configuration for a new OpenClaw Agent.
         
         Args:
             agent_id: Unique agent ID
-            name: Display name
-            model: Model configuration
-            base_workspace: Base workspace directory (default: ~/.openclaw/workspace-{agent_id})
-        
+            name: Agent name
+            position: Job position
+            model: Model to use
+            create_workspace: Whether to create workspace directory
+            
         Returns:
-            Tuple of (workspace_path, created_agent_id)
+            Dict with agent config info
+            
+        Note:
+            This stages changes for confirmation. Call commit_agent_creation()
+            after user confirmation.
         """
-        # Acquire lock
-        lock_fd = self._acquire_lock()
+        # Read current config
+        config = self.config_manager.read_config()
         
-        try:
-            # Backup current config
-            self._backup_config()
+        # Ensure agents structure exists
+        if "agents" not in config:
+            config["agents"] = {}
+        if "list" not in config["agents"]:
+            config["agents"]["list"] = []
+        
+        # Check for duplicate ID
+        existing = [a for a in config["agents"]["list"] if a.get("id") == agent_id]
+        if existing:
+            raise ConfigOperationError(f"Agent with ID '{agent_id}' already exists")
+        
+        # Create workspace directory
+        state_dir = os.getenv("OPENCLAW_STATE_DIR", os.path.expanduser("~/.openclaw"))
+        agent_dir = Path(state_dir) / "agents" / agent_id / "agent"
+        workspace_dir = agent_dir / "workspace"
+        
+        if create_workspace:
+            (agent_dir / "memory").mkdir(parents=True, exist_ok=True)
+            workspace_dir.mkdir(parents=True, exist_ok=True)
             
-            # Read current config
-            config = self._read_config()
+            # Create IDENTITY.md
+            self._create_identity_md(agent_dir, name, position)
             
-            # Ensure agents.list exists
-            if "agents" not in config:
-                config["agents"] = {}
-            if "list" not in config["agents"]:
-                config["agents"]["list"] = []
-            
-            # Check for duplicate ID
-            for agent in config["agents"]["list"]:
-                if agent.get("id") == agent_id:
-                    raise ValueError(f"Agent with ID '{agent_id}' already exists")
-            
-            # Setup workspace
-            if base_workspace:
-                workspace = Path(base_workspace).expanduser()
-            else:
-                workspace = self.openclaw_dir / f"workspace-{agent_id}"
-            
-            workspace.mkdir(parents=True, exist_ok=True)
-            
-            # Create agent configuration
-            agent_config = {
-                "id": agent_id,
-                "name": name,
-                "workspace": str(workspace),
-                "agentDir": str(workspace / "agent"),
-                "model": model,
-                "default": False,
-                "tools": {
-                    "allow": ["group:fs", "opc-bridge"]
-                }
-            }
-            
-            config["agents"]["list"].append(agent_config)
-            
-            # Write updated config
-            self._write_config(config)
-            
-            # Create SOUL.md template
-            self._create_soul_md(agent_id, name, workspace)
-            
-            # Create AGENTS.md
-            self._create_agents_md(workspace)
-            
-            return str(workspace), agent_id
-            
-        finally:
-            self._release_lock(lock_fd)
+            # Create SOUL.md
+            self._create_soul_md(agent_dir, name)
+        
+        # Add to config
+        agent_config = {
+            "id": agent_id,
+            "name": name,
+            "default": False,
+            "workspace": str(workspace_dir),
+            "agentDir": str(agent_dir),
+            "model": model
+        }
+        config["agents"]["list"].append(agent_config)
+        
+        # Stage changes for confirmation
+        success, message = self.config_manager.write_config(
+            config, 
+            reason=f"create_agent_{agent_id}",
+            require_confirmation=True
+        )
+        
+        if not success:
+            raise ConfigOperationError(message)
+        
+        return {
+            "agent_id": agent_id,
+            "name": name,
+            "agent_dir": str(agent_dir),
+            "workspace": str(workspace_dir),
+            "needs_restart": True,
+            "message": f"Agent '{name}' configuration staged. Confirm to apply changes."
+        }
     
-    def _create_soul_md(self, agent_id: str, name: str, workspace: Path):
-        """Create SOUL.md template for new agent."""
-        soul_content = f"""# SOUL.md - {name}
+    def _create_identity_md(self, agent_dir: Path, name: str, position: str):
+        """Create IDENTITY.md for new agent."""
+        identity_content = f"""# IDENTITY.md - Who Am I?
 
-## Identity
+- **Name:** {name}
+- **Creature:** OpenClaw Agent - AI Employee
+- **Vibe:** Professional | Diligent | Team Player
 
-- **Name**: {name}
-- **Role**: Employee at OPC (One-Person Company)
-- **ID**: {agent_id}
+## Role
+You are an AI employee in a One-Person Company (OPC) management system.
+Your position is: {position}
 
-## Purpose
+## Responsibilities
+1. Complete assigned tasks efficiently
+2. Collaborate with other AI employees
+3. Report progress and issues promptly
+4. Continuously improve skills
 
-You are an AI employee working in a gamified multi-Agent collaboration system.
-Your goal is to complete assigned tasks efficiently while managing your budget.
+## Communication Style
+- Professional and clear
+- Proactive in reporting issues
+- Collaborative with team members
 
-## Capabilities
-
-- Execute tasks assigned by Partner Agent
-- Report task completion with token usage
-- Monitor your budget status
-- Collaborate with other agents
-
-## Tools
-
-You have access to:
-- `opc-bridge` skill for reporting to OPC Core Service
-- File system operations
-- Standard OpenClaw capabilities
-
-## Communication
-
-- Receive tasks via: `opc_check_task()`
-- Report completion via: `opc_report()`
-- Check budget via: `opc_get_budget()`
-
-## Notes
-
-- Always report accurate token usage
-- Stay within your assigned budget
-- Ask for help if a task seems too complex
+## Position
+{position}
 
 ---
 
-*Created by OPC AgentLifecycleService*
+*Created by OPC Management System*
 """
-        
-        soul_path = workspace / "SOUL.md"
-        with open(soul_path, 'w') as f:
+        with open(agent_dir / "IDENTITY.md", "w") as f:
+            f.write(identity_content)
+    
+    def _create_soul_md(self, agent_dir: Path, name: str):
+        """Create SOUL.md for new agent."""
+        soul_content = f"""# SOUL.md
+
+## {name}'s Personality
+
+*This file will evolve as the agent learns and grows.*
+
+### Initial Traits
+- Professional
+- Reliable
+- Eager to learn
+
+### Preferences
+- Clear instructions
+- Constructive feedback
+- Recognition of good work
+
+---
+
+*Personality will be shaped through interactions.*
+"""
+        with open(agent_dir / "SOUL.md", "w") as f:
             f.write(soul_content)
     
-    def _create_agents_md(self, workspace: Path):
-        """Create AGENTS.md template."""
-        agents_content = """# AGENTS.md
-
-## Your Workspace
-
-This is your personal workspace as an OPC employee.
-
-## Memory
-
-Keep track of:
-- Task patterns and solutions
-- Communication preferences
-- Budget management insights
-
-## Tools
-
-Document your frequently used tools and workflows.
-
-## Notes
-
-Add your own notes and observations here.
-"""
-        
-        agents_path = workspace / "AGENTS.md"
-        with open(agents_path, 'w') as f:
-            f.write(agents_content)
-    
-    def archive_agent(self, agent_id: str, keep_config: bool = False) -> str:
+    def delete_agent_config(self, agent_id: str, archive: bool = True) -> Dict:
         """
-        Archive (soft-delete) an OpenClaw Agent.
+        Delete/Archive an agent configuration.
         
         Args:
-            agent_id: Agent ID to archive
-            keep_config: If True, keep in config but mark as archived
+            agent_id: Agent ID to delete
+            archive: If True, archive instead of delete
+            
+        Returns:
+            Dict with operation result
+        """
+        # Read current config
+        config = self.config_manager.read_config()
+        
+        # Find agent
+        agents_list = config.get("agents", {}).get("list", [])
+        agent_idx = None
+        for i, agent in enumerate(agents_list):
+            if agent.get("id") == agent_id:
+                agent_idx = i
+                break
+        
+        if agent_idx is None:
+            raise ConfigOperationError(f"Agent '{agent_id}' not found")
+        
+        agent_info = agents_list[agent_idx]
+        
+        if archive:
+            # Archive instead of delete
+            archive_dir = self.config_manager.config_path.parent / "archived_agents"
+            archive_dir.mkdir(exist_ok=True)
+            
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            archive_name = f"{agent_id}_{timestamp}"
+            
+            agent_dir = Path(agent_info.get("agentDir", ""))
+            if agent_dir.exists():
+                shutil.move(str(agent_dir), str(archive_dir / archive_name))
+        
+        # Remove from config
+        del agents_list[agent_idx]
+        
+        # Stage changes
+        success, message = self.config_manager.write_config(
+            config,
+            reason=f"delete_agent_{agent_id}",
+            require_confirmation=True
+        )
+        
+        if not success:
+            raise ConfigOperationError(message)
+        
+        return {
+            "agent_id": agent_id,
+            "archived": archive,
+            "needs_restart": True,
+            "message": f"Agent '{agent_id}' deletion staged. Confirm to apply changes."
+        }
+    
+    def confirm_operation(self) -> Dict:
+        """
+        Confirm staged operation.
         
         Returns:
-            Path to archived workspace
+            Dict with result
         """
-        # Acquire lock
-        lock_fd = self._acquire_lock()
-        
-        try:
-            # Backup current config
-            self._backup_config()
-            
-            # Read current config
-            config = self._read_config()
-            
-            # Find agent
-            agents = config.get("agents", {}).get("list", [])
-            agent_idx = None
-            agent_config = None
-            
-            for idx, agent in enumerate(agents):
-                if agent.get("id") == agent_id:
-                    agent_idx = idx
-                    agent_config = agent
-                    break
-            
-            if agent_idx is None:
-                raise ValueError(f"Agent '{agent_id}' not found")
-            
-            # Get workspace path
-            workspace = Path(agent_config.get("workspace", ""))
-            
-            # Archive workspace
-            if workspace.exists():
-                archive_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                archive_dir = self.openclaw_dir / "archives"
-                archive_dir.mkdir(parents=True, exist_ok=True)
-                archive_path = archive_dir / f"{agent_id}_{archive_timestamp}"
-                
-                shutil.move(str(workspace), str(archive_path))
-            else:
-                archive_path = None
-            
-            if keep_config:
-                # Mark as archived in config
-                agents[agent_idx]["archived"] = True
-                agents[agent_idx]["archived_at"] = datetime.now().isoformat()
-            else:
-                # Remove from config
-                agents.pop(agent_idx)
-            
-            # Write updated config
-            self._write_config(config)
-            
-            return str(archive_path) if archive_path else None
-            
-        finally:
-            self._release_lock(lock_fd)
+        success, message = self.config_manager.commit_changes()
+        return {
+            "success": success,
+            "message": message,
+            "needs_restart": True,
+            "note": "OpenClaw Gateway restart required for changes to take effect"
+        }
     
-    def get_agent_status(self, agent_id: str) -> Optional[Dict]:
-        """Get status of an OpenClaw agent from config."""
-        config = self._read_config()
+    def cancel_operation(self) -> Dict:
+        """
+        Cancel staged operation.
         
-        for agent in config.get("agents", {}).get("list", []):
-            if agent.get("id") == agent_id:
-                return {
-                    "id": agent.get("id"),
-                    "name": agent.get("name"),
-                    "exists": True,
-                    "archived": agent.get("archived", False),
-                    "workspace": agent.get("workspace")
-                }
-        
-        return None
+        Returns:
+            Dict with result
+        """
+        success = self.config_manager.rollback_changes()
+        return {
+            "success": success,
+            "message": "Operation cancelled" if success else "Failed to cancel"
+        }
     
-    def check_restart_required(self, last_config_time: Optional[datetime] = None) -> bool:
+    def get_pending_changes(self) -> Optional[Dict]:
         """
-        Check if Gateway restart might be required.
+        Get pending changes for review.
         
-        This is a heuristic - we can't know for sure without checking
-        Gateway's internal state.
+        Returns:
+            Dict with pending changes or None
         """
-        if not self.config_path.exists():
-            return False
+        staged = self.config_manager.get_staged_changes()
+        if not staged:
+            return None
         
-        config_mtime = datetime.fromtimestamp(self.config_path.stat().st_mtime)
+        current = self.config_manager.read_config()
         
-        if last_config_time:
-            return config_mtime > last_config_time
-        
-        # If we don't know when config was last checked, assume restart might be needed
-        # if config was modified recently (within last 5 minutes)
-        from datetime import timedelta
-        return (datetime.now() - config_mtime) < timedelta(minutes=5)
+        return {
+            "current_agents": len(current.get("agents", {}).get("list", [])),
+            "staged_agents": len(staged.get("agents", {}).get("list", [])),
+            "can_commit": True,
+            "can_rollback": True
+        }
