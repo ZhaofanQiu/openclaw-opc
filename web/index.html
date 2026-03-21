@@ -751,6 +751,36 @@
             background: rgba(248, 113, 113, 0.2);
             color: #f87171;
         }
+        
+        /* Task execution status badges (v0.3.0 P0) */
+        .execution-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            margin-left: 8px;
+        }
+        
+        .execution-badge.sent {
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.4);
+        }
+        
+        .execution-badge.acked {
+            background: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+            border: 1px solid rgba(59, 130, 246, 0.4);
+        }
+        
+        .execution-badge.running {
+            background: rgba(139, 92, 246, 0.2);
+            color: #8b5cf6;
+            border: 1px solid rgba(139, 92, 246, 0.4);
+        }
 
         .task-desc {
             font-size: 13px;
@@ -2709,8 +2739,40 @@
                         'fused': '已熔断'
                     }[task.status] || task.status;
                     
+                    // Execution status for assigned tasks (v0.3.0 P0)
+                    const executionStatusMap = {
+                        'sent': { text: '已发送', icon: '📤', color: '#f59e0b' },
+                        'acked': { text: '已接收', icon: '👋', color: '#3b82f6' },
+                        'running': { text: '执行中', icon: '⚙️', color: '#8b5cf6' },
+                        'completed': { text: '已完成', icon: '✅', color: '#10b981' },
+                        'failed': { text: '失败', icon: '❌', color: '#f87171' },
+                        'timeout': { text: '超时', icon: '⏰', color: '#f87171' }
+                    };
+                    
+                    let executionBadge = '';
+                    if (task.status === 'assigned' && task.execution_status) {
+                        const exec = executionStatusMap[task.execution_status];
+                        if (exec) {
+                            executionBadge = `
+                                <span style="background: ${exec.color}20; color: ${exec.color}; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-left: 8px; border: 1px solid ${exec.color}40;">
+                                    ${exec.icon} ${exec.text}
+                                </span>
+                            `;
+                        }
+                    }
+                    
                     const assignedTo = task.assigned_to ? `分配给: ${task.assigned_to}` : '未分配';
                     const canAssign = task.status === 'pending';
+                    
+                    // Resend button for assigned but not acked tasks
+                    let resendButton = '';
+                    if (task.status === 'assigned' && task.execution_status === 'sent') {
+                        resendButton = `
+                            <button class="assign-btn" onclick="event.stopPropagation(); resendTask('${task.id}')" style="background: #f59e0b; margin-left: 8px;" title="重新发送任务">🔄 重发</button>
+                        `;
+                    }
+                    
+                    // Build token display
                     
                     // Build token display
                     let tokenDisplay = '';
@@ -2749,8 +2811,12 @@
                         <div class="task-item">
                             <div class="task-header">
                                 <div class="task-title">${task.title}</div>
-                                <span class="task-status ${statusClass}">${statusText}</span>
-                                ${canAssign ? `<button class="assign-btn" onclick="openAssignModal('${task.id}')">分配</button>` : ''}
+                                <div style="display: flex; align-items: center;">
+                                    <span class="task-status ${statusClass}">${statusText}</span>
+                                    ${executionBadge}
+                                    ${canAssign ? `<button class="assign-btn" onclick="openAssignModal('${task.id}')">分配</button>` : ''}
+                                    ${resendButton}
+                                </div>
                             </div>
                             <div class="task-desc">${task.description || '暂无描述'}</div>
                             <div class="task-meta">
@@ -4430,6 +4496,34 @@
                 console.error('Error restarting gateway:', error);
                 statusEl.textContent = '重启失败: ' + error.message;
                 progressEl.style.width = '0%';
+            }
+        }
+        
+        // ============================================================
+        // Task Resend Function (v0.3.0 P0 - Agent execution loop)
+        // ============================================================
+        
+        async function resendTask(taskId) {
+            if (!confirm('确定要重新发送这个任务吗？\n\n这将再次通过 sessions_send 通知 Agent。')) {
+                return;
+            }
+            
+            try {
+                const response = await Auth.authFetch(`${API_BASE}/api/tasks/${taskId}/resend`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    alert(`✅ 任务已重新发送\n\nSession ID: ${data.session_id}`);
+                    loadTasks();
+                } else {
+                    const error = await response.json();
+                    alert('重发失败: ' + (error.detail || '未知错误'));
+                }
+            } catch (error) {
+                console.error('Error resending task:', error);
+                alert('重发失败，请重试');
             }
         }
         
