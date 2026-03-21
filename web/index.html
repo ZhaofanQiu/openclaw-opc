@@ -2084,8 +2084,10 @@
         </div>
     </div>
 
-    <!-- Notification Button + Logout -->
+    <!-- Notification Button + Admin Menu + Logout -->
     <div style="position: fixed; top: 20px; right: 20px; display: flex; gap: 10px; z-index: 1000;">
+        <button onclick="openBackupManagerModal()" style="background: #2a2a4a; border: none; color: #888; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; transition: all 0.2s;" title="配置备份管理">💾 备份</button>
+        <button onclick="openPendingChangesModal()" style="background: #2a2a4a; border: none; color: #888; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; transition: all 0.2s;" title="待确认的变更">⏳ 变更</button>
         <button onclick="Auth.logout()" style="background: #2a2a4a; border: none; color: #888; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; transition: all 0.2s;">🚪 登出</button>
         <button class="notification-btn" onclick="toggleNotifications()">
             <span>🔔</span>
@@ -2140,6 +2142,131 @@
                 <button class="modal-btn secondary" onclick="closeBindModal()">取消</button>
                 <button class="modal-btn" style="background: #f59e0b;" onclick="autoCreateAgent()">自动创建</button>
                 <button class="modal-btn primary" onclick="confirmBind()">确认绑定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auto Create Agent Modal (v0.3.0 P0 Feature) -->
+    <div class="modal-overlay" id="auto-create-modal">
+        <div class="modal" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 class="modal-title">🤖 自动创建 OpenClaw Agent</h3>
+                <button class="modal-close" onclick="closeAutoCreateModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="auto-create-step1">
+                    <div style="background: #1a1a2e; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+                        <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                            <span style="font-size: 24px; margin-right: 12px;">👤</span>
+                            <div>
+                                <div style="font-weight: 600; color: #fff;" id="auto-create-employee-name">--</div>
+                                <div style="font-size: 12px; color: #888;" id="auto-create-employee-position">--</div>
+                            </div>
+                        </div>
+                        <div style="font-size: 13px; color: #888;">
+                            将为该员工自动创建 OpenClaw Agent，包括：
+                            <ul style="margin: 8px 0; padding-left: 20px;">
+                                <li>Agent 配置文件</li>
+                                <li>独立 workspace 目录</li>
+                                <li>IDENTITY.md 身份文件</li>
+                                <li>SOUL.md 个性文件</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+                        <div style="display: flex; align-items: flex-start;">
+                            <span style="font-size: 18px; margin-right: 8px;">⚠️</span>
+                            <div>
+                                <div style="font-weight: 600; color: #f59e0b; margin-bottom: 4px;">安全提醒</div>
+                                <div style="font-size: 12px; color: #888;">
+                                    此操作将修改 OpenClaw 配置文件。系统会自动创建备份，您可以随时恢复。
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="auto-create-step2" style="display: none;">
+                    <div style="text-align: center; padding: 20px;">
+                        <div class="spinner" style="width: 40px; height: 40px; margin: 0 auto 16px;"></div>
+                        <p style="color: #888;">正在创建 Agent 配置...</p>
+                    </div>
+                </div>
+                
+                <div id="auto-create-step3" style="display: none;">
+                    <div style="text-align: center; padding: 20px;">
+                        <div style="font-size: 48px; margin-bottom: 16px;">✅</div>
+                        <p style="margin-bottom: 12px;">Agent 配置已创建并应用！</p>
+                        <div style="background: #1a1a2e; border-radius: 8px; padding: 12px; margin: 16px 0; text-align: left;">
+                            <div style="font-size: 12px; color: #888; margin-bottom: 4px;">Agent ID</div>
+                            <div style="font-family: monospace; color: #667eea;" id="auto-create-result-agent-id">--</div>
+                        </div>
+                        <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px; padding: 12px;">
+                            <div style="display: flex; align-items: center; justify-content: center;">
+                                <span style="font-size: 18px; margin-right: 8px;">🔄</span>
+                                <span style="color: #f59e0b;">需要重启 OpenClaw Gateway</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="auto-create-error" style="display: none;">
+                    <div style="text-align: center; padding: 20px;">
+                        <div style="font-size: 48px; margin-bottom: 16px;">❌</div>
+                        <p style="color: #f87171; margin-bottom: 12px;">创建失败</p>
+                        <p style="color: #888; font-size: 13px;" id="auto-create-error-message">--</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" id="auto-create-footer">
+                <button class="refresh-btn" style="background: #666;" onclick="closeAutoCreateModal()">取消</button>
+                <button class="refresh-btn" style="background: #8b5cf6;" onclick="stageAgentCreation()">确认创建</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Changes Modal (v0.3.0 P0 Feature) -->
+    <div class="modal-overlay" id="pending-changes-modal">
+        <div class="modal" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 class="modal-title">⏳ 待确认的变更</h3>
+                <button class="modal-close" onclick="closePendingChangesModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="pending-changes-content">
+                    <div style="text-align: center; padding: 20px;">
+                        <div class="spinner" style="width: 32px; height: 32px; margin: 0 auto 12px;"></div>
+                        <p style="color: #888; font-size: 14px;">检查中...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Backup Manager Modal (v0.3.0 P0 Feature) -->
+    <div class="modal-overlay" id="backup-manager-modal">
+        <div class="modal" style="max-width: 600px; max-height: 80vh;">
+            <div class="modal-header">
+                <h3 class="modal-title">💾 配置备份管理</h3>
+                <button class="modal-close" onclick="closeBackupManagerModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
+                <div style="background: rgba(102, 126, 234, 0.1); border: 1px solid rgba(102, 126, 234, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+                    <div style="display: flex; align-items: flex-start;">
+                        <span style="font-size: 18px; margin-right: 8px;">ℹ️</span>
+                        <div style="font-size: 13px; color: #888;">
+                            系统自动保留最近 10 个配置备份。您可以随时恢复到任意备份版本。
+                            <br><span style="color: #f59e0b;">注意：恢复备份后需要重启 OpenClaw Gateway。</span>
+                        </div>
+                    </div>
+                </div>
+                <div id="backup-list-content">
+                    <div style="text-align: center; padding: 20px;">
+                        <div class="spinner" style="width: 32px; height: 32px; margin: 0 auto 12px;"></div>
+                        <p style="color: #888; font-size: 14px;">加载备份列表...</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -2462,8 +2589,10 @@
                     const boundBadge = isBound 
                         ? `<span style="background:#4ade80;color:#000;padding:2px 8px;border-radius:4px;font-size:11px;margin-left:8px;">已绑定 · ${agent.agent_id}</span>`
                         : `<span style="background:#f87171;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;margin-left:8px;">未绑定</span>`;
+                    
+                    // Auto-create agent button for unbound employees
                     const bindButton = !isBound 
-                        ? `<button class="assign-btn" onclick="openBindModal('${agent.id}', '${agent.name}')">绑定Agent</button>`
+                        ? `<button class="assign-btn" onclick="event.stopPropagation(); openAutoCreateModal('${agent.id}', '${agent.name}')" style="background: #8b5cf6; margin-right: 4px;">🤖 创建Agent</button><button class="assign-btn" onclick="event.stopPropagation(); openBindModal('${agent.id}', '${agent.name}')">绑定Agent</button>`
                         : '';
                     
                     // Determine pixel avatar class based on position (like pixel office)
@@ -5026,6 +5155,337 @@
                 alert('请求失败，请稍后重试');
             }
         }
+        
+        // ============================================================
+        // Agent Lifecycle Management (v0.3.0 P0 Feature)
+        // ============================================================
+        
+        let currentAutoCreateEmployeeId = null;
+        let currentAutoCreateEmployeeName = null;
+        
+        function openAutoCreateModal(employeeId, employeeName) {
+            currentAutoCreateEmployeeId = employeeId;
+            currentAutoCreateEmployeeName = employeeName;
+            
+            document.getElementById('auto-create-employee-name').textContent = employeeName;
+            
+            // Reset modal state
+            document.getElementById('auto-create-step1').style.display = 'block';
+            document.getElementById('auto-create-step2').style.display = 'none';
+            document.getElementById('auto-create-step3').style.display = 'none';
+            document.getElementById('auto-create-error').style.display = 'none';
+            document.getElementById('auto-create-footer').style.display = 'flex';
+            
+            // Update footer buttons
+            document.getElementById('auto-create-footer').innerHTML = `
+                <button class="refresh-btn" style="background: #666;" onclick="closeAutoCreateModal()">取消</button>
+                <button class="refresh-btn" style="background: #8b5cf6;" onclick="stageAgentCreation()">确认创建</button>
+            `;
+            
+            document.getElementById('auto-create-modal').classList.add('visible');
+        }
+        
+        function closeAutoCreateModal() {
+            document.getElementById('auto-create-modal').classList.remove('visible');
+            currentAutoCreateEmployeeId = null;
+            currentAutoCreateEmployeeName = null;
+        }
+        
+        async function stageAgentCreation() {
+            if (!currentAutoCreateEmployeeId) return;
+            
+            // Show loading
+            document.getElementById('auto-create-step1').style.display = 'none';
+            document.getElementById('auto-create-step2').style.display = 'block';
+            document.getElementById('auto-create-footer').style.display = 'none';
+            
+            try {
+                const response = await Auth.authFetch(`${API_BASE}/api/agents/lifecycle/create`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        employee_id: currentAutoCreateEmployeeId,
+                        confirm: false
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Show success with confirmation option
+                    document.getElementById('auto-create-step2').style.display = 'none';
+                    document.getElementById('auto-create-step3').style.display = 'block';
+                    document.getElementById('auto-create-result-agent-id').textContent = data.agent_id;
+                    
+                    // Update footer for confirmation
+                    document.getElementById('auto-create-footer').style.display = 'flex';
+                    document.getElementById('auto-create-footer').innerHTML = `
+                        <button class="refresh-btn" style="background: #666;" onclick="closeAutoCreateModal()">稍后再说</button>
+                        <button class="refresh-btn" style="background: #10b981;" onclick="confirmAgentCreation()">✓ 确认应用变更</button>
+                    `;
+                } else {
+                    const error = await response.json();
+                    throw new Error(error.detail || '创建失败');
+                }
+            } catch (error) {
+                console.error('Error staging agent creation:', error);
+                document.getElementById('auto-create-step2').style.display = 'none';
+                document.getElementById('auto-create-error').style.display = 'block';
+                document.getElementById('auto-create-error-message').textContent = error.message;
+                document.getElementById('auto-create-footer').style.display = 'flex';
+                document.getElementById('auto-create-footer').innerHTML = `
+                    <button class="refresh-btn" style="background: #666;" onclick="closeAutoCreateModal()">关闭</button>
+                    <button class="refresh-btn" style="background: #8b5cf6;" onclick="stageAgentCreation()">重试</button>
+                `;
+            }
+        }
+        
+        async function confirmAgentCreation() {
+            if (!currentAutoCreateEmployeeId) return;
+            
+            document.getElementById('auto-create-step3').style.display = 'none';
+            document.getElementById('auto-create-step2').style.display = 'block';
+            document.getElementById('auto-create-footer').style.display = 'none';
+            
+            try {
+                const response = await Auth.authFetch(`${API_BASE}/api/agents/lifecycle/create`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        employee_id: currentAutoCreateEmployeeId,
+                        confirm: true
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    document.getElementById('auto-create-step2').style.display = 'none';
+                    document.getElementById('auto-create-step3').style.display = 'block';
+                    document.getElementById('auto-create-footer').style.display = 'flex';
+                    document.getElementById('auto-create-footer').innerHTML = `
+                        <button class="refresh-btn" style="background: #666;" onclick="closeAutoCreateModal()">关闭</button>
+                        <button class="refresh-btn" style="background: #f59e0b;" onclick="restartGateway()">🔄 重启 Gateway</button>
+                    `;
+                    
+                    // Refresh data
+                    loadData();
+                } else {
+                    const error = await response.json();
+                    throw new Error(error.detail || '确认失败');
+                }
+            } catch (error) {
+                console.error('Error confirming agent creation:', error);
+                document.getElementById('auto-create-step2').style.display = 'none';
+                document.getElementById('auto-create-error').style.display = 'block';
+                document.getElementById('auto-create-error-message').textContent = error.message;
+                document.getElementById('auto-create-footer').style.display = 'flex';
+                document.getElementById('auto-create-footer').innerHTML = `
+                    <button class="refresh-btn" style="background: #666;" onclick="closeAutoCreateModal()">关闭</button>
+                `;
+            }
+        }
+        
+        // Pending Changes Modal
+        function openPendingChangesModal() {
+            document.getElementById('pending-changes-modal').classList.add('visible');
+            loadPendingChanges();
+        }
+        
+        function closePendingChangesModal() {
+            document.getElementById('pending-changes-modal').classList.remove('visible');
+        }
+        
+        async function loadPendingChanges() {
+            const container = document.getElementById('pending-changes-content');
+            
+            try {
+                const response = await Auth.authFetch(`${API_BASE}/api/agents/lifecycle/pending`);
+                const data = await response.json();
+                
+                if (!data.has_pending) {
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: 40px;">
+                            <div style="font-size: 48px; margin-bottom: 16px;">✅</div>
+                            <p style="color: #888;">没有待确认的变更</p>
+                            <p style="font-size: 12px; color: #666; margin-top: 8px;">所有配置变更都已应用</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                container.innerHTML = `
+                    <div style="background: #1a1a2e; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <span style="color: #888; font-size: 13px;">当前配置</span>
+                            <span style="font-weight: 600;">${data.current_agents} 个Agent</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <span style="color: #888; font-size: 13px;"> staged 配置</span>
+                            <span style="font-weight: 600; color: #8b5cf6;">${data.staged_agents} 个Agent</span>
+                        </div>
+                        <div style="border-top: 1px solid #2a2a4a; padding-top: 12px; margin-top: 12px;">
+                            <div style="font-size: 12px; color: #888;">
+                                staged 配置尚未应用。确认后将写入 openclaw.json
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 12px;">
+                        <button class="refresh-btn" style="flex: 1; background: #666;" onclick="cancelPendingChanges()">
+                            取消变更
+                        </button>
+                        <button class="refresh-btn" style="flex: 1; background: #10b981;" onclick="confirmPendingChangesFromModal()">
+                            确认应用
+                        </button>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error loading pending changes:', error);
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #f87171;">
+                        加载失败，请重试
+                    </div>
+                `;
+            }
+        }
+        
+        async function confirmPendingChangesFromModal() {
+            try {
+                const response = await Auth.authFetch(`${API_BASE}/api/agents/lifecycle/confirm`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    alert('变更已应用！请重启 OpenClaw Gateway');
+                    closePendingChangesModal();
+                    loadData();
+                } else {
+                    const error = await response.json();
+                    alert('确认失败: ' + (error.detail || '未知错误'));
+                }
+            } catch (error) {
+                console.error('Error confirming changes:', error);
+                alert('确认失败，请重试');
+            }
+        }
+        
+        async function cancelPendingChanges() {
+            if (!confirm('确定要取消所有 staged 变更吗？')) return;
+            
+            try {
+                const response = await Auth.authFetch(`${API_BASE}/api/agents/lifecycle/cancel`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    alert('变更已取消');
+                    closePendingChangesModal();
+                } else {
+                    const error = await response.json();
+                    alert('取消失败: ' + (error.detail || '未知错误'));
+                }
+            } catch (error) {
+                console.error('Error canceling changes:', error);
+                alert('取消失败，请重试');
+            }
+        }
+        
+        // Backup Manager Modal
+        function openBackupManagerModal() {
+            document.getElementById('backup-manager-modal').classList.add('visible');
+            loadBackupList();
+        }
+        
+        function closeBackupManagerModal() {
+            document.getElementById('backup-manager-modal').classList.remove('visible');
+        }
+        
+        async function loadBackupList() {
+            const container = document.getElementById('backup-list-content');
+            
+            try {
+                const response = await Auth.authFetch(`${API_BASE}/api/agents/lifecycle/backups`);
+                const backups = await response.json();
+                
+                if (backups.length === 0) {
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: 40px; color: #888;">
+                            <div style="font-size: 32px; margin-bottom: 12px;">📂</div>
+                            <p>暂无备份</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                container.innerHTML = backups.map((backup, index) => `
+                    <div style="background: #1a1a2e; border-radius: 8px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-weight: 600; margin-bottom: 4px;">
+                                ${index === 0 ? '⭐ ' : ''}${backup.filename}
+                            </div>
+                            <div style="font-size: 12px; color: #888;">
+                                ${new Date(backup.timestamp).toLocaleString()} · ${(backup.size / 1024).toFixed(1)} KB · ${backup.reason}
+                            </div>
+                        </div>
+                        <button class="refresh-btn" style="background: ${index === 0 ? '#667eea' : '#2a2a4a'}; font-size: 12px; padding: 6px 12px;" onclick="restoreBackup('${backup.filename}')">
+                            ${index === 0 ? '最新' : '恢复'}
+                        </button>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading backups:', error);
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #f87171;">
+                        加载备份列表失败
+                    </div>
+                `;
+            }
+        }
+        
+        async function restoreBackup(filename) {
+            if (!confirm(`确定要恢复到备份 "${filename}" 吗？\n\n⚠️ 当前配置将被覆盖，系统会自动创建新备份。`)) return;
+            
+            try {
+                const response = await Auth.authFetch(`${API_BASE}/api/agents/lifecycle/restore?backup_filename=${encodeURIComponent(filename)}`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    alert('备份恢复成功！请重启 OpenClaw Gateway');
+                    closeBackupManagerModal();
+                    loadData();
+                } else {
+                    const error = await response.json();
+                    alert('恢复失败: ' + (error.detail || '未知错误'));
+                }
+            } catch (error) {
+                console.error('Error restoring backup:', error);
+                alert('恢复失败，请重试');
+            }
+        }
+        
+        // Check pending changes on page load
+        async function checkPendingChanges() {
+            try {
+                const response = await Auth.authFetch(`${API_BASE}/api/agents/lifecycle/pending`);
+                const data = await response.json();
+                
+                if (data.has_pending) {
+                    // Show notification badge or indicator
+                    console.log(`有 ${data.staged_agents} 个配置变更待确认`);
+                }
+            } catch (error) {
+                console.error('Error checking pending changes:', error);
+            }
+        }
+        
+        // Add to initial load
+        const originalLoadData = loadData;
+        loadData = async function() {
+            await originalLoadData();
+            await checkPendingChanges();
+        };
     </script>
 
     <!-- Transactions Panel (Drawer) -->
