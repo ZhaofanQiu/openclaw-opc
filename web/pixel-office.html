@@ -467,8 +467,9 @@
         </div>
     </div>
 
+    <script src="auth.js"></script>
     <script>
-        const API_BASE = window.location.hostname === 'localhost' 
+        const API_BASE = window.location.hostname === 'localhost'
             ? 'http://localhost:8080'
             : '';
         const REFRESH_INTERVAL = 5000;
@@ -476,9 +477,15 @@
         // Load office data
         async function loadOffice() {
             try {
+                // Check auth first
+                if (!Auth.isLoggedIn()) {
+                    window.location.href = '/dashboard/login.html';
+                    return;
+                }
+
                 const [agentsRes, tasksRes] = await Promise.all([
-                    fetch(`${API_BASE}/api/agents`),
-                    fetch(`${API_BASE}/api/tasks`)
+                    Auth.authFetch(`${API_BASE}/api/agents`),
+                    Auth.authFetch(`${API_BASE}/api/tasks`)
                 ]);
 
                 if (!agentsRes.ok || !tasksRes.ok) {
@@ -515,7 +522,7 @@
                 if (agent) {
                     const task = tasks.find(t => t.agent_id === agent.id && t.status === 'assigned');
                     const isWorking = agent.status === 'working';
-                    const isOnline = agent.is_online;
+                    const isOnline = agent.is_online === 'online' || agent.is_online === 'awake';
                     
                     const budgetPercent = agent.total_budget > 0 
                         ? (agent.remaining_budget / agent.total_budget) * 100 

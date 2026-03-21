@@ -13,7 +13,7 @@ from src.database import get_db
 from src.models import Agent, AgentStatus, PositionLevel
 from src.services.agent_service import AgentService
 from src.services.agent_lifecycle_service import AgentLifecycleService
-from src.utils.openclaw_config import read_openclaw_agents, get_agent_details
+from src.utils.openclaw_config import read_openclaw_agents, get_agent_details, ensure_partner_agent_exists
 from src.services.partner_service import PartnerService
 from src.utils.rate_limit import limiter, RATE_LIMITS
 
@@ -26,6 +26,7 @@ class AgentCreate(BaseModel):
     agent_id: Optional[str] = Field(None, description="OpenClaw agent ID (optional - if None creates unbound employee)")
     emoji: str = "🧑‍💻"
     monthly_budget: float = 2000.0
+    position_title: Optional[str] = Field(None, description="Employee position title")
     bind_now: bool = Field(True, description="Whether to bind to OpenClaw agent immediately")
 
 
@@ -61,7 +62,9 @@ class AgentResponse(BaseModel):
     name: str
     emoji: str
     position_title: str
+    position_level: int
     status: str
+    is_online: str
     mood_emoji: str
     total_budget: float
     remaining_budget: float
@@ -84,6 +87,124 @@ async def list_openclaw_agents(request: Request):
         "agents": agents,
         "count": len(agents),
         "message": "Select one agent as your Partner" if agents else "No OpenClaw agents found"
+    }
+
+
+@router.post("/partner/create-agent")
+@limiter.limit(RATE_LIMITS["create"])
+async def create_partner_agent_endpoint(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    Auto-create a dedicated Partner Agent for OPC.
+    
+    This creates a new OpenClaw Agent with:
+    - Isolated workspace (no context pollution)
+    - Dedicated memory directory
+    - Professional CEO Assistant identity
+    
+    Returns the created agent info for binding.
+    """
+    from src.utils.openclaw_config import create_partner_agent
+    
+    # Create the Partner Agent
+    result = create_partner_agent("OPC Partner Assistant")
+    
+    if not result:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to create Partner Agent. Please check OpenClaw configuration."
+        )
+    
+    return {
+        "success": True,
+        "agent": {
+            "id": result["id"],
+            "name": result["name"],
+            "agent_dir": result["agent_dir"],
+            "workspace": result["workspace"],
+        },
+        "message": "✅ Partner Agent created successfully! Please restart OpenClaw Gateway to activate it.",
+        "next_step": "Restart OpenClaw Gateway, then call /partner/setup to bind this agent"
+    }
+
+
+@router.post("/partner/setup-auto")
+@limiter.limit(RATE_LIMITS["create"])
+async def setup_partner_auto(
+    request: Request,
+    monthly_budget: float = 10000.0,
+    db: Session = Depends(get_db),
+):
+    """
+    One-click setup Partner with auto-created Agent.
+    
+    This is the RECOMMENDED way to initialize OPC:
+    1. Creates a dedicated Partner Agent (if not exists)
+    2. Binds it to Partner role
+    3. Ready to use!
+    
+    Note: If a new agent is created, you need to restart OpenClaw Gateway.
+    """
+    from src.utils.openclaw_config import ensure_partner_agent_exists
+    
+    service = AgentService(db)
+    
+    # Ensure Partner Agent exists
+    oc_agent = ensure_partner_agent_exists()
+    
+    if not oc_agent:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to create or find Partner Agent"
+        )
+    
+    # Check if this agent is already bound as Partner
+    existing = service.get_agent(oc_agent["id"])
+    if existing:
+        return {
+            "success": True,
+            "partner": {
+                "id": existing.id,
+                "name": existing.name,
+                "agent_id": existing.agent_id,
+                "position": existing.position_title,
+                "monthly_budget": existing.monthly_budget,
+            },
+            "message": f"Partner '{existing.name}' is already set up!",
+            "restart_required": False
+        }
+    
+    # Create Partner in database
+    partner = service.create_agent(
+        name=f"{oc_agent['name']} (Partner)",
+        agent_id=oc_agent["id"],
+        emoji="👑",
+        monthly_budget=monthly_budget,
+    )
+    
+    # Update to Partner level
+    partner.position_level = PositionLevel.PARTNER.value
+    partner.position_title = "合伙人"
+    db.commit()
+    db.refresh(partner)
+    
+    # Check if this was a new agent creation
+    restart_required = "opc_partner_" in oc_agent["id"]
+    
+    return {
+        "success": True,
+        "partner": {
+            "id": partner.id,
+            "name": partner.name,
+            "agent_id": partner.agent_id,
+            "position": "合伙人",
+            "monthly_budget": partner.monthly_budget,
+        },
+        "message": f"🎉 Partner '{partner.name}' is ready!",
+        "restart_required": restart_required,
+        "note": "Please restart OpenClaw Gateway to activate the new Partner Agent" if restart_required else None
     }
 
 
@@ -195,7 +316,7 @@ async def partner_hire_employee(
     service = AgentService(db)
     
     # Verify partner
-    partner = service.get_agent(partner_id)
+    partner = service.get_agent_by_id(partner_id)
     if not partner:
         raise HTTPException(status_code=404, detail="Partner not found")
     
@@ -211,6 +332,12 @@ async def partner_hire_employee(
             monthly_budget=employee.monthly_budget,
         )
         
+        # Set position title if provided
+        if employee.position_title:
+            new_employee.position_title = employee.position_title
+            db.commit()
+            db.refresh(new_employee)
+        
         return {
             "success": True,
             "employee": {
@@ -221,7 +348,7 @@ async def partner_hire_employee(
                 "monthly_budget": new_employee.monthly_budget,
             },
             "hired_by": partner.name,
-            "message": f"{partner.name} successfully hired {new_employee.name} as {new_employee.position_title}!"
+            "message": f"{partner.name} 成功雇佣了 {new_employee.name} ({new_employee.position_title})!"
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -353,7 +480,7 @@ async def partner_heartbeat(
     service = AgentService(db)
     
     # Verify partner
-    partner = service.get_agent(partner_id)
+    partner = service.get_agent_by_id(partner_id)
     if not partner:
         raise HTTPException(status_code=404, detail="Partner not found")
     
@@ -385,7 +512,7 @@ async def partner_health_status(
     
     service = AgentService(db)
     
-    partner = service.get_agent(partner_id)
+    partner = service.get_agent_by_id(partner_id)
     if not partner:
         raise HTTPException(status_code=404, detail="Partner not found")
     
@@ -411,6 +538,311 @@ async def partner_health_status(
         "seconds_since_heartbeat": seconds_since_heartbeat,
         "warning": not is_online and partner.last_heartbeat is not None
     }
+
+
+# ============================================================
+# Partner Wake/Sleep Mode API
+# ============================================================
+
+class PartnerWakeResponse(BaseModel):
+    """Partner wake response."""
+    status: str
+    message: str
+    summary: dict
+
+
+class PartnerChatRequest(BaseModel):
+    """Chat request to Partner."""
+    message: str
+
+
+class PartnerChatResponse(BaseModel):
+    """Partner chat response."""
+    response: str
+    actions: List[str] = []
+
+
+@router.post("/partner/wake", response_model=PartnerWakeResponse)
+async def wake_partner(
+    partner_id: str,
+    db: Session = Depends(get_db),
+):
+    """
+    Wake up Partner Agent.
+    
+    Partner will greet the user and provide company status summary.
+    Partner remains awake for interaction until auto-sleep timeout.
+    """
+    from datetime import datetime
+    
+    service = AgentService(db)
+    partner_service = PartnerService(db)
+    
+    partner = service.get_agent_by_id(partner_id)
+    if not partner:
+        raise HTTPException(status_code=404, detail="Partner not found")
+    
+    # Update Partner status to awake
+    partner.is_online = "awake"
+    partner.last_heartbeat = datetime.utcnow()
+    db.commit()
+    
+    # Generate company summary
+    summary = partner_service.get_company_summary()
+    
+    # Generate welcome message (using bound Agent if available)
+    welcome_msg = generate_welcome_message(summary, partner.name, partner.agent_id)
+    
+    return {
+        "status": "awake",
+        "message": welcome_msg,
+        "summary": summary
+    }
+
+
+@router.post("/partner/sleep")
+async def sleep_partner(
+    partner_id: str,
+    db: Session = Depends(get_db),
+):
+    """
+    Put Partner Agent to sleep (standby mode).
+    
+    Partner will enter standby state and conserve resources.
+    User can still view dashboard data in self-service mode.
+    """
+    service = AgentService(db)
+    
+    partner = service.get_agent_by_id(partner_id)
+    if not partner:
+        raise HTTPException(status_code=404, detail="Partner not found")
+    
+    partner.is_online = "standby"
+    db.commit()
+    
+    return {
+        "status": "standby",
+        "message": f"{partner.name} 已进入待机模式。随时呼唤我！",
+        "partner_id": partner_id
+    }
+
+
+@router.get("/partner/state")
+async def get_partner_state(
+    partner_id: str,
+    db: Session = Depends(get_db),
+):
+    """
+    Get current Partner state.
+    
+    Returns: standby | awake | busy
+    """
+    service = AgentService(db)
+    
+    partner = service.get_agent_by_id(partner_id)
+    if not partner:
+        raise HTTPException(status_code=404, detail="Partner not found")
+    
+    # Check for auto-sleep (5 minutes = 300 seconds)
+    from datetime import datetime, timedelta
+    
+    state = partner.is_online or "standby"
+    
+    if state == "awake" and partner.last_heartbeat:
+        delta = datetime.utcnow() - partner.last_heartbeat
+        if delta.total_seconds() > 300:  # 5 minutes
+            state = "standby"
+            partner.is_online = "standby"
+            db.commit()
+    
+    return {
+        "partner_id": partner_id,
+        "name": partner.name,
+        "state": state,
+        "last_interaction": partner.last_heartbeat.isoformat() if partner.last_heartbeat else None
+    }
+
+
+@router.get("/partner/summary")
+async def get_partner_summary(
+    partner_id: str,
+    db: Session = Depends(get_db),
+):
+    """
+    Get company status summary.
+    
+    Returns key metrics and alerts for Partner to report.
+    """
+    service = AgentService(db)
+    partner_service = PartnerService(db)
+    
+    partner = service.get_agent_by_id(partner_id)
+    if not partner:
+        raise HTTPException(status_code=404, detail="Partner not found")
+    
+    summary = partner_service.get_company_summary()
+    
+    return summary
+
+
+@router.post("/partner/chat", response_model=PartnerChatResponse)
+async def chat_with_partner(
+    partner_id: str,
+    chat_req: PartnerChatRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    Send a message to Partner and get response.
+    
+    Also refreshes the awake timer to prevent auto-sleep.
+    """
+    from datetime import datetime
+    
+    service = AgentService(db)
+    partner = service.get_agent_by_id(partner_id)
+    
+    if not partner:
+        raise HTTPException(status_code=404, detail="Partner not found")
+    
+    # Check if Partner is awake
+    if partner.is_online != "awake":
+        return {
+            "response": "我需要先被唤醒才能帮助您。请点击 Partner 头像或发送 '唤醒' 来激活我！",
+            "actions": ["wake"]
+        }
+    
+    # Refresh heartbeat
+    partner.last_heartbeat = datetime.utcnow()
+    db.commit()
+    
+    # Simple response logic (can be enhanced with AI later)
+    message = chat_req.message.lower()
+    
+    if any(word in message for word in ["雇佣", "招聘", "hire", "新员工"]):
+        return {
+            "response": "我来帮您雇佣新员工！请告诉我需要什么样的员工（职位、技能要求）。",
+            "actions": ["open_hire_modal"]
+        }
+    elif any(word in message for word in ["任务", "发布", "task", "assign"]):
+        return {
+            "response": "我可以帮您发布任务。请描述任务内容和预算。",
+            "actions": ["open_create_task"]
+        }
+    elif any(word in message for word in ["报告", "状态", "status", "report"]):
+        return {
+            "response": "我来为您生成公司状态报告。",
+            "actions": ["show_reports"]
+        }
+    else:
+        return {
+            "response": f"收到！我是 {partner.name}，有什么我可以帮您的吗？\n\n您可以让我：\n• 雇佣新员工\n• 发布任务\n• 查看报告",
+            "actions": []
+        }
+
+
+def generate_welcome_message(summary: dict, partner_name: str, agent_id: str = None) -> str:
+    """Generate personalized welcome message using the bound OpenClaw Agent."""
+    import random
+    
+    # If no agent bound, use fallback
+    if not agent_id:
+        return generate_fallback_welcome(summary, partner_name)
+    
+    # Try to use the bound Agent to generate message
+    try:
+        from src.utils.openclaw_config import send_message_to_agent
+        
+        # Prepare context for the Agent
+        budget = summary.get("budget", {})
+        tasks = summary.get("tasks", {})
+        alerts = summary.get("alerts", [])
+        good_news = summary.get("good_news", [])
+        
+        prompt = f"""你是 {partner_name}，一位专业的 CEO 助理。现在老板刚刚打开 Dashboard，你需要热情地欢迎他/她，并简要汇报公司状态。
+
+公司当前状态：
+- 预算使用率：{budget.get('used_percentage', 0):.1f}%
+- 待办任务：{tasks.get('pending', 0)} 个
+- 进行中：{tasks.get('in_progress', 0)} 个
+- 今日完成：{tasks.get('completed_today', 0)} 个
+
+需要注意：
+{chr(10).join(['- ' + a for a in alerts[:3]]) if alerts else '- 暂无'}
+
+好消息：
+{chr(10).join(['- ' + g for g in good_news[:2]]) if good_news else '- 一切正常'}
+
+请生成一段热情的欢迎消息（包含问候、状态简报、和询问需要什么帮助）。语气要专业但友好，像一位称职的助理。"""
+
+        # Send to Agent and get response
+        response = send_message_to_agent(agent_id, prompt, timeout=30)
+        
+        if response and response.get("text"):
+            return response["text"]
+        
+    except Exception as e:
+        logger.warning("Failed to generate welcome message via Agent", error=str(e))
+    
+    # Fallback to generated message
+    return generate_fallback_welcome(summary, partner_name)
+
+
+def generate_fallback_welcome(summary: dict, partner_name: str) -> str:
+    """Fallback welcome message generator."""
+    import random
+    
+    greetings = [
+        "老板好！👋",
+        "欢迎回来！🎉",
+        "您好！我一直在等您。😊",
+        "老板，有什么我可以帮您的？💼"
+    ]
+    
+    greeting = random.choice(greetings)
+    
+    # Budget status
+    budget = summary.get("budget", {})
+    budget_pct = budget.get("used_percentage", 0)
+    if budget_pct > 90:
+        budget_status = "⚠️ 预算已接近上限"
+    elif budget_pct > 70:
+        budget_status = "💰 预算使用率正常"
+    else:
+        budget_status = "💰 预算充足"
+    
+    # Task status
+    tasks = summary.get("tasks", {})
+    pending = tasks.get("pending", 0)
+    overdue = tasks.get("overdue", 0)
+    
+    task_status = f"📋 待办任务：{pending}个"
+    if overdue > 0:
+        task_status += f"（⚠️ {overdue}个已逾期）"
+    
+    # Alerts
+    alerts = summary.get("alerts", [])
+    warning_section = ""
+    if alerts:
+        warning_section = "\n⚠️ 需要注意：\n" + "\n".join([f"  • {a}" for a in alerts[:3]])
+    
+    # Good news
+    good_news = summary.get("good_news", [])
+    good_news_section = ""
+    if good_news:
+        good_news_section = "\n✅ 好消息：\n" + "\n".join([f"  • {g}" for g in good_news[:2]])
+    
+    message = f"""{greeting}
+
+今天公司状态：
+• {budget_status}（{budget_pct:.1f}%）
+• {task_status}{warning_section}{good_news_section}
+
+有什么我可以帮您的吗？
+• 🤝 雇佣新员工
+• 📝 发布任务  
+• 📊 查看详细报告"""
+    
+    return message
 
 
 @router.get("/{agent_id}")
@@ -440,7 +872,7 @@ async def partner_company_status(
     service = AgentService(db)
     
     # Verify partner
-    partner = service.get_agent(partner_id)
+    partner = service.get_agent_by_id(partner_id)
     if not partner:
         raise HTTPException(status_code=404, detail="Partner not found")
     
@@ -475,7 +907,7 @@ async def partner_auto_assign(
     service = AgentService(db)
     
     # Verify partner
-    partner = service.get_agent(partner_id)
+    partner = service.get_agent_by_id(partner_id)
     if not partner:
         raise HTTPException(status_code=404, detail="Partner not found")
     
@@ -503,7 +935,7 @@ async def partner_assign_all_pending(
     service = AgentService(db)
     
     # Verify partner
-    partner = service.get_agent(partner_id)
+    partner = service.get_agent_by_id(partner_id)
     if not partner:
         raise HTTPException(status_code=404, detail="Partner not found")
     
@@ -741,3 +1173,114 @@ async def auto_create_agent_for_employee(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create agent: {str(e)}")
+
+
+@router.post("/gateway/restart")
+@limiter.limit(RATE_LIMITS["default"])
+async def restart_gateway(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    Restart OpenClaw Gateway.
+    
+    This is a sensitive operation that requires confirmation.
+    Returns immediately, actual restart happens asynchronously.
+    """
+    import subprocess
+    import os
+    import signal
+    
+    try:
+        # Find openclaw-gateway process
+        result = subprocess.run(
+            ["pgrep", "-f", "openclaw-gateway"],
+            capture_output=True,
+            text=True
+        )
+        
+        if result.returncode != 0 or not result.stdout.strip():
+            raise HTTPException(
+                status_code=404,
+                detail="OpenClaw Gateway process not found"
+            )
+        
+        # Get the PID
+        pid = int(result.stdout.strip().split('\n')[0])
+        
+        # Send SIGUSR1 to trigger graceful restart
+        os.kill(pid, signal.SIGUSR1)
+        
+        return {
+            "success": True,
+            "pid": pid,
+            "message": "OpenClaw Gateway restart signal sent. The gateway will restart shortly.",
+            "note": "It may take 10-30 seconds for the restart to complete."
+        }
+        
+    except ProcessLookupError:
+        raise HTTPException(
+            status_code=404,
+            detail="OpenClaw Gateway process not found"
+        )
+    except PermissionError:
+        raise HTTPException(
+            status_code=403,
+            detail="Permission denied. Cannot restart OpenClaw Gateway."
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to restart OpenClaw Gateway: {str(e)}"
+        )
+
+
+@router.get("/gateway/status")
+@limiter.limit(RATE_LIMITS["default"])
+async def get_gateway_status(
+    request: Request,
+):
+    """
+    Check OpenClaw Gateway status.
+    
+    Returns whether the gateway is running and its PID.
+    """
+    import subprocess
+    import time
+    
+    try:
+        result = subprocess.run(
+            ["pgrep", "-f", "openclaw-gateway"],
+            capture_output=True,
+            text=True
+        )
+        
+        if result.returncode == 0 and result.stdout.strip():
+            pid = int(result.stdout.strip().split('\n')[0])
+            
+            # Check if process is actually running
+            try:
+                os.kill(pid, 0)  # Signal 0 is used to check if process exists
+                return {
+                    "running": True,
+                    "pid": pid,
+                    "message": "OpenClaw Gateway is running"
+                }
+            except (OSError, ProcessLookupError):
+                return {
+                    "running": False,
+                    "pid": None,
+                    "message": "OpenClaw Gateway is not running"
+                }
+        else:
+            return {
+                "running": False,
+                "pid": None,
+                "message": "OpenClaw Gateway is not running"
+            }
+            
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to check gateway status: {str(e)}"
+        )

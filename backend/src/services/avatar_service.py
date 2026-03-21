@@ -59,8 +59,9 @@ class EmployeeAvatar(Base):
 class AvatarService:
     """Service for managing employee avatars."""
     
-    # Upload directory
-    UPLOAD_DIR = Path("./data/avatars")
+    # Upload directory - should be accessible from web
+    # Try absolute path first (for Docker), then relative from project root
+    UPLOAD_DIR = Path("/usr/share/nginx/html/avatars") if Path("/usr/share/nginx/html/avatars").exists() else Path(__file__).parent.parent.parent.parent / "web" / "avatars"
     
     # Pixel art templates (8x8 grid characters)
     PIXEL_TEMPLATES = {
@@ -214,7 +215,7 @@ class AvatarService:
         svg_width = grid_size * pixel_size
         svg_height = grid_size * pixel_size
         
-        svg = f'''"""?xml version="1.0" encoding="UTF-8"?>
+        svg = f'''<?xml version="1.0" encoding="UTF-8"?>
 <svg width="{svg_width}" height="{svg_height}" viewBox="0 0 {svg_width} {svg_height}" 
      xmlns="http://www.w3.org/2000/svg">
   <rect width="100%" height="100%" fill="#1a1a2e"/>
