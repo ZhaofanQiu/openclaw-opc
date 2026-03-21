@@ -101,6 +101,37 @@ class TaskService:
             agent_name=agent.name
         )
         
+        # Send task to Agent via execution service (v0.3.0 P0 - execution loop)
+        try:
+            from src.services.task_execution_service import TaskExecutionService
+            execution_service = TaskExecutionService(self.db)
+            result = execution_service.send_task_to_agent(task_id, agent_id)
+            
+            if result.get("success"):
+                logger.info(
+                    "task_auto_sent_to_agent",
+                    task_id=task_id,
+                    agent_id=agent_id,
+                    session_id=result.get("session_id")
+                )
+            else:
+                logger.warning(
+                    "task_auto_send_failed",
+                    task_id=task_id,
+                    agent_id=agent_id,
+                    error=result.get("error")
+                )
+                # Don't fail the assignment, just log the error
+                # The task is still assigned, and the Agent can check via opc_check_task
+        except Exception as e:
+            logger.error(
+                "task_auto_send_exception",
+                task_id=task_id,
+                agent_id=agent_id,
+                error=str(e)
+            )
+            # Don't fail the assignment
+        
         return task
     
     def update_task(

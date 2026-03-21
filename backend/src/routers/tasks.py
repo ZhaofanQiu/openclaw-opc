@@ -220,3 +220,173 @@ async def update_task(
     except ValueError as e:
         logger.warning("update_task_failed", task_id=task_id, error=str(e))
         raise HTTPException(status_code=400, detail=str(e))
+
+
+# ============================================================
+# Task Execution API (v0.3.0 P0 - Agent execution loop)
+# ============================================================
+
+class TaskReport(BaseModel):
+    """Task completion report from Agent."""
+    task_id: str = Field(..., description="Task ID")
+    agent_id: str = Field(..., description="Agent ID")
+    token_used: int = Field(..., ge=0, description="Actual tokens consumed")
+    result_summary: str = Field(..., min_length=1, max_length=2000, description="Work summary")
+    status: str = Field(default="completed", description="completed or failed")
+
+
+class TaskReportResponse(BaseModel):
+    """Task report response."""
+    success: bool
+    task_id: str
+    status: str
+    cost: float
+    remaining_budget: float
+    fused: bool
+    message: str
+
+
+@router.post("/report", response_model=TaskReportResponse)
+@limiter.limit(RATE_LIMITS["create"])
+async def report_task_completion(
+    request: Request,
+    report: TaskReport,
+    db: Session = Depends(get_db),
+):
+    """
+    Report task completion from Agent.
+    
+    This is the callback endpoint for Agents to report task results.
+    Called by Agents via opc_report() or directly via HTTP.
+    
+    **Authentication**: Agents use their agent_id as authentication.
+    
+    **Process**:
+    1. Validate task and agent
+    2. Update task status and cost
+    3. Update agent budget
+    4. Record transaction
+    5. Send notification
+    
+    **Returns**:
+    - Updated budget info
+    - Fuse status (if budget exceeded)
+    """
+    from src.services.task_execution_service import TaskExecutionService
+    
+    logger.info(
+        "task_report_received",
+        task_id=report.task_id,
+        agent_id=report.agent_id,
+        status=report.status
+    )
+    
+    service = TaskExecutionService(db)
+    result = service.report_task_completion(
+        task_id=report.task_id,
+        agent_id=report.agent_id,
+        token_used=report.token_used,
+        result_summary=report.result_summary,
+        status=report.status
+    )
+    
+    if not result.get("success"):
+        logger.warning(
+            "task_report_failed",
+            task_id=report.task_id,
+            error=result.get("error")
+        )
+        raise HTTPException(status_code=400, detail=result.get("error"))
+    
+    logger.info(
+        "task_report_processed",
+        task_id=report.task_id,
+        status=result["status"],
+        cost=result["cost"]
+    )
+    
+    return TaskReportResponse(
+        success=True,
+        task_id=result["task_id"],
+        status=result["status"],
+        cost=result["cost"],
+        remaining_budget=result["remaining_budget"],
+        fused=result["fused"],
+        message=f"Task {result['status']}. Budget: {result['remaining_budget']:.2f} OC币 remaining."
+    )
+
+
+@router.get("/{task_id}/execution")
+async def get_task_execution_status(
+    task_id: str,
+    db: Session = Depends(get_db),
+):
+    """
+    Get task execution status.
+    
+    Returns detailed execution information including:
+    - Current execution status
+    - When task was sent to agent
+    - Session ID
+    - Completion info (if finished)
+    """
+    from src.services.task_execution_service import TaskExecutionService
+    
+    service = TaskExecutionService(db)
+    status = service.get_execution_status(task_id)
+    
+    if not status:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    return status
+
+
+@router.post("/{task_id}/resend")
+@limiter.limit(RATE_LIMITS["create"])
+async def resend_task_to_agent(
+    request: Request,
+    task_id: str,
+    db: Session = Depends(get_db),
+):
+    """
+    Manually resend task to Agent.
+    
+    Useful when:
+    - Initial send failed
+    - Agent didn't receive the task
+    - Need to retry after timeout
+    
+    Requires task status to be 'assigned'.
+    """
+    from src.services.task_execution_service import TaskExecutionService
+    from src.models import Task
+    
+    task = db.query(Task).filter(Task.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    if task.status != TaskStatus.ASSIGNED.value:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot resend task with status '{task.status}'. Must be 'assigned'."
+        )
+    
+    if not task.agent_id:
+        raise HTTPException(status_code=400, detail="Task has no assigned agent")
+    
+    # Get agent's openclaw agent_id
+    agent = db.query(Agent).filter(Agent.id == task.agent_id).first()
+    if not agent or not agent.agent_id:
+        raise HTTPException(status_code=400, detail="Agent not bound to OpenClaw")
+    
+    service = TaskExecutionService(db)
+    result = service.send_task_to_agent(task_id, agent.agent_id)
+    
+    if result.get("success"):
+        return {
+            "success": True,
+            "message": result["message"],
+            "session_id": result.get("session_id")
+        }
+    else:
+        raise HTTPException(status_code=400, detail=result.get("error", "Failed to resend"))
