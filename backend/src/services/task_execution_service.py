@@ -77,7 +77,7 @@ class TaskExecutionService:
                 task.status = TaskStatus.ASSIGNED.value
                 task.execution_status = ExecutionStatus.SENT.value
                 task.sent_to_agent_at = datetime.utcnow()
-                task.execution_session_id = result.get("session_id")
+                task.execution_session_id = result.get("session_id")  # Store async message ID
                 
                 # Update agent status
                 agent.status = AgentStatus.WORKING.value
@@ -95,7 +95,8 @@ class TaskExecutionService:
                 return {
                     "success": True,
                     "message": f"Task sent to Agent '{agent.name}'",
-                    "session_id": result.get("session_id")
+                    "session_id": result.get("session_id"),
+                    "async": True
                 }
             else:
                 logger.error(
@@ -171,40 +172,35 @@ class TaskExecutionService:
         """
         Send message to Agent via sessions_send.
         
-        This is the integration point with OpenClaw's session system.
-        
-        In a real implementation, this would:
-        1. Call OpenClaw's sessions_send API
-        2. Or use an HTTP call to a local OpenClaw gateway
-        
-        For now, we'll use a mock implementation that can be replaced
-        with actual OpenClaw integration.
+        Async mode: Returns immediately, message is queued for background processing.
         """
         try:
-            # Try to use the actual sessions_send if available
-            # This requires the OpenClaw gateway to be running
             import requests
             
-            # OpenClaw gateway endpoint (configurable)
+            # Use async message API instead of direct sessions_send
+            # This returns immediately without waiting for Agent response
             gateway_url = "http://localhost:8080"
             
-            # Build the sessions send request
             payload = {
-                "sessionKey": agent_id,  # Use agent_id as session key
-                "message": message,
-                "timeoutSeconds": 30
+                "recipient_id": agent_id,
+                "content": message,
+                "subject": "任务分配",
+                "message_type": "task",
+                "timeout_seconds": 1800  # 30 minutes
             }
             
             response = requests.post(
-                f"{gateway_url}/api/sessions/send",
+                f"{gateway_url}/api/async-messages/send",
                 json=payload,
-                timeout=10
+                timeout=5  # Short timeout for API call
             )
             
             if response.status_code == 200:
+                data = response.json()
                 return {
                     "success": True,
-                    "session_id": response.json().get("session_id", str(uuid.uuid4())[:8])
+                    "session_id": data.get("message_id"),
+                    "async": True
                 }
             else:
                 return {
@@ -213,10 +209,8 @@ class TaskExecutionService:
                 }
                 
         except ImportError:
-            # requests not available, use fallback
             return self._send_via_fallback(agent_id, message)
         except requests.RequestException as e:
-            # Gateway not available, use fallback
             logger.warning("gateway_unavailable", error=str(e))
             return self._send_via_fallback(agent_id, message)
     

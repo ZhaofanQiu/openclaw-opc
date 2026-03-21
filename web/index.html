@@ -4728,10 +4728,18 @@
                 });
 
                 if (response.ok) {
+                    const data = await response.json();
                     closeAssignModal();
                     loadData();
                     loadNotifications();
-                    alert('任务分配成功！');
+                    
+                    // Show async notification
+                    showToast(`任务已分配给 ${data.agent_name || '员工'}，正在通知Agent...`);
+                    
+                    // If there's an async message, track it
+                    if (data.execution_session_id) {
+                        trackTaskMessage(data.execution_session_id, data.title || '任务');
+                    }
                 } else {
                     const error = await response.json();
                     alert('分配失败: ' + (error.detail || '未知错误'));
@@ -4743,6 +4751,46 @@
                 // Restore button state
                 confirmBtn.textContent = originalText;
                 confirmBtn.disabled = false;
+            }
+        }
+
+        // Track task execution message status
+        let taskMessagePollingInterval = null;
+        let pendingTaskMessages = new Map(); // messageId -> taskTitle
+
+        function trackTaskMessage(messageId, taskTitle) {
+            pendingTaskMessages.set(messageId, taskTitle);
+            
+            if (!taskMessagePollingInterval) {
+                taskMessagePollingInterval = setInterval(() => pollTaskMessages(), 5000);
+            }
+        }
+
+        async function pollTaskMessages() {
+            if (pendingTaskMessages.size === 0) {
+                clearInterval(taskMessagePollingInterval);
+                taskMessagePollingInterval = null;
+                return;
+            }
+
+            for (const [messageId, taskTitle] of pendingTaskMessages) {
+                try {
+                    const response = await Auth.authFetch(`${API_BASE}/api/async-messages/${messageId}`);
+                    if (!response.ok) continue;
+                    
+                    const msg = await response.json();
+                    
+                    if (msg.status === 'responded') {
+                        pendingTaskMessages.delete(messageId);
+                        showToast(`Agent 已接受任务"${taskTitle}"`);
+                        loadData(); // Refresh to show updated task status
+                    } else if (msg.status === 'failed' || msg.status === 'timeout') {
+                        pendingTaskMessages.delete(messageId);
+                        showToast(`任务"${taskTitle}"通知失败，请检查Agent状态`);
+                    }
+                } catch (error) {
+                    console.error(`Error polling task message ${messageId}:`, error);
+                }
             }
         }
 
