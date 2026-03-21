@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>星际工作室 - OPC Dashboard</title>
+    <script src="auth.js"></script>
     <style>
         * {
             margin: 0;
@@ -799,12 +800,15 @@
         </div>
     </div>
 
-    <!-- Notification Button -->
-    <button class="notification-btn" onclick="toggleNotifications()" style="position: fixed; top: 20px; right: 20px;">
-        <span>🔔</span>
-        <span id="notification-btn-text">通知</span>
-        <span class="notification-badge hidden" id="notification-badge">0</span>
-    </button>
+    <!-- Notification Button + Logout -->
+    <div style="position: fixed; top: 20px; right: 20px; display: flex; gap: 10px; z-index: 1000;">
+        <button onclick="Auth.logout()" style="background: #2a2a4a; border: none; color: #888; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; transition: all 0.2s;">🚪 登出</button>
+        <button class="notification-btn" onclick="toggleNotifications()">
+            <span>🔔</span>
+            <span id="notification-btn-text">通知</span>
+            <span class="notification-badge hidden" id="notification-badge">0</span>
+        </button>
+    </div>
 
     <!-- Notification Panel -->
     <div class="notification-panel" id="notification-panel">
@@ -879,7 +883,7 @@
         // Load company budget
         async function loadCompanyBudget() {
             try {
-                const response = await fetch(`${API_BASE}/api/budget/company`);
+                const response = await Auth.authFetch(`${API_BASE}/api/budget/company`);
                 if (!response.ok) throw new Error('Failed to load budget');
                 
                 const data = await response.json();
@@ -902,7 +906,7 @@
             const container = document.getElementById('agents-list');
             
             try {
-                const response = await fetch(`${API_BASE}/api/agents`);
+                const response = await Auth.authFetch(`${API_BASE}/api/agents`);
                 if (!response.ok) throw new Error('Failed to load agents');
                 
                 const agents = await response.json();
@@ -965,7 +969,7 @@
             const container = document.getElementById('tasks-list');
             
             try {
-                const response = await fetch(`${API_BASE}/api/tasks`);
+                const response = await Auth.authFetch(`${API_BASE}/api/tasks`);
                 if (!response.ok) throw new Error('Failed to load tasks');
                 
                 const tasks = await response.json();
@@ -1039,7 +1043,7 @@
         // Load Partner health status
         async function loadPartnerHealth() {
             try {
-                const response = await fetch(`${API_BASE}/api/agents/partner/health?partner_id=main`);
+                const response = await Auth.authFetch(`${API_BASE}/api/agents/partner/health?partner_id=main`);
                 if (response.ok) {
                     const data = await response.json();
                     const indicator = document.querySelector('.status-indicator');
@@ -1060,7 +1064,7 @@
         // Load system config
         async function loadConfig() {
             try {
-                const response = await fetch(`${API_BASE}/api/config`);
+                const response = await Auth.authFetch(`${API_BASE}/api/config`);
                 if (response.ok) {
                     const data = await response.json();
                     document.getElementById('config-timeout').value = data.task_timeout_minutes;
@@ -1087,7 +1091,7 @@
             };
 
             try {
-                const response = await fetch(`${API_BASE}/api/config`, {
+                const response = await Auth.authFetch(`${API_BASE}/api/config`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(updates)
@@ -1119,10 +1123,10 @@
         async function checkOverdueTasks() {
             try {
                 // First, run check
-                await fetch(`${API_BASE}/api/monitor/check`, { method: 'POST' });
+                await Auth.authFetch(`${API_BASE}/api/monitor/check`, { method: 'POST' });
                 
                 // Then get overdue list
-                const response = await fetch(`${API_BASE}/api/monitor/overdue`);
+                const response = await Auth.authFetch(`${API_BASE}/api/monitor/overdue`);
                 if (response.ok) {
                     const data = await response.json();
                     const alert = document.getElementById('overdue-alert');
@@ -1160,7 +1164,7 @@
 
         async function loadNotifications() {
             try {
-                const response = await fetch(`${API_BASE}/api/notifications`);
+                const response = await Auth.authFetch(`${API_BASE}/api/notifications`);
                 if (!response.ok) return;
                 
                 const data = await response.json();
@@ -1204,7 +1208,7 @@
 
         async function markNotificationRead(id) {
             try {
-                await fetch(`${API_BASE}/api/notifications/${id}/read`, { method: 'POST' });
+                await Auth.authFetch(`${API_BASE}/api/notifications/${id}/read`, { method: 'POST' });
                 loadNotifications();
             } catch (error) {
                 console.error('Error marking notification read:', error);
@@ -1213,7 +1217,7 @@
 
         async function markAllNotificationsRead() {
             try {
-                await fetch(`${API_BASE}/api/notifications/read-all`, { method: 'POST' });
+                await Auth.authFetch(`${API_BASE}/api/notifications/read-all`, { method: 'POST' });
                 loadNotifications();
             } catch (error) {
                 console.error('Error marking all notifications read:', error);
@@ -1237,7 +1241,7 @@
             select.innerHTML = '<option value="">加载中...</option>';
             
             try {
-                const response = await fetch(`${API_BASE}/api/agents?available_only=true`);
+                const response = await Auth.authFetch(`${API_BASE}/api/agents?available_only=true`);
                 if (!response.ok) throw new Error('Failed to load agents');
                 
                 const agents = await response.json();
@@ -1265,7 +1269,7 @@
             }
             
             try {
-                const response = await fetch(`${API_BASE}/api/tasks/${currentAssignTaskId}/assign`, {
+                const response = await Auth.authFetch(`${API_BASE}/api/tasks/${currentAssignTaskId}/assign`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ agent_id: agentId })
@@ -1309,7 +1313,7 @@
             select.innerHTML = '<option value="">加载可用Agent...</option>';
             
             try {
-                const response = await fetch(`${API_BASE}/api/agents/binding/available`);
+                const response = await Auth.authFetch(`${API_BASE}/api/agents/binding/available`);
                 if (!response.ok) throw new Error('Failed to load available agents');
                 
                 const data = await response.json();
@@ -1337,7 +1341,7 @@
             }
             
             try {
-                const response = await fetch(`${API_BASE}/api/agents/binding/bind`, {
+                const response = await Auth.authFetch(`${API_BASE}/api/agents/binding/bind`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
@@ -1376,7 +1380,7 @@
             if (!confirm) return;
             
             try {
-                const response = await fetch(`${API_BASE}/api/agents/auto-create`, {
+                const response = await Auth.authFetch(`${API_BASE}/api/agents/auto-create`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 

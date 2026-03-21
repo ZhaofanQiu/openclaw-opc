@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>工作日报 - 星际工作室</title>
+    <script src="auth.js"></script>
     <style>
         * {
             margin: 0;
@@ -330,6 +331,7 @@
             <div class="nav-links">
                 <a href="/dashboard">← 返回Dashboard</a>
                 <a href="/dashboard/pixel-office.html">🏢 像素办公室</a>
+                <a href="#" onclick="Auth.logout(); return false;" style="color: #f87171;">🚪 登出</a>
             </div>
         </header>
 
@@ -379,7 +381,7 @@
             }
 
             try {
-                const response = await fetch(`${API_BASE}/api/reports/daily?date_str=${dateStr}`);
+                const response = await Auth.authFetch(`${API_BASE}/api/reports/daily?date_str=${dateStr}`);
                 if (!response.ok) {
                     throw new Error('Failed to load report');
                 }
@@ -417,7 +419,7 @@
             `;
 
             try {
-                const response = await fetch(`${API_BASE}/api/reports/recent?days=7`);
+                const response = await Auth.authFetch(`${API_BASE}/api/reports/recent?days=7`);
                 if (!response.ok) {
                     throw new Error('Failed to load reports');
                 }

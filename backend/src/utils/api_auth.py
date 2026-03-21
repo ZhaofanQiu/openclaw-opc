@@ -90,32 +90,32 @@ async def require_api_key(
     }
 
 
-# Permission-based dependencies
-def require_read_permission(
+# Permission-based dependencies (async versions)
+async def require_read_permission(
     request: Request,
     api_key: str = Depends(get_api_key),
     db: Session = Depends(get_db),
 ):
     """Require read permission."""
-    return require_api_key(request, api_key, db, "read")
+    return await require_api_key(request, api_key, db, "read")
 
 
-def require_write_permission(
+async def require_write_permission(
     request: Request,
     api_key: str = Depends(get_api_key),
     db: Session = Depends(get_db),
 ):
     """Require write permission."""
-    return require_api_key(request, api_key, db, "write")
+    return await require_api_key(request, api_key, db, "write")
 
 
-def require_admin_permission(
+async def require_admin_permission(
     request: Request,
     api_key: str = Depends(get_api_key),
     db: Session = Depends(get_db),
 ):
     """Require admin permission."""
-    return require_api_key(request, api_key, db, "admin")
+    return await require_api_key(request, api_key, db, "admin")
 
 
 # Optional API key (for mixed public/private endpoints)
