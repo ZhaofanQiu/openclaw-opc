@@ -1,103 +1,99 @@
-# Cloudflare Tunnel 部署指南
+# Cloudflare Quick Tunnel 测试方案
 
-> ⚠️ **注意：本文档尚未经验证，仅供测试参考**
-> 
-> Quick Tunnel 方案存在连接不稳定问题，可能遇到 530 错误。
-> 生产环境建议使用带有公网 IP 的服务器或购买独立域名配置正式 Tunnel。
+> ⚠️ **警告：此方案尚未经验证，仅供测试使用**
 
 ---
 
-## 快速开始（Quick Tunnel）
+## 概述
 
-Cloudflare Quick Tunnel 是一种无需账号、无需域名的临时公网访问方案。
+Cloudflare Quick Tunnel 是一种无需账号、无需配置的临时隧道方案，适合快速测试外网访问功能。
 
-### 安装 cloudflared
+---
 
-```bash
-# Linux (amd64)
-curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
-dpkg -x cloudflared.deb /tmp/
-cp /tmp/usr/bin/cloudflared /usr/local/bin/
-chmod +x /usr/local/bin/cloudflared
+## ⚠️ 重要警告
 
-# 验证安装
-cloudflared version
-```
+**此方案存在以下已知问题：**
+
+1. **连接不稳定** - Quick Tunnel 是临时性的，可能随时断开
+2. **530 错误** - 可能遇到 Cloudflare 530 错误导致无法访问
+3. **仅限测试** - 不建议用于生产环境或长期运行
+4. **无持久域名** - 每次启动 URL 都会变化
+
+---
+
+## 快速开始
+
+### 前提条件
+
+- Docker 已安装
+- OpenClaw OPC 本地可正常访问
 
 ### 启动 Quick Tunnel
 
 ```bash
-# 确保 OPC 后端服务在 8080 端口运行
-curl http://localhost:8080/health
-
-# 启动临时公网隧道
-cloudflared tunnel --url http://localhost:8080
+# 确保 OpenClaw OPC 已在本地运行
+# 然后启动 Quick Tunnel
+docker run --rm -it cloudflare/cloudflared:latest tunnel --url http://host.docker.internal:3000
 ```
 
 输出示例：
 ```
-INF |  https://xxxxx.trycloudflare.com  |
+Your quick Tunnel URL: https://random-string.trycloudflare.com
 ```
 
 ### 访问 Dashboard
 
-```
-https://xxxxx.trycloudflare.com/dashboard
-```
-
-使用 API Key 登录（通过后端创建）。
+1. 复制输出的 URL（如 `https://random-string.trycloudflare.com`）
+2. 在浏览器中打开
+3. 使用 API Key 登录（需提前创建）
 
 ---
 
-## ⚠️ 已知问题
+## 已知问题与解决
 
-| 问题 | 说明 |
-|------|------|
-| **连接不稳定** | Quick Tunnel 没有可用性保证，可能频繁断开 |
-| **530 错误** | 隧道连接中断时会返回 530 错误 |
-| **1 小时限制** | 临时隧道大约 1 小时后自动关闭 |
-| **无自定义域名** | 无法使用自己的域名 |
+### 连接不稳定
+
+**现象**：隧道突然断开，无法访问
+
+**解决**：重新运行 Quick Tunnel 命令获取新 URL
+
+### 530 错误
+
+**现象**：浏览器显示 "Error 530"
+
+**可能原因**：
+- Cloudflare 边缘节点问题
+- Quick Tunnel 服务临时不可用
+- 本地服务未启动或端口错误
+
+**解决**：
+1. 检查本地服务是否正常运行
+2. 重新启动 Quick Tunnel
+3. 等待几分钟后重试
+
+### CORS 错误
+
+**现象**：API 请求失败，浏览器控制台显示 CORS 错误
+
+**解决**：设置环境变量允许 Quick Tunnel 域名
+
+```bash
+# 在启动 OPC 前设置
+export CORS_ORIGINS="https://*.trycloudflare.com"
+```
 
 ---
 
 ## 生产环境建议
 
-### 方案 1：购买域名 + 正式 Tunnel（推荐）
+如需稳定的公网访问，建议：
 
-1. 购买域名（阿里云/腾讯云 .top/.xyz 首年 1-10 元）
-2. 注册 Cloudflare 账号，添加域名
-3. 创建正式 Tunnel 并配置 Public Hostname
-4. 参考 Cloudflare 官方文档：https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/
-
-### 方案 2：有公网 IP 的服务器
-
-直接部署 OPC，配置防火墙开放端口，使用 Let's Encrypt SSL。
-
-### 方案 3：其他内网穿透工具
-
-- **ngrok**: 需要注册，免费版有速率限制
-- **frp**: 需要自建服务端或有公网 IP 的服务器
-- **花生壳/神卓互联**: 国内商业服务
+1. **使用正式 Cloudflare Tunnel**（需 Cloudflare 账号和域名）
+2. **使用传统方案**（公网 IP + DDNS + 反向代理）
+3. **使用云服务部署**（VPS、云服务器等）
 
 ---
 
-## 安全提醒
+## 参考
 
-⚠️ **启用 API Key 认证**
-
-无论使用哪种公网访问方案，都必须启用 API Key 认证：
-
-```bash
-# .env
-API_KEY_AUTH_ENABLED=true
-API_KEY_SECRET=your-secure-secret-key
-```
-
-创建 API Key 后，Dashboard 和 Reports 页面需要登录才能访问。
-
----
-
-## 参考文档
-
-- [Cloudflare Tunnel 官方文档](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)
-- [cloudflared GitHub](https://github.com/cloudflare/cloudflared)
+- [Cloudflare Tunnel 文档](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)

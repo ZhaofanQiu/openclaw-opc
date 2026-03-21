@@ -6,13 +6,11 @@ version: '3.8'
 #   1. Copy .env.example to .env and configure
 #   2. Run: docker-compose -f docker-compose.prod.yml up -d
 #
-# External Access (Experimental):
-#   For Quick Tunnel (testing only):
-#     cloudflared tunnel --url http://localhost:8080
+# External Access (Testing Only):
+#   ⚠️ 以下方案尚未经验证，仅供测试使用
+#   如需公网访问，建议使用 Cloudflare Quick Tunnel:
 #
-#   For production, consider:
-#     - Purchasing a domain and configuring formal Cloudflare Tunnel
-#     - Using a server with public IP
+#   docker run --rm -it cloudflare/cloudflared:latest tunnel --url http://host.docker.internal:3000
 #
 # Documentation: docs/CLOUDFLARE_TUNNEL.md
 
@@ -36,10 +34,9 @@ services:
       - PORT=8080
       
       # Security (Production Hardening)
-      # CORS origins should be set to your Cloudflare domains only
-      - CORS_ORIGINS=${CORS_ORIGINS:-https://*.trycloudflare.com}
+      - CORS_ORIGINS=${CORS_ORIGINS:-*}
       
-      # API Key Authentication - REQUIRED for external access
+      # API Key Authentication - RECOMMENDED for external access
       - API_KEY_AUTH_ENABLED=${API_KEY_AUTH_ENABLED:-true}
       - API_KEY_SECRET=${API_KEY_SECRET}
       
@@ -117,11 +114,11 @@ services:
           cpus: '0.25'
           memory: 64M
 
-  # Cloudflare Tunnel - Secure external access
-  # ⚠️  WARNING: Quick Tunnel is for testing only, not stable for production
-  # For external access, manually run: cloudflared tunnel --url http://localhost:8080
-  # Or purchase a domain for formal tunnel setup
-  # 
+  # Cloudflare Tunnel - Commented out (testing only)
+  # ⚠️ 警告：此方案尚未经验证，仅供测试使用
+  # 如需临时测试外网访问，请使用 Quick Tunnel 手动启动:
+  # docker run --rm -it cloudflare/cloudflared:latest tunnel --url http://host.docker.internal:3000
+  #
   # cloudflared:
   #   image: cloudflare/cloudflared:latest
   #   container_name: opc-tunnel
@@ -173,7 +170,7 @@ networks:
 #
 #  redis:
 #    image: redis:7-alpine
-#    container_name: opc-redis
+#    container_name: opc-redgres
 #    restart: unless-stopped
 #    networks:
 #      - opc-network

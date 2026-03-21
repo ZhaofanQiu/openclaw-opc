@@ -386,47 +386,32 @@ curl -X POST -H "Authorization: Bearer YOUR_API_KEY" \
 
 ---
 
-## 🌐 外网访问（实验性）
+## 🌐 外网访问（测试方案）
 
-⚠️ **注意：以下方案尚未经验证，仅供测试参考**
+> ⚠️ **警告：以下方案尚未经验证，仅供测试使用**
 
-### Cloudflare Quick Tunnel（临时方案）
+### Cloudflare Quick Tunnel（临时测试）
 
-无需公网 IP，无需域名，快速临时访问：
+如需临时测试外网访问，可使用 Cloudflare Quick Tunnel：
 
 ```bash
-# 1. 安装 cloudflared
-curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
-dpkg -x cloudflared.deb /tmp/
-cp /tmp/usr/bin/cloudflared /usr/local/bin/
+# 1. 确保 OpenClaw OPC 本地运行
+# 2. 启动 Quick Tunnel
+docker run --rm -it cloudflare/cloudflared:latest tunnel --url http://host.docker.internal:3000
 
-# 2. 确保 OPC 在运行
-curl http://localhost:8080/health
-
-# 3. 启动临时隧道
-cloudflared tunnel --url http://localhost:8080
+# 3. 复制输出的 URL 访问 Dashboard
 ```
 
-输出示例：
-```
-https://xxxxx.trycloudflare.com
-```
-
-访问 Dashboard: `https://xxxxx.trycloudflare.com/dashboard`
-
-### ⚠️ 已知问题
-
-- 连接不稳定，可能频繁断开
+**已知问题：**
+- 连接不稳定，可能随时断开
 - 可能遇到 530 错误
-- 约 1 小时后自动关闭
-- 无法使用自定义域名
+- 每次启动 URL 都会变化
+
+详细说明请参考 [docs/CLOUDFLARE_TUNNEL.md](./docs/CLOUDFLARE_TUNNEL.md)
 
 ### 生产环境建议
 
-| 方案 | 说明 |
-|------|------|
-| **购买域名** | 阿里云/腾讯云 .top/.xyz 首年 1-10 元，配置正式 Tunnel |
-| **公网 IP 服务器** | 直接部署，配置 Let's Encrypt SSL |
-| **其他工具** | ngrok（需注册）、frp（需服务端） |
-
-详细说明：[docs/CLOUDFLARE_TUNNEL.md](./docs/CLOUDFLARE_TUNNEL.md)
+如需稳定的公网访问，建议：
+1. 使用传统方案（公网 IP + DDNS + 反向代理）
+2. 使用云服务器部署
+3. 配置正式 Cloudflare Tunnel（需账号和域名）
