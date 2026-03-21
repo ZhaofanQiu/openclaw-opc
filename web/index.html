@@ -3939,10 +3939,7 @@
             container.scrollTop = container.scrollHeight;
         }
 
-        // Partner async chat
-        let partnerPendingMessages = new Set();
-        let partnerPollingInterval = null;
-
+        // Partner async chat - Using MessageCenter
         async function sendChatMessage() {
             const input = document.getElementById('partner-chat-input');
             const message = input.value.trim();
@@ -3970,6 +3967,7 @@
             const pendingId = 'pending-' + Date.now();
             const pendingDiv = document.createElement('div');
             pendingDiv.id = pendingId;
+            pendingDiv.dataset.messageId = pendingId;
             pendingDiv.style.cssText = 'text-align: left; margin-bottom: 12px;';
             pendingDiv.innerHTML = `
                 <div style="display: inline-block; max-width: 80%; padding: 10px 14px; border-radius: 12px; background: #2a2a4a; color: #fff; font-size: 14px;">
@@ -3997,14 +3995,15 @@
                 const data = await response.json();
 
                 if (response.ok && data.success) {
-                    // Track pending message
-                    partnerPendingMessages.add(data.message_id);
-                    pendingDiv.dataset.messageId = data.message_id;
-                    
-                    // Start polling
-                    if (!partnerPollingInterval) {
-                        partnerPollingInterval = setInterval(() => pollPartnerMessages(), 5000);
-                    }
+                    // Subscribe to message updates via MessageCenter
+                    MessageCenter.subscribe(
+                        data.message_id,
+                        'partner',
+                        (status, msg, context) => {
+                            handlePartnerMessageUpdate(status, msg, pendingDiv, context);
+                        },
+                        { originalMessage: message }
+                    );
                 } else {
                     // Remove pending indicator
                     pendingDiv.remove();
@@ -4017,58 +4016,38 @@
             }
         }
 
-        async function pollPartnerMessages() {
-            if (partnerPendingMessages.size === 0) {
-                clearInterval(partnerPollingInterval);
-                partnerPollingInterval = null;
-                return;
-            }
-
-            for (const messageId of partnerPendingMessages) {
-                try {
-                    const response = await Auth.authFetch(`${API_BASE}/api/async-messages/${messageId}`);
-                    if (!response.ok) continue;
-                    
-                    const msg = await response.json();
-                    
-                    // Find pending element
-                    const pendingEl = document.querySelector(`[data-message-id="${messageId}"]`);
-                    
-                    if (msg.status === 'responded') {
-                        // Got response!
-                        partnerPendingMessages.delete(messageId);
-                        
-                        if (pendingEl) {
-                            pendingEl.innerHTML = `
-                                <div class="partner-chat-message partner">${msg.response_content}</div>
-                                <div style="font-size: 11px; color: #666; margin-top: 4px;">${new Date(msg.responded_at).toLocaleString()}</div>
-                            `;
-                        } else {
-                            // If element not found (user switched views), add as new
-                            addPartnerMessage(msg.response_content);
-                        }
-                        
-                        // Show notification if chat closed
-                        if (!isPartnerChatOpen()) {
-                            showNotification('Partner 回复了您的消息');
-                        }
-                    } else if (msg.status === 'failed' || msg.status === 'timeout') {
-                        partnerPendingMessages.delete(messageId);
-                        if (pendingEl) {
-                            pendingEl.innerHTML = `
-                                <div style="color: #f87171; font-size: 14px;">❌ ${msg.status === 'timeout' ? '回复超时（30分钟）' : '发送失败'}</div>
-                            `;
-                        }
-                    } else if (msg.status === 'sent' || msg.status === 'delivered') {
-                        if (pendingEl) {
-                            pendingEl.querySelector('div:last-child').textContent = '📤 Partner已接收';
-                        }
-                    }
-                } catch (error) {
-                    console.error(`Error polling partner message ${messageId}:`, error);
+        // Handle Partner message status updates
+        function handlePartnerMessageUpdate(status, msg, pendingEl, context) {
+            if (status === 'responded') {
+                // Got response!
+                if (pendingEl && pendingEl.parentNode) {
+                    pendingEl.innerHTML = `
+                        <div class="partner-chat-message partner">${msg.response_content}</div>
+                        <div style="font-size: 11px; color: #666; margin-top: 4px;">${new Date(msg.responded_at).toLocaleString()}</div>
+                    `;
+                } else {
+                    // If element not found (user switched views), add as new
+                    addPartnerMessage(msg.response_content);
+                }
+                
+                // Show notification if chat closed
+                if (!isPartnerChatOpen()) {
+                    showNotification('Partner 回复了您的消息');
+                }
+            } else if (status === 'failed' || status === 'timeout') {
+                if (pendingEl && pendingEl.parentNode) {
+                    pendingEl.innerHTML = `
+                        <div style="color: #f87171; font-size: 14px;">❌ ${status === 'timeout' ? '回复超时（30分钟）' : '发送失败'}</div>
+                    `;
+                }
+            } else if (status === 'sent' || status === 'delivered') {
+                if (pendingEl && pendingEl.parentNode) {
+                    pendingEl.querySelector('div:last-child').textContent = '📤 Partner已接收';
                 }
             }
         }
+
+        // Remove old pollPartnerMessages function - replaced by MessageCenter
 
         function isPartnerChatOpen() {
             const chat = document.getElementById('partner-chat-container');
@@ -4098,7 +4077,135 @@
             setInterval(loadPartnerState, 30000);
         });
 
-        // Load Partner health status
+        // ============================================================
+        // Unified Message Center (Phase 5)
+        // ============================================================
+        
+        const MessageCenter = {
+            // Pending messages: messageId -> { type, callback, context }
+            pendingMessages: new Map(),
+            
+            // Polling interval reference
+            pollingInterval: null,
+            
+            // Polling interval in ms (5 seconds)
+            POLL_INTERVAL: 5000,
+            
+            /**
+             * Subscribe to message status updates
+             * @param {string} messageId - Async message ID
+             * @param {string} type - Message type: 'partner' | 'agent' | 'task'
+             * @param {Function} callback - Callback function(status, data)
+             * @param {Object} context - Optional context data
+             */
+            subscribe(messageId, type, callback, context = {}) {
+                this.pendingMessages.set(messageId, {
+                    type,
+                    callback,
+                    context,
+                    startTime: Date.now()
+                });
+                
+                // Start polling if not already running
+                this.startPolling();
+                
+                console.log(`[MessageCenter] Subscribed: ${messageId} (${type})`);
+            },
+            
+            /**
+             * Unsubscribe from message updates
+             * @param {string} messageId - Async message ID
+             */
+            unsubscribe(messageId) {
+                if (this.pendingMessages.has(messageId)) {
+                    this.pendingMessages.delete(messageId);
+                    console.log(`[MessageCenter] Unsubscribed: ${messageId}`);
+                }
+                
+                // Stop polling if no more messages
+                if (this.pendingMessages.size === 0) {
+                    this.stopPolling();
+                }
+            },
+            
+            /**
+             * Start unified polling
+             */
+            startPolling() {
+                if (this.pollingInterval) return; // Already running
+                
+                console.log('[MessageCenter] Starting unified polling');
+                this.pollingInterval = setInterval(() => this.poll(), this.POLL_INTERVAL);
+            },
+            
+            /**
+             * Stop unified polling
+             */
+            stopPolling() {
+                if (!this.pollingInterval) return;
+                
+                console.log('[MessageCenter] Stopping unified polling');
+                clearInterval(this.pollingInterval);
+                this.pollingInterval = null;
+            },
+            
+            /**
+             * Poll all pending messages
+             */
+            async poll() {
+                if (this.pendingMessages.size === 0) {
+                    this.stopPolling();
+                    return;
+                }
+                
+                const messageIds = Array.from(this.pendingMessages.keys());
+                
+                for (const messageId of messageIds) {
+                    try {
+                        const response = await Auth.authFetch(`${API_BASE}/api/async-messages/${messageId}`);
+                        if (!response.ok) continue;
+                        
+                        const msg = await response.json();
+                        const subscription = this.pendingMessages.get(messageId);
+                        
+                        if (!subscription) continue;
+                        
+                        // Check for terminal states
+                        const isTerminal = ['responded', 'failed', 'timeout'].includes(msg.status);
+                        
+                        // Call callback with status update
+                        subscription.callback(msg.status, msg, subscription.context);
+                        
+                        // Unsubscribe if terminal state
+                        if (isTerminal) {
+                            this.unsubscribe(messageId);
+                        }
+                    } catch (error) {
+                        console.error(`[MessageCenter] Error polling ${messageId}:`, error);
+                    }
+                }
+            },
+            
+            /**
+             * Get count of pending messages by type
+             */
+            getPendingCount(type = null) {
+                if (!type) return this.pendingMessages.size;
+                return Array.from(this.pendingMessages.values()).filter(m => m.type === type).length;
+            },
+            
+            /**
+             * Clear all subscriptions
+             */
+            clear() {
+                this.pendingMessages.clear();
+                this.stopPolling();
+            }
+        };
+
+        // ============================================================
+        // Partner Widget - Refactored for Message Center
+        // ============================================================
         async function loadPartnerHealth() {
             try {
                 const response = await Auth.authFetch(`${API_BASE}/api/agents/partner/health?partner_id=${PARTNER_ID}`);
@@ -5879,14 +5986,8 @@
         function closeAgentModal() {
             document.getElementById('agent-detail-modal').classList.remove('visible');
             
-            // Clear polling interval
-            if (agentModalPollingInterval) {
-                clearInterval(agentModalPollingInterval);
-                agentModalPollingInterval = null;
-            }
-            
-            // Note: We keep pendingAgentMessages so user can come back later
-            // The messages will still be processed in background
+            // Note: MessageCenter handles message polling in background
+            // No need to clear interval here - messages continue to be tracked
             
             currentModalAgentId = null;
             currentModalAgentData = null;
@@ -6010,9 +6111,8 @@
             }
         }
 
-        // Async message polling for agent modal
-        let agentModalPollingInterval = null;
-        let pendingAgentMessages = new Set();
+        // Async message polling for agent modal - Using MessageCenter
+        // Removed: agentModalPollingInterval and pendingAgentMessages - now managed by MessageCenter
 
         async function sendAgentModalMessage() {
             if (!currentModalAgentId) return;
@@ -6047,15 +6147,20 @@
                     input.value = '';
                     
                     // Add to pending messages for polling
-                    pendingAgentMessages.add(data.message_id);
+                    // pendingAgentMessages.add(data.message_id);  // Replaced by MessageCenter
                     
                     // Show pending message in UI
                     addPendingMessageToUI(content, data.message_id);
                     
-                    // Start polling if not already
-                    if (!agentModalPollingInterval) {
-                        agentModalPollingInterval = setInterval(() => pollAgentModalMessages(), 5000);
-                    }
+                    // Subscribe to updates via MessageCenter
+                    MessageCenter.subscribe(
+                        data.message_id,
+                        'agent',
+                        (status, msg, context) => {
+                            handleAgentModalMessageUpdate(status, msg, data.message_id);
+                        },
+                        { agentId: currentModalAgentId }
+                    );
                     
                     // Show notification
                     showToast('消息已发送，Agent处理中...');
@@ -6095,47 +6200,25 @@
             container.scrollTop = container.scrollHeight;
         }
 
-        async function pollAgentModalMessages() {
-            if (pendingAgentMessages.size === 0) {
-                clearInterval(agentModalPollingInterval);
-                agentModalPollingInterval = null;
-                return;
-            }
-
-            for (const messageId of pendingAgentMessages) {
-                try {
-                    const response = await Auth.authFetch(`${API_BASE}/api/async-messages/${messageId}`);
-                    if (!response.ok) continue;
-                    
-                    const msg = await response.json();
-                    
-                    // Update status in UI
-                    const statusEl = document.querySelector(`.msg-status[data-msg-id="${messageId}"]`);
-                    if (!statusEl) continue;
-                    
-                    if (msg.status === 'responded') {
-                        // Agent replied!
-                        statusEl.textContent = '✓ 已回复';
-                        statusEl.style.color = '#4ade80';
-                        
-                        // Add response to UI
-                        addAgentResponseToUI(msg.response_content);
-                        
-                        // Remove from pending
-                        pendingAgentMessages.delete(messageId);
-                    } else if (msg.status === 'failed' || msg.status === 'timeout') {
-                        statusEl.textContent = '❌ ' + (msg.status === 'timeout' ? '超时' : '失败');
-                        statusEl.style.color = '#f87171';
-                        pendingAgentMessages.delete(messageId);
-                    } else if (msg.status === 'sent' || msg.status === 'delivered') {
-                        statusEl.textContent = '📤 Agent已接收';
-                        statusEl.style.color = '#60a5fa';
-                    }
-                } catch (error) {
-                    console.error(`Error polling message ${messageId}:`, error);
-                }
+        // Handle Agent modal message status updates (MessageCenter callback)
+        function handleAgentModalMessageUpdate(status, msg, messageId) {
+            const statusEl = document.querySelector(`.msg-status[data-msg-id="${messageId}"]`);
+            if (!statusEl) return;
+            
+            if (status === 'responded') {
+                statusEl.textContent = '✓ 已回复';
+                statusEl.style.color = '#4ade80';
+                addAgentResponseToUI(msg.response_content);
+            } else if (status === 'failed' || status === 'timeout') {
+                statusEl.textContent = '❌ ' + (status === 'timeout' ? '超时' : '失败');
+                statusEl.style.color = '#f87171';
+            } else if (status === 'sent' || status === 'delivered') {
+                statusEl.textContent = '📤 Agent已接收';
+                statusEl.style.color = '#60a5fa';
             }
         }
+
+        // Old pollAgentModalMessages removed - now handled by MessageCenter
 
         function addAgentResponseToUI(response) {
             const container = document.getElementById('agent-modal-chat-messages');
