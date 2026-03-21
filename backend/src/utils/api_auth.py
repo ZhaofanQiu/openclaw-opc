@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from src.database import get_db
 from src.services.api_key_service import APIKeyService
+from src.services.share_link_service import ShareLinkService
 
 
 security = HTTPBearer(auto_error=False)
@@ -40,6 +41,22 @@ async def get_api_key(
         api_key = request.query_params.get("api_key")
     
     return api_key
+
+
+async def get_share_token(request: Request) -> str:
+    """
+    Extract share link token from request.
+    
+    Checks in order:
+    1. share_token query parameter
+    2. token query parameter (for backward compatibility)
+    """
+    # Check query parameters
+    share_token = request.query_params.get("share_token")
+    if not share_token:
+        share_token = request.query_params.get("token")
+    
+    return share_token
 
 
 async def require_api_key(
@@ -87,6 +104,61 @@ async def require_api_key(
         "key_id": key_obj.id,
         "name": key_obj.name,
         "permissions": key_obj.permissions.split(","),
+        "auth_type": "api_key",
+    }
+
+
+async def get_current_permission(
+    request: Request,
+    api_key: str = Depends(get_api_key),
+    share_token: str = Depends(get_share_token),
+    db: Session = Depends(get_db),
+) -> dict:
+    """
+    Get current user permissions from API key or share link.
+    
+    Tries API key first, then falls back to share link.
+    """
+    # Try API key first
+    if api_key:
+        service = APIKeyService(db)
+        key_obj = service.validate_key(api_key)
+        if key_obj:
+            service.record_usage(key_obj.id)
+            return {
+                "key_id": key_obj.id,
+                "name": key_obj.name,
+                "permissions": key_obj.permissions.split(","),
+                "permission": key_obj.permissions.split(",")[0],
+                "employee_id": None,  # API keys don't have employee_id
+                "auth_type": "api_key",
+                "is_admin": "admin" in key_obj.permissions.split(","),
+            }
+    
+    # Try share link
+    if share_token:
+        service = ShareLinkService(db)
+        result = service.validate_link(share_token)
+        if result and result.get("valid"):
+            service.record_usage(result["link_id"])
+            return {
+                "link_id": result["link_id"],
+                "permissions": [result["permissions"]],
+                "permission": result["permissions"],
+                "resource_type": result["resource_type"],
+                "resource_id": result["resource_id"],
+                "employee_id": None,
+                "auth_type": "share_link",
+                "is_admin": False,
+            }
+    
+    # No valid auth
+    return {
+        "permissions": [],
+        "permission": None,
+        "employee_id": None,
+        "auth_type": None,
+        "is_admin": False,
     }
 
 
@@ -94,10 +166,34 @@ async def require_api_key(
 async def require_read_permission(
     request: Request,
     api_key: str = Depends(get_api_key),
+    share_token: str = Depends(get_share_token),
     db: Session = Depends(get_db),
 ):
-    """Require read permission."""
-    return await require_api_key(request, api_key, db, "read")
+    """Require read permission (via API key or share link)."""
+    # Try API key
+    if api_key:
+        try:
+            return await require_api_key(request, api_key, db, "read")
+        except HTTPException:
+            pass
+    
+    # Try share link
+    if share_token:
+        service = ShareLinkService(db)
+        result = service.validate_link(share_token)
+        if result and result.get("valid"):
+            service.record_usage(result["link_id"])
+            return {
+                "link_id": result["link_id"],
+                "permissions": [result["permissions"]],
+                "auth_type": "share_link",
+            }
+    
+    # No valid auth
+    raise HTTPException(
+        status_code=401,
+        detail="API key or share link required",
+    )
 
 
 async def require_write_permission(
