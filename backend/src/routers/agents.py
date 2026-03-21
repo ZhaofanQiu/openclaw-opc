@@ -854,7 +854,7 @@ def generate_fallback_welcome(summary: dict, partner_name: str) -> str:
     return message
 
 
-@router.get("/{agent_id}")
+@router.get("/{agent_id}", response_model=AgentResponse)
 async def get_agent(
     agent_id: str,
     db: Session = Depends(get_db),
@@ -865,7 +865,9 @@ async def get_agent(
     agent = service.get_agent_by_id(agent_id)
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
-    return agent
+    
+    # Convert SQLAlchemy model to Pydantic response to trigger validators
+    return AgentResponse.model_validate(agent)
 
 
 # Partner auto-assignment endpoints
