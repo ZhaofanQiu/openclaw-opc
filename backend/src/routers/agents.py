@@ -16,6 +16,9 @@ from src.services.agent_lifecycle_service import AgentLifecycleService
 from src.utils.openclaw_config import read_openclaw_agents, get_agent_details, ensure_partner_agent_exists
 from src.services.partner_service import PartnerService
 from src.utils.rate_limit import limiter, RATE_LIMITS
+from src.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 router = APIRouter()
 
