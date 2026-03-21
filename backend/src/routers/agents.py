@@ -3,7 +3,7 @@ Agent API routes.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
@@ -66,13 +66,22 @@ class AgentResponse(BaseModel):
     status: str
     is_online: str
     mood_emoji: str
-    total_budget: float
-    remaining_budget: float
+    monthly_budget: float
+    used_budget: float
+    total_budget: float = 0.0
+    remaining_budget: float = 0.0
     is_bound: str
     agent_id: Optional[str]
     
     class Config:
         from_attributes = True
+    
+    @model_validator(mode='after')
+    def compute_budget_fields(self):
+        """Compute total_budget and remaining_budget from monthly_budget and used_budget."""
+        self.total_budget = self.monthly_budget
+        self.remaining_budget = self.monthly_budget - self.used_budget
+        return self
 
 
 @router.get("/openclaw/agents")
@@ -850,9 +859,10 @@ async def get_agent(
     agent_id: str,
     db: Session = Depends(get_db),
 ):
-    """Get agent details."""
+    """Get agent details by internal ID."""
     service = AgentService(db)
-    agent = service.get_agent(agent_id)
+    # Use get_agent_by_id to query by internal ID (not OpenClaw agent_id)
+    agent = service.get_agent_by_id(agent_id)
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
     return agent
