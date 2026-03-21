@@ -7,6 +7,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- **Dashboard Login Protection** - API Key authentication for Dashboard and Reports pages
+  - Login page with API Key input
+  - Automatic Authorization header injection for all API requests
+  - Logout functionality
+  - Configurable via `API_KEY_AUTH_ENABLED` env var
 - Structured logging with structlog (JSON/text formats)
 - API rate limiting with slowapi
 - Global exception handler

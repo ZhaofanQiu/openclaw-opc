@@ -6,7 +6,7 @@ FastAPI application for managing AI employees and tasks.
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -20,9 +20,13 @@ from src.database import init_db
 from src.routers import agents, budget, config, monitor, notifications, reports, skills, tasks, api_keys
 from src.utils.logging_config import configure_logging, get_logger
 from src.utils.rate_limit import limiter, RATE_LIMITS
+from src.utils.api_auth import require_read_permission
 
 # Get project root (parent of backend/)
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Check if API key auth is enabled
+API_KEY_AUTH_ENABLED = os.getenv("API_KEY_AUTH_ENABLED", "true").lower() == "true"
 
 # Configure logging
 log_level = os.getenv("LOG_LEVEL", "INFO")
@@ -35,7 +39,7 @@ logger = get_logger(__name__)
 async def lifespan(app: FastAPI):
     """Application lifespan handler."""
     # Startup
-    logger.info("Application starting")
+    logger.info("Application starting", api_key_auth=API_KEY_AUTH_ENABLED)
     init_db()
     logger.info("Application ready")
     yield
@@ -127,15 +131,63 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers
-app.include_router(agents.router, prefix="/api/agents", tags=["agents"])
-app.include_router(tasks.router, prefix="/api/tasks", tags=["tasks"])
-app.include_router(budget.router, prefix="/api/budget", tags=["budget"])
-app.include_router(config.router, prefix="/api/config", tags=["config"])
-app.include_router(monitor.router, prefix="/api/monitor", tags=["monitor"])
-app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
-app.include_router(skills.router, prefix="/api/skills", tags=["skills"])
-app.include_router(reports.router, prefix="/api/reports", tags=["reports"])
+# Include routers with optional API key auth
+def get_router_dependencies():
+    """Get router dependencies based on auth config."""
+    if API_KEY_AUTH_ENABLED:
+        return [Depends(require_read_permission)]
+    return []
+
+# Include routers with optional auth
+app.include_router(
+    agents.router, 
+    prefix="/api/agents", 
+    tags=["agents"],
+    dependencies=get_router_dependencies()
+)
+app.include_router(
+    tasks.router, 
+    prefix="/api/tasks", 
+    tags=["tasks"],
+    dependencies=get_router_dependencies()
+)
+app.include_router(
+    budget.router, 
+    prefix="/api/budget", 
+    tags=["budget"],
+    dependencies=get_router_dependencies()
+)
+app.include_router(
+    config.router, 
+    prefix="/api/config", 
+    tags=["config"],
+    dependencies=get_router_dependencies()
+)
+app.include_router(
+    monitor.router, 
+    prefix="/api/monitor", 
+    tags=["monitor"],
+    dependencies=get_router_dependencies()
+)
+app.include_router(
+    notifications.router, 
+    prefix="/api/notifications", 
+    tags=["notifications"],
+    dependencies=get_router_dependencies()
+)
+app.include_router(
+    skills.router, 
+    prefix="/api/skills", 
+    tags=["skills"],
+    dependencies=get_router_dependencies()
+)
+app.include_router(
+    reports.router, 
+    prefix="/api/reports", 
+    tags=["reports"],
+    dependencies=get_router_dependencies()
+)
+# API Keys router - requires admin for management but has its own auth endpoints
 app.include_router(api_keys.router, tags=["API Keys"])
 
 
