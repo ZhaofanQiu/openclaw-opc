@@ -235,6 +235,80 @@
 
 ---
 
+## 运维问题
+
+### #7 后台服务频繁停止
+**状态**: ✅ 已修复  
+**影响**: 测试过程中服务多次中断，影响测试体验
+
+**问题描述**:
+- OPC Backend 服务 (`uvicorn`) 在使用 `&` 后台运行时频繁停止
+- 每次测试中断后需要手动重启服务
+- Cpolar 隧道断开需要重新获取 URL
+
+**根本原因**:
+- `nohup` + `&` 后台运行在某些环境中进程仍会被父 shell 终止
+- Cpolar 免费版 URL 在隧道重启后会变化
+
+**解决方案**:
+
+#### 1. 启动 OPC Backend (使用 setsid 替代 nohup)
+```bash
+cd /root/.openclaw/workspace/openclaw-opc/backend
+# 错误方式 ❌: 进程可能随 shell 断开而停止
+nohup python3 -m uvicorn src.main:app --host 127.0.0.1 --port 8080 &
+
+# 正确方式 ✅: 进程完全脱离当前会话
+setsid python3 -m uvicorn src.main:app --host 127.0.0.1 --port 8080 >> app.log 2>&1 &
+```
+
+#### 2. 启动 Cpolar 隧道
+```bash
+# 在确认本地服务正常后再启动
+curl http://127.0.0.1:8080/health
+
+# 启动隧道
+cpolar http 8080
+
+# 获取公网 URL
+curl -s http://127.0.0.1:4040/http/in | grep -oE "https://[a-zA-Z0-9_-]+\.cpolar[^\"]*" | head -1
+```
+
+#### 3. 服务监控脚本 (可选)
+```bash
+#!/bin/bash
+# save as: /root/.openclaw/workspace/openclaw-opc/backend/monitor.sh
+
+while true; do
+    if ! curl -s http://127.0.0.1:8080/health > /dev/null; then
+        echo "$(date): OPC 服务异常，正在重启..." >> service_monitor.log
+        setsid python3 -m uvicorn src.main:app --host 127.0.0.1 --port 8080 >> app.log 2>&1 &
+        sleep 5
+    fi
+    sleep 30
+done
+```
+
+**启动顺序**:
+1. 先启动 OPC Backend (`setsid` 方式)
+2. 验证 `curl http://127.0.0.1:8080/health` 返回正常
+3. 再启动 Cpolar 隧道
+4. 获取并记录新的公网 URL
+
+**关键检查点**:
+```bash
+# 检查 OPC 服务
+curl http://127.0.0.1:8080/health
+
+# 检查 Cpolar 状态
+curl http://127.0.0.1:4040/http/in | grep PublicUrl
+
+# 检查端口监听
+netstat -tlnp | grep -E "8080|4040"
+```
+
+---
+
 ## 附录
 
 ### 测试环境信息

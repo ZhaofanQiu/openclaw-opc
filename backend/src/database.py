@@ -83,7 +83,7 @@ def get_db():
 
 def init_db():
     """Initialize database tables."""
-    from src.models import agent, budget, task  # noqa: F401
+    from src.models import agent, async_message, budget, task  # noqa: F401
     Base.metadata.create_all(bind=engine)
 
 
