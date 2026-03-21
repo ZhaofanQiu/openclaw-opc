@@ -19,6 +19,7 @@ class TaskStatus(str, PyEnum):
     COMPLETED = "completed"
     FAILED = "failed"
     FUSED = "fused"  # Budget exceeded
+    SPLIT = "split"  # Task was split into sub-tasks
 
 
 class TaskPriority(str, PyEnum):
@@ -40,6 +41,9 @@ class Task(Base):
 
     # Assignment
     agent_id = Column(String, ForeignKey("agents.id"), nullable=True)
+    
+    # Parent task (for sub-tasks created from splitting)
+    parent_task_id = Column(String, ForeignKey("tasks.id"), nullable=True)
 
     # Status
     status = Column(String, default=TaskStatus.PENDING.value)

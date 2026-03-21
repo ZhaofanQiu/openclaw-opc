@@ -17,7 +17,7 @@ from slowapi.util import get_remote_address
 from pydantic import ValidationError
 
 from src.database import init_db
-from src.routers import agents, budget, config, monitor, notifications, reports, skills, tasks, api_keys, share
+from src.routers import agents, budget, config, monitor, notifications, reports, skills, tasks, api_keys, share, fuse
 from src.utils.logging_config import configure_logging, get_logger
 from src.utils.rate_limit import limiter, RATE_LIMITS
 from src.utils.api_auth import require_read_permission
@@ -191,6 +191,8 @@ app.include_router(
 app.include_router(api_keys.router, tags=["API Keys"])
 # Share links router
 app.include_router(share.router, tags=["Share Links"])
+# Fuse events router
+app.include_router(fuse.router)
 
 
 @app.get("/")
