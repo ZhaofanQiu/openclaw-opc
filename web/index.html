@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>星际工作室 - OPC Dashboard</title>
     <script src="auth.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -174,6 +175,29 @@
 
         .agent-item:hover {
             background: #252542;
+        }
+
+        /* Charts */
+        .chart-container {
+            background: #1a1a2e;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #2a2a4a;
+            margin-bottom: 24px;
+        }
+
+        .chart-title {
+            font-size: 14px;
+            color: #667eea;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 200px;
         }
 
         .agent-avatar {
@@ -865,6 +889,17 @@
             </div>
         </div>
 
+        <!-- Budget Trend Chart -->
+        <div class="chart-container">
+            <div class="chart-title">
+                <span>📊</span>
+                7天预算使用趋势
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="budgetTrendChart"></canvas>
+            </div>
+        </div>
+
         <!-- Main Content -->
         <div class="main-grid">
             <!-- Agents Section -->
@@ -1001,6 +1036,128 @@
                     data.usage_percentage.toFixed(1) + '%';
             } catch (error) {
                 console.error('Error loading budget:', error);
+            }
+        }
+
+        // Load budget trend chart
+        async function loadBudgetTrendChart() {
+            try {
+                const response = await Auth.authFetch(`${API_BASE}/api/reports/recent?days=7`);
+                if (!response.ok) throw new Error('Failed to load trend data');
+                
+                const data = await response.json();
+                const reports = data.reports || [];
+                
+                if (reports.length === 0) return;
+                
+                // Reverse to show oldest first
+                const sortedReports = [...reports].reverse();
+                const dates = sortedReports.map(r => r.date.slice(5)); // MM-DD
+                const budgetData = sortedReports.map(r => Math.round(r.summary.total_budget_consumed));
+                const tasksData = sortedReports.map(r => r.summary.total_tasks_completed);
+                
+                const ctx = document.getElementById('budgetTrendChart').getContext('2d');
+                
+                // Destroy existing chart if any
+                if (window.budgetChartInstance) {
+                    window.budgetChartInstance.destroy();
+                }
+                
+                window.budgetChartInstance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: dates,
+                        datasets: [
+                            {
+                                label: 'OC币消耗',
+                                data: budgetData,
+                                backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                                borderColor: '#667eea',
+                                borderWidth: 1,
+                                borderRadius: 4,
+                                yAxisID: 'y'
+                            },
+                            {
+                                label: '完成任务',
+                                data: tasksData,
+                                backgroundColor: 'rgba(74, 222, 128, 0.8)',
+                                borderColor: '#4ade80',
+                                borderWidth: 1,
+                                borderRadius: 4,
+                                yAxisID: 'y1'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                labels: {
+                                    color: '#888',
+                                    font: { size: 12 },
+                                    usePointStyle: true
+                                }
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(26, 26, 46, 0.95)',
+                                titleColor: '#667eea',
+                                bodyColor: '#e0e0e0',
+                                borderColor: '#2a2a4a',
+                                borderWidth: 1
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: {
+                                    color: '#2a2a4a'
+                                },
+                                ticks: {
+                                    color: '#888'
+                                }
+                            },
+                            y: {
+                                type: 'linear',
+                                display: true,
+                                position: 'left',
+                                title: {
+                                    display: true,
+                                    text: 'OC币',
+                                    color: '#667eea'
+                                },
+                                grid: {
+                                    color: '#2a2a4a'
+                                },
+                                ticks: {
+                                    color: '#888'
+                                }
+                            },
+                            y1: {
+                                type: 'linear',
+                                display: true,
+                                position: 'right',
+                                title: {
+                                    display: true,
+                                    text: '任务数',
+                                    color: '#4ade80'
+                                },
+                                grid: {
+                                    drawOnChartArea: false
+                                },
+                                ticks: {
+                                    color: '#888'
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading budget trend:', error);
             }
         }
 
@@ -1173,6 +1330,9 @@
                 loadPartnerHealth(),
                 loadExactTokenStats()
             ]);
+            
+            // Load budget trend chart
+            loadBudgetTrendChart();
             
             // Check for pending fuse events
             await checkFuseEvents();
