@@ -365,7 +365,7 @@ async def assign_task(agent_id: str,
                      task_id: str,
                      task_title: str,
                      task_description: str,
-                     manual_paths: Dict[str, str],
+                     manual_paths: Optional[Dict[str, str]] = None,
                      async_mode: bool = True) -> AgentResponse:
     """
     分配任务给 Agent
@@ -375,6 +375,9 @@ async def assign_task(agent_id: str,
     Args:
         manual_paths: 手册路径字典，如 {"task": "/path/to/task.md", "position": "/path/to/position.md"}
     """
+    if manual_paths is None:
+        manual_paths = {}
+    
     # 构建消息（只包含路径，不包含内容）
     message_parts = [
         f"# 任务分配",

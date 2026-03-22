@@ -15,7 +15,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 
 from database import init_db, check_database_connection, get_database_info
-from routers import agents, tasks, manuals, budget, approvals, reports, config, skill_api
+from routers import agents, tasks, skill_api
 from utils.logging_config import configure_logging, get_logger
 from utils.rate_limit import limiter
 from utils.api_auth import require_read_permission
@@ -141,15 +141,10 @@ def get_router_deps():
     return []
 
 
-# Include routers (简化版 - 8个核心 router)
+# Include routers (简化版 - 核心 router)
 routers_config = [
     (agents, "/api/agents", "Agents"),
     (tasks, "/api/tasks", "Tasks"),
-    (manuals, "/api/manuals", "Manuals"),
-    (budget, "/api/budget", "Budget"),
-    (approvals, "/api/approvals", "Approvals"),
-    (reports, "/api/reports", "Reports"),
-    (config, "/api/config", "Config"),
     (skill_api, "/api/skill", "Skill API"),
 ]
 

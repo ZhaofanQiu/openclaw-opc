@@ -9,7 +9,10 @@ from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from typing import List, Optional
+import uuid
+
 from database import get_db
+from models.agent_v2 import Agent, AgentStatus
 from utils.rate_limit import limiter
 from utils.logging_config import get_logger
 
@@ -49,6 +52,10 @@ class SkillAssign(BaseModel):
     """分配技能请求"""
     skill_id: str
 
+class BindRequest(BaseModel):
+    """绑定请求"""
+    openclaw_agent_id: str
+
 # ============ 员工管理 ============
 
 @router.get("", response_model=dict)
@@ -59,8 +66,15 @@ def list_agents(
     db: Session = Depends(get_db)
 ):
     """获取员工列表"""
-    # TODO: 从 agent_service 获取
-    return {"agents": [], "total": 0}
+    query = db.query(Agent)
+    if status:
+        query = query.filter(Agent.status == status)
+    
+    agents = query.all()
+    return {
+        "agents": [a.to_dict() for a in agents],
+        "total": len(agents)
+    }
 
 @router.post("", response_model=dict)
 @limiter.limit("20/minute")
@@ -70,14 +84,34 @@ def create_agent(
     db: Session = Depends(get_db)
 ):
     """创建新员工"""
-    # TODO: 调用 agent_service.create_agent
-    return {"id": "", "message": "Agent created"}
+    agent = Agent(
+        id=f"emp_{uuid.uuid4().hex[:8]}",
+        name=data.name,
+        emoji=data.emoji,
+        position_level=data.position_level,
+        monthly_budget=float(data.monthly_budget),
+        status=AgentStatus.IDLE.value
+    )
+    
+    db.add(agent)
+    db.commit()
+    db.refresh(agent)
+    
+    logger.info(f"Created employee: {agent.name} ({agent.id})")
+    
+    return {
+        "id": agent.id,
+        "name": agent.name,
+        "message": "Agent created"
+    }
 
 @router.get("/{agent_id}", response_model=dict)
 def get_agent(agent_id: str, db: Session = Depends(get_db)):
     """获取员工详情"""
-    # TODO: 从 agent_service 获取
-    return {}
+    agent = db.query(Agent).filter(Agent.id == agent_id).first()
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    return agent.to_dict()
 
 @router.put("/{agent_id}", response_model=dict)
 def update_agent(
@@ -86,11 +120,32 @@ def update_agent(
     db: Session = Depends(get_db)
 ):
     """更新员工信息"""
-    return {"message": "Agent updated"}
+    agent = db.query(Agent).filter(Agent.id == agent_id).first()
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    
+    if data.name:
+        agent.name = data.name
+    if data.emoji:
+        agent.emoji = data.emoji
+    if data.monthly_budget is not None:
+        agent.monthly_budget = float(data.monthly_budget)
+    
+    db.commit()
+    db.refresh(agent)
+    
+    return {"message": "Agent updated", "agent": agent.to_dict()}
 
 @router.delete("/{agent_id}")
 def delete_agent(agent_id: str, db: Session = Depends(get_db)):
     """删除员工"""
+    agent = db.query(Agent).filter(Agent.id == agent_id).first()
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    
+    db.delete(agent)
+    db.commit()
+    
     return {"message": "Agent deleted"}
 
 # ============ 头像管理 ============
@@ -135,15 +190,36 @@ def remove_skill(agent_id: str, skill_id: str, db: Session = Depends(get_db)):
 @router.post("/{agent_id}/bind")
 def bind_openclaw_agent(
     agent_id: str,
-    openclaw_agent_id: str,
+    data: BindRequest,
     db: Session = Depends(get_db)
 ):
     """绑定 OpenClaw Agent"""
-    return {"message": "Agent bound"}
+    agent = db.query(Agent).filter(Agent.id == agent_id).first()
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    
+    agent.openclaw_agent_id = data.openclaw_agent_id
+    agent.is_bound = "true"
+    db.commit()
+    
+    logger.info(f"Bound agent {agent_id} to OpenClaw agent {data.openclaw_agent_id}")
+    
+    return {
+        "message": "Agent bound",
+        "openclaw_agent_id": data.openclaw_agent_id
+    }
 
 @router.post("/{agent_id}/unbind")
 def unbind_openclaw_agent(agent_id: str, db: Session = Depends(get_db)):
     """解绑 OpenClaw Agent"""
+    agent = db.query(Agent).filter(Agent.id == agent_id).first()
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    
+    agent.openclaw_agent_id = None
+    agent.is_bound = "false"
+    db.commit()
+    
     return {"message": "Agent unbound"}
 
 # ============ 预算管理 ============
@@ -151,10 +227,14 @@ def unbind_openclaw_agent(agent_id: str, db: Session = Depends(get_db)):
 @router.get("/{agent_id}/budget")
 def get_agent_budget(agent_id: str, db: Session = Depends(get_db)):
     """获取员工预算信息"""
+    agent = db.query(Agent).filter(Agent.id == agent_id).first()
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    
     return {
-        "monthly_budget": 0,
-        "used_budget": 0,
-        "remaining": 0
+        "monthly_budget": agent.monthly_budget,
+        "used_budget": agent.used_budget,
+        "remaining": agent.remaining_budget
     }
 
 # ============ 交互日志 ============

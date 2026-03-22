@@ -3,12 +3,17 @@
 核心功能: 任务 CRUD + 分配 + 执行
 """
 
+import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from typing import List, Optional
+
 from database import get_db
+from models.task_v2 import Task, TaskStatus, TaskPriority
+from models.agent_v2 import Agent, AgentStatus
 from utils.logging_config import get_logger
+from core.openclaw_client import assign_task
 
 logger = get_logger(__name__)
 router = APIRouter(tags=["Tasks"])
@@ -36,19 +41,47 @@ def list_tasks(
     db: Session = Depends(get_db)
 ):
     """获取任务列表"""
-    # TODO: 从数据库查询
-    return {"tasks": [], "total": 0}
+    query = db.query(Task)
+    if status:
+        query = query.filter(Task.status == status)
+    
+    tasks = query.all()
+    return {
+        "tasks": [t.to_dict() for t in tasks],
+        "total": len(tasks)
+    }
 
 @router.post("")
 def create_task(data: TaskCreate, db: Session = Depends(get_db)):
     """创建任务"""
-    # TODO: 创建任务，自动生成手册
-    return {"id": "", "message": "Task created"}
+    task = Task(
+        id=f"task_{uuid.uuid4().hex[:8]}",
+        title=data.title,
+        description=data.description,
+        priority=data.priority,
+        estimated_cost=float(data.estimated_cost),
+        status=TaskStatus.PENDING.value
+    )
+    
+    db.add(task)
+    db.commit()
+    db.refresh(task)
+    
+    logger.info(f"Created task: {task.title} ({task.id})")
+    
+    return {
+        "id": task.id,
+        "title": task.title,
+        "message": "Task created"
+    }
 
 @router.get("/{task_id}")
 def get_task(task_id: str, db: Session = Depends(get_db)):
     """获取任务详情"""
-    return {}
+    task = db.query(Task).filter(Task.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return task.to_dict()
 
 @router.put("/{task_id}")
 def update_task(
@@ -57,17 +90,36 @@ def update_task(
     db: Session = Depends(get_db)
 ):
     """更新任务"""
-    return {"message": "Task updated"}
+    task = db.query(Task).filter(Task.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    task.title = data.title
+    task.description = data.description
+    task.priority = data.priority
+    task.estimated_cost = float(data.estimated_cost)
+    
+    db.commit()
+    db.refresh(task)
+    
+    return {"message": "Task updated", "task": task.to_dict()}
 
 @router.delete("/{task_id}")
 def delete_task(task_id: str, db: Session = Depends(get_db)):
     """删除任务"""
+    task = db.query(Task).filter(Task.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    db.delete(task)
+    db.commit()
+    
     return {"message": "Task deleted"}
 
 # ============ 任务分配与执行 ============
 
 @router.post("/{task_id}/assign")
-def assign_task(
+async def assign_task_endpoint(
     task_id: str,
     data: TaskAssign,
     db: Session = Depends(get_db)
@@ -75,23 +127,76 @@ def assign_task(
     """
     分配任务给员工
     
-    这是核心功能：
+    核心功能：
     1. 检查员工可用性
-    2. 生成任务手册
-    3. 创建任务步骤
-    4. 唤醒 Agent
+    2. 更新任务状态
+    3. 发送消息到 Agent（同步或异步）
     """
-    # TODO: 实现完整流程
-    return {
-        "message": "Task assigned",
-        "task_id": task_id,
-        "agent_id": data.agent_id
-    }
+    task = db.query(Task).filter(Task.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    agent = db.query(Agent).filter(Agent.id == data.agent_id).first()
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    
+    if agent.status != AgentStatus.IDLE.value:
+        raise HTTPException(status_code=400, detail="Agent is not available")
+    
+    # 检查是否绑定了 OpenClaw agent
+    if not agent.openclaw_agent_id:
+        raise HTTPException(status_code=400, detail="Agent not bound to OpenClaw")
+    
+    # 更新任务状态
+    task.assigned_to = data.agent_id
+    task.status = TaskStatus.ASSIGNED.value
+    db.commit()
+    
+    # 更新员工状态
+    agent.status = AgentStatus.WORKING.value
+    agent.current_task_id = task_id
+    db.commit()
+    
+    logger.info(f"Task {task_id} assigned to agent {data.agent_id}")
+    
+    # 发送消息到 Agent（异步）
+    try:
+        import asyncio
+        response = await assign_task(
+            agent_id=agent.openclaw_agent_id,
+            agent_name=agent.name,
+            task_id=task_id,
+            task_title=task.title,
+            task_description=task.description,
+            async_mode=True
+        )
+        
+        return {
+            "message": "Task assigned and agent notified",
+            "task_id": task_id,
+            "agent_id": data.agent_id,
+            "execution_id": response.execution_id,
+            "status": response.status
+        }
+    except Exception as e:
+        logger.error(f"Failed to notify agent: {e}")
+        return {
+            "message": "Task assigned but failed to notify agent",
+            "task_id": task_id,
+            "agent_id": data.agent_id,
+            "error": str(e)
+        }
 
 @router.post("/{task_id}/start")
 def start_task(task_id: str, db: Session = Depends(get_db)):
     """开始执行任务"""
-    # TODO: 调用 TaskExecutor
+    task = db.query(Task).filter(Task.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    task.status = TaskStatus.IN_PROGRESS.value
+    db.commit()
+    
     return {"message": "Task started"}
 
 @router.post("/{task_id}/complete")
@@ -101,6 +206,24 @@ def complete_task(
     db: Session = Depends(get_db)
 ):
     """完成任务"""
+    task = db.query(Task).filter(Task.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    task.status = TaskStatus.COMPLETED.value
+    task.result = data.output
+    task.score = data.score
+    db.commit()
+    
+    # 更新员工状态
+    if task.assigned_to:
+        agent = db.query(Agent).filter(Agent.id == task.assigned_to).first()
+        if agent:
+            agent.status = AgentStatus.IDLE.value
+            agent.current_task_id = None
+            agent.completed_tasks += 1
+            db.commit()
+    
     return {"message": "Task completed"}
 
 @router.post("/{task_id}/rework")
@@ -110,6 +233,14 @@ def rework_task(
     db: Session = Depends(get_db)
 ):
     """返工任务"""
+    task = db.query(Task).filter(Task.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    task.rework_count += 1
+    task.status = TaskStatus.ASSIGNED.value
+    db.commit()
+    
     return {"message": "Task sent for rework", "reason": reason}
 
 # ============ 任务手册 ============

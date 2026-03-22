@@ -37,7 +37,7 @@ class Task(Base):
     description = Column(Text, default="")
     
     # 分配
-    assigned_to = Column(String, ForeignKey("agents.id"), nullable=True)
+    assigned_to = Column(String, ForeignKey("agents_v2.id"), nullable=True)
     assigned_by = Column(String, nullable=True)  # user_id or agent_id
     
     # 状态

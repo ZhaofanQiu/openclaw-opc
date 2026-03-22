@@ -1,7 +1,3 @@
-"""Services package."""
+"""Services package - v2.0 Simplified"""
 
-from services.agent_service import AgentService
-from services.budget_service import BudgetService
-from services.task_service import TaskService
-
-__all__ = ["AgentService", "BudgetService", "TaskService"]
+# 暂时为空，直接导入具体模块
