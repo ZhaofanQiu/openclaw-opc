@@ -10,9 +10,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from src.database import get_db
-from src.services.skill_growth_service import SkillGrowthService
-from src.utils.logging_config import get_logger
+from database import get_db
+from services.skill_growth_service import SkillGrowthService
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/skill-growth", tags=["skill-growth"])
@@ -179,7 +179,7 @@ async def get_growth_stats(
 @router.get("/config")
 async def get_growth_config():
     """获取技能成长配置。"""
-    from src.models.skill_growth import SKILL_GROWTH_CONFIG
+    from models.skill_growth import SKILL_GROWTH_CONFIG
     return SKILL_GROWTH_CONFIG
 
 
@@ -196,7 +196,7 @@ async def award_task_completion(
     
     此端点通常由任务完成流程自动调用
     """
-    from src.models import Task
+    from models import Task
     
     service = SkillGrowthService(db)
     

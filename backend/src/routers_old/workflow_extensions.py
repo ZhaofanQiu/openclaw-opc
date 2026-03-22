@@ -14,14 +14,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from src.database import get_db
-from src.services.workflow_extensions import (
+from database import get_db
+from services.workflow_extensions import (
     WorkflowVisualizationService,
     WorkflowRecommendationService,
     WorkflowAchievementService,
     WorkflowAnalyticsService,
 )
-from src.utils.logging_config import get_logger
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/workflows", tags=["workflow-extensions"])
@@ -198,7 +198,7 @@ async def get_dashboard_summary(
     db: Session = Depends(get_db),
 ):
     """获取仪表盘汇总数据"""
-    from src.models import WorkflowInstance
+    from models import WorkflowInstance
     
     # 活跃工作流
     active = db.query(WorkflowInstance).filter(

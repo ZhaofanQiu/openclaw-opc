@@ -7,8 +7,8 @@ from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
-from src.models import SystemConfig, Task, TaskStatus
-from src.services.config_service import ConfigService
+from models import SystemConfig, Task, TaskStatus
+from services.config_service import ConfigService
 
 
 class TaskMonitorService:
@@ -61,13 +61,13 @@ class TaskMonitorService:
             # Get agent name for notification
             agent_name = "Unknown"
             if task.agent_id:
-                from src.models import Agent
+                from models import Agent
                 agent = self.db.query(Agent).filter(Agent.id == task.agent_id).first()
                 if agent:
                     agent_name = agent.name
             
             # Create notification
-            from src.services.notification_service import NotificationService
+            from services.notification_service import NotificationService
             notification_service = NotificationService(self.db)
             notification_service.notify_task_overdue(
                 task_id=task.id,

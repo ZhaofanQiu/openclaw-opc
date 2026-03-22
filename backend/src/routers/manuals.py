@@ -7,8 +7,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from src.database import get_db
-from src.utils.logging_config import get_logger
+from database import get_db
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/manuals", tags=["Manuals"])

@@ -9,9 +9,9 @@ from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from src.database import get_db
-from src.utils.rate_limit import limiter
-from src.utils.logging_config import get_logger
+from database import get_db
+from utils.rate_limit import limiter
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/agents", tags=["Agents"])

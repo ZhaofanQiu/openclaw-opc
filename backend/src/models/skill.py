@@ -7,7 +7,7 @@ from datetime import datetime
 from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Table
 from sqlalchemy.orm import relationship
 
-from src.database import Base
+from database import Base
 
 
 # Association table for agent skills

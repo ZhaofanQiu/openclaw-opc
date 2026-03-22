@@ -7,7 +7,7 @@ from typing import List, Optional
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from src.models import Agent, BudgetTransaction
+from models import Agent, BudgetTransaction
 
 
 class BudgetService:

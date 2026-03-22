@@ -7,10 +7,10 @@ WebSocket实时通信
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, Query
 from sqlalchemy.orm import Session
 
-from src.database import get_db
-from src.services.websocket_manager import websocket_manager
-from src.services.workflow_notification_service import WorkflowNotificationService
-from src.utils.logging_config import get_logger
+from database import get_db
+from services.websocket_manager import websocket_manager
+from services.workflow_notification_service import WorkflowNotificationService
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/ws", tags=["websocket"])

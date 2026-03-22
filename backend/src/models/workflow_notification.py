@@ -16,7 +16,7 @@ from enum import Enum as PyEnum
 from sqlalchemy import Column, String, Text, DateTime, JSON, ForeignKey, Integer
 from sqlalchemy.orm import relationship
 
-from src.database import Base
+from database import Base
 
 
 class NotificationChannel(str, PyEnum):

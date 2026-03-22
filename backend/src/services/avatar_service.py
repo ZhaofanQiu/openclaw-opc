@@ -17,7 +17,7 @@ from pathlib import Path
 from sqlalchemy import Column, String, Text, DateTime
 from sqlalchemy.orm import Session
 
-from src.database import Base
+from database import Base
 
 
 class AvatarSource(str, PyEnum):
@@ -257,7 +257,7 @@ class AvatarService:
             
             # Update Agent's avatar URL
             try:
-                from src.models.agent import Agent
+                from models.agent import Agent
                 agent_record = self.db.query(Agent).filter(Agent.id == agent_id).first()
                 if agent_record:
                     avatar_url = self.get_avatar_url(avatar)
@@ -341,7 +341,7 @@ class AvatarService:
         Returns:
             Status dict with pending flag or immediate result
         """
-        from src.services.agent_service import AgentService
+        from services.agent_service import AgentService
         
         # Check if avatar exists
         avatar = self.get_avatar(agent_id)
@@ -460,7 +460,7 @@ class AvatarService:
         
         # Update Agent's avatar URL
         try:
-            from src.models.agent import Agent
+            from models.agent import Agent
             agent_record = self.db.query(Agent).filter(Agent.id == agent_id).first()
             if agent_record:
                 avatar_url = self.get_avatar_url(avatar)
@@ -526,7 +526,7 @@ class AvatarService:
         
         # Update Agent's avatar URL
         try:
-            from src.models.agent import Agent
+            from models.agent import Agent
             agent_record = self.db.query(Agent).filter(Agent.id == agent_id).first()
             if agent_record:
                 agent_record.avatar_url = external_url
@@ -570,7 +570,7 @@ class AvatarService:
             logger.debug(f"Randomly selected style: {style}")
 
             # Get agent position for colors
-            from src.models.agent import Agent
+            from models.agent import Agent
             agent = self.db.query(Agent).filter(Agent.id == agent_id).first()
 
             if agent:

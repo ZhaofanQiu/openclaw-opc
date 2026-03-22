@@ -7,12 +7,12 @@ Workflow Detail Service v0.5.8
 from typing import Dict, List, Optional
 from sqlalchemy.orm import Session
 
-from src.models import Agent, WorkflowInstance, WorkflowStep
-from src.models.workflow_engine import (
+from models import Agent, WorkflowInstance, WorkflowStep
+from models.workflow_engine import (
     WorkflowHistory, WorkflowReworkRecord,
     StepType, WorkflowStatus, StepStatus
 )
-from src.utils.logging_config import get_logger
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 

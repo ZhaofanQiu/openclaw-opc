@@ -8,10 +8,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from src.database import get_db
-from src.services.workflow_engine_service import WorkflowEngineService
-from src.services.workflow_execution_service import WorkflowExecutionService
-from src.utils.logging_config import get_logger
+from database import get_db
+from services.workflow_engine_service import WorkflowEngineService
+from services.workflow_execution_service import WorkflowExecutionService
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/workflows", tags=["workflows"])
@@ -108,7 +108,7 @@ async def get_workflow(
     db: Session = Depends(get_db),
 ):
     """获取工作流详情"""
-    from src.models import WorkflowInstance
+    from models import WorkflowInstance
     
     workflow = db.query(WorkflowInstance).filter(
         WorkflowInstance.id == workflow_id
@@ -130,7 +130,7 @@ async def complete_current_step(
     """完成当前步骤"""
     service = WorkflowExecutionService(db)
     
-    from src.models import WorkflowInstance, WorkflowStep
+    from models import WorkflowInstance, WorkflowStep
     workflow = db.query(WorkflowInstance).filter(
         WorkflowInstance.id == workflow_id
     ).first()
@@ -194,7 +194,7 @@ async def handle_fuse(
 @router.get("/{workflow_id}/steps")
 async def get_workflow_steps(workflow_id: str, db: Session = Depends(get_db)):
     """获取工作流所有步骤"""
-    from src.models import WorkflowStep
+    from models import WorkflowStep
     
     steps = db.query(WorkflowStep).filter(
         WorkflowStep.workflow_id == workflow_id
@@ -206,7 +206,7 @@ async def get_workflow_steps(workflow_id: str, db: Session = Depends(get_db)):
 @router.get("/{workflow_id}/history")
 async def get_workflow_history(workflow_id: str, db: Session = Depends(get_db)):
     """获取工作流历史"""
-    from src.models.workflow_engine import WorkflowHistory
+    from models.workflow_engine import WorkflowHistory
     
     history = db.query(WorkflowHistory).filter(
         WorkflowHistory.workflow_id == workflow_id
@@ -229,7 +229,7 @@ async def get_workflow_history(workflow_id: str, db: Session = Depends(get_db)):
 @router.get("/{workflow_id}/budget")
 async def get_workflow_budget(workflow_id: str, db: Session = Depends(get_db)):
     """获取预算详情"""
-    from src.models import WorkflowInstance
+    from models import WorkflowInstance
     
     workflow = db.query(WorkflowInstance).filter(
         WorkflowInstance.id == workflow_id
@@ -257,7 +257,7 @@ async def get_workflow_budget(workflow_id: str, db: Session = Depends(get_db)):
 @router.get("/agent/{agent_id}/pending")
 async def get_agent_pending_workflows(agent_id: str, db: Session = Depends(get_db)):
     """获取员工的待办工作流"""
-    from src.models import WorkflowStep, WorkflowInstance
+    from models import WorkflowStep, WorkflowInstance
     
     steps = db.query(WorkflowStep).join(WorkflowInstance).filter(
         WorkflowStep.assignee_id == agent_id,
@@ -282,7 +282,7 @@ async def get_agent_pending_workflows(agent_id: str, db: Session = Depends(get_d
 
 def _get_current_step_info(db: Session, workflow_id: str) -> Optional[Dict]:
     """获取当前步骤信息"""
-    from src.models import WorkflowInstance, WorkflowStep
+    from models import WorkflowInstance, WorkflowStep
     
     workflow = db.query(WorkflowInstance).filter(
         WorkflowInstance.id == workflow_id

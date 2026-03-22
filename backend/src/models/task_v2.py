@@ -7,7 +7,7 @@ Simplified Task Model (v2.0)
 from datetime import datetime
 from enum import Enum as PyEnum
 from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text
-from src.database import Base
+from database import Base
 
 
 class TaskStatus(str, PyEnum):
@@ -28,9 +28,9 @@ class TaskPriority(str, PyEnum):
 
 
 class Task(Base):
-    """任务模型 (简化版)"""
+    """任务模型 (简化版 v2.0)"""
     
-    __tablename__ = "tasks"
+    __tablename__ = "tasks_v2"
     
     id = Column(String, primary_key=True)
     title = Column(String, nullable=False)

@@ -6,9 +6,9 @@ from fastapi import Request, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 
-from src.database import get_db
-from src.services.api_key_service import APIKeyService
-from src.services.share_link_service import ShareLinkService
+from database import get_db
+from services.api_key_service import APIKeyService
+from services.share_link_service import ShareLinkService
 
 
 security = HTTPBearer(auto_error=False)

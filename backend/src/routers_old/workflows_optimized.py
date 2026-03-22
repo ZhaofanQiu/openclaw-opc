@@ -7,10 +7,10 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from src.database import get_db
-from src.services.optimized_workflow_query_service import OptimizedWorkflowQueryService
-from src.utils.pagination import PaginationHelper
-from src.utils.logging_config import get_logger
+from database import get_db
+from services.optimized_workflow_query_service import OptimizedWorkflowQueryService
+from utils.pagination import PaginationHelper
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/workflows-optimized", tags=["workflows-optimized"])

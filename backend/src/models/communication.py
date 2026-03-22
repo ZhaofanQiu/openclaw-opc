@@ -9,7 +9,7 @@ from enum import Enum as PyEnum
 
 from sqlalchemy import Column, String, Text, DateTime, Integer
 
-from src.database import Base
+from database import Base
 
 
 class MessageStatus(str, PyEnum):

@@ -16,8 +16,8 @@ from typing import Dict, Optional
 
 from sqlalchemy.orm import Session
 
-from src.models import Agent, AgentStatus, Task, TaskStatus
-from src.utils.logging_config import get_logger
+from models import Agent, AgentStatus, Task, TaskStatus
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
@@ -223,7 +223,7 @@ class TaskExecutionService:
         """
         # Store in a "pending messages" queue
         # In production, this would use Redis or a database queue
-        from src.services.notification_service import NotificationService
+        from services.notification_service import NotificationService
         
         notification_service = NotificationService(self.db)
         
@@ -296,7 +296,7 @@ class TaskExecutionService:
         agent.current_task_id = None
         
         # Record transaction manually
-        from src.models import BudgetTransaction, TransactionType
+        from models import BudgetTransaction, TransactionType
         import uuid
         transaction = BudgetTransaction(
             id=str(uuid.uuid4())[:8],
@@ -311,7 +311,7 @@ class TaskExecutionService:
         self.db.commit()
         
         # Create notification
-        from src.services.notification_service import NotificationService
+        from services.notification_service import NotificationService
         notification_service = NotificationService(self.db)
         
         if status == "completed":
@@ -377,7 +377,7 @@ class TaskExecutionService:
                 self.db.commit()
                 
                 # Create notification
-                from src.services.notification_service import NotificationService
+                from services.notification_service import NotificationService
                 notification_service = NotificationService(self.db)
                 notification_service.create_notification(
                     type="task_timeout",

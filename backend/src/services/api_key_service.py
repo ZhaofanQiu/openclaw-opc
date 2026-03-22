@@ -12,7 +12,7 @@ from typing import Optional, List, Dict
 from sqlalchemy import Column, String, DateTime, Boolean, Integer
 from sqlalchemy.orm import Session
 
-from src.database import Base
+from database import Base
 
 
 class APIKey(Base):

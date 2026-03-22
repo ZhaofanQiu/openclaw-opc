@@ -84,10 +84,7 @@ def get_db():
 def init_db():
     """Initialize database tables."""
     # Import v2.0 simplified models
-    from src.models import agent_v2, task_v2  # noqa: F401
-    
-    # Import original models (for migration/compatibility)
-    from src.models import agent, task  # noqa: F401
+    from models import agent_v2, task_v2  # noqa: F401
     
     Base.metadata.create_all(bind=engine)
 

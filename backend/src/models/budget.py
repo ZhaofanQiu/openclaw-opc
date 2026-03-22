@@ -7,7 +7,7 @@ from enum import Enum as PyEnum
 
 from sqlalchemy import Column, DateTime, Float, Integer, String, Text, Boolean
 
-from src.database import Base
+from database import Base
 
 
 class TransactionType(str, PyEnum):

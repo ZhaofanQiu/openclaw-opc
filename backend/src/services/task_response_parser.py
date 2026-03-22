@@ -232,7 +232,7 @@ class TaskResultHandler:
         is_valid, error_msg = self.parser.validate_result(result)
         
         # 更新任务状态
-        from src.models import Task, TaskStatus
+        from models import Task, TaskStatus
         
         task = self.db.query(Task).filter(Task.id == task_id).first()
         

@@ -13,9 +13,9 @@ from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from src.database import get_db
-from src.services.avatar_service import AvatarService, AvatarSource
-from src.utils.rate_limit import limiter, RATE_LIMITS
+from database import get_db
+from services.avatar_service import AvatarService, AvatarSource
+from utils.rate_limit import limiter, RATE_LIMITS
 
 router = APIRouter(prefix="/api/avatars", tags=["Avatars"])
 
@@ -106,7 +106,7 @@ async def generate_system_avatar(
     
     Creates an SVG pixel art avatar based on style and position.
     """
-    from src.models import Agent
+    from models import Agent
     
     # Verify agent exists
     agent = db.query(Agent).filter(Agent.id == agent_id).first()
@@ -144,7 +144,7 @@ async def upload_avatar(
     Supports PNG, JPG, JPEG, SVG formats.
     Max file size: 5MB.
     """
-    from src.models import Agent
+    from models import Agent
     
     # Verify agent exists
     agent = db.query(Agent).filter(Agent.id == agent_id).first()
@@ -195,7 +195,7 @@ async def request_ai_avatar(
     Note: This only records the request. Actual generation must be
     triggered manually or via skill integration.
     """
-    from src.models import Agent
+    from models import Agent
     
     # Verify agent exists
     agent = db.query(Agent).filter(Agent.id == agent_id).first()
@@ -249,7 +249,7 @@ async def regenerate_avatar(
     
     Picks a random pixel style and generates a new avatar.
     """
-    from src.models import Agent
+    from models import Agent
     
     # Verify agent exists
     agent = db.query(Agent).filter(Agent.id == agent_id).first()

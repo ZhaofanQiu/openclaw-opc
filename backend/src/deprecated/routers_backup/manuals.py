@@ -9,10 +9,10 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from src.database import get_db
-from src.services.manual_service import ManualService, get_manual_service
-from src.services.manual_template_engine import template_engine
-from src.utils.rate_limit import limiter, RATE_LIMITS
+from database import get_db
+from services.manual_service import ManualService, get_manual_service
+from services.manual_template_engine import template_engine
+from utils.rate_limit import limiter, RATE_LIMITS
 
 router = APIRouter(prefix="/api/manuals", tags=["Task Manuals"])
 
@@ -113,7 +113,7 @@ async def get_task_manual(
     
     如果任务已生成手册，返回手册内容；否则返回 has_manual=false
     """
-    from src.models import Task
+    from models import Task
     
     task = db.query(Task).filter(Task.id == task_id).first()
     if not task:
@@ -156,7 +156,7 @@ async def regenerate_manual(
     
     可以指定新的模板ID，否则使用自动选择
     """
-    from src.models import Task
+    from models import Task
     
     task = db.query(Task).filter(Task.id == task_id).first()
     if not task:

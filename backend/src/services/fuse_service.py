@@ -10,7 +10,7 @@ from typing import Optional, List, Dict, Any
 
 from sqlalchemy.orm import Session
 
-from src.models import BudgetFuseEvent, FuseAction, FuseEventStatus
+from models import BudgetFuseEvent, FuseAction, FuseEventStatus
 
 
 class FuseService:
@@ -161,7 +161,7 @@ class FuseService:
         Returns:
             Resolution result with updated budget info
         """
-        from src.models import Agent, BudgetTransaction
+        from models import Agent, BudgetTransaction
 
         event = self.get_event(event_id)
         if not event:
@@ -230,7 +230,7 @@ class FuseService:
         Returns:
             Resolution result
         """
-        from src.models import Agent, Task
+        from models import Agent, Task
 
         event = self.get_event(event_id)
         if not event:
@@ -310,7 +310,7 @@ class FuseService:
         Returns:
             Resolution result
         """
-        from src.models import Agent, Task
+        from models import Agent, Task
 
         event = self.get_event(event_id)
         if not event:
@@ -399,7 +399,7 @@ class FuseService:
         Returns:
             Resolution result
         """
-        from src.models import Agent, Task, TaskStatus
+        from models import Agent, Task, TaskStatus
 
         event = self.get_event(event_id)
         if not event:

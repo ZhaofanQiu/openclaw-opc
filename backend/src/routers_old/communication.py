@@ -10,14 +10,14 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from src.database import get_db
-from src.services.communication_service import (
+from database import get_db
+from services.communication_service import (
     CommunicationService, 
     MessagePriority, 
     MessageStatus
 )
-from src.utils.rate_limit import limiter, RATE_LIMITS
-from src.utils.current_user import get_user_id_safe
+from utils.rate_limit import limiter, RATE_LIMITS
+from utils.current_user import get_user_id_safe
 
 router = APIRouter(prefix="/api/communication", tags=["Agent Communication"])
 
@@ -79,7 +79,7 @@ async def send_message(
     service = CommunicationService(db)
     
     # Validate recipient exists
-    from src.models import Agent
+    from models import Agent
     recipient = db.query(Agent).filter(Agent.id == data.recipient_id).first()
     if not recipient:
         raise HTTPException(status_code=404, detail="Recipient not found")
@@ -156,7 +156,7 @@ async def get_messages(
         limit=limit,
     )
     
-    from src.models import Agent
+    from models import Agent
     
     result = []
     for msg in messages:
@@ -198,7 +198,7 @@ async def get_inbox(
         limit=limit,
     )
     
-    from src.models import Agent
+    from models import Agent
     
     result = []
     for msg in messages:
@@ -237,7 +237,7 @@ async def get_conversation(
     service = CommunicationService(db)
     messages = service.get_conversation(agent1_id, agent2_id, limit)
     
-    from src.models import Agent
+    from models import Agent
     
     result = []
     for msg in messages:

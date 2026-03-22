@@ -10,10 +10,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from src.database import get_db
-from src.services.share_link_service import ShareLinkService
-from src.utils.api_auth import require_admin_permission, get_current_permission
-from src.utils.rate_limit import limiter, RATE_LIMITS
+from database import get_db
+from services.share_link_service import ShareLinkService
+from utils.api_auth import require_admin_permission, get_current_permission
+from utils.rate_limit import limiter, RATE_LIMITS
 
 router = APIRouter(prefix="/api/share", tags=["Share Links"])
 

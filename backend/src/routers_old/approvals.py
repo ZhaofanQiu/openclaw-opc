@@ -10,10 +10,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from src.database import get_db
-from src.models import ApprovalRequest, ApprovalStatus
-from src.services.approval_service import ApprovalService
-from src.utils.logging_config import get_logger
+from database import get_db
+from models import ApprovalRequest, ApprovalStatus
+from services.approval_service import ApprovalService
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/approvals", tags=["approvals"])
@@ -222,7 +222,7 @@ async def update_threshold(
     db: Session = Depends(get_db),
 ):
     """更新审批阈值。"""
-    from src.models.config import SystemConfig
+    from models.config import SystemConfig
     
     config = db.query(SystemConfig).first()
     if not config:
@@ -244,7 +244,7 @@ async def get_threshold(
     db: Session = Depends(get_db),
 ):
     """获取当前审批阈值。"""
-    from src.models.config import SystemConfig
+    from models.config import SystemConfig
     
     config = db.query(SystemConfig).first()
     threshold = config.approval_threshold if config and config.approval_threshold else 1000.0

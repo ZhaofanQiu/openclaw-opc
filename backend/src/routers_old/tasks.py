@@ -11,10 +11,10 @@ from pydantic import BaseModel, Field, field_validator
 from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 
-from src.database import get_db
-from src.services.task_service import TaskService
-from src.utils.logging_config import get_logger
-from src.utils.rate_limit import limiter, RATE_LIMITS
+from database import get_db
+from services.task_service import TaskService
+from utils.logging_config import get_logger
+from utils.rate_limit import limiter, RATE_LIMITS
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -148,7 +148,7 @@ async def list_tasks(
         
         # Get agent name if assigned
         if task.agent_id:
-            from src.models import Agent
+            from models import Agent
             agent = db.query(Agent).filter(Agent.id == task.agent_id).first()
             if agent:
                 task_dict["assigned_to"] = agent.name
@@ -174,8 +174,8 @@ async def assign_task(
     logger.info("assign_task", task_id=task_id, agent_id=assign.agent_id)
     
     # v0.4.0 - Check if approval is required
-    from src.models import Task, Agent, ApprovalRequest, ApprovalStatus
-    from src.services.approval_service import ApprovalService
+    from models import Task, Agent, ApprovalRequest, ApprovalStatus
+    from services.approval_service import ApprovalService
     
     task = db.query(Task).filter(Task.id == task_id).first()
     if not task:
@@ -305,7 +305,7 @@ async def report_task_completion(
     - Updated budget info
     - Fuse status (if budget exceeded)
     """
-    from src.services.task_execution_service import TaskExecutionService
+    from services.task_execution_service import TaskExecutionService
     
     logger.info(
         "task_report_received",
@@ -363,7 +363,7 @@ async def get_task_execution_status(
     - Session ID
     - Completion info (if finished)
     """
-    from src.services.task_execution_service import TaskExecutionService
+    from services.task_execution_service import TaskExecutionService
     
     service = TaskExecutionService(db)
     status = service.get_execution_status(task_id)
@@ -391,8 +391,8 @@ async def resend_task_to_agent(
     
     Requires task status to be 'assigned'.
     """
-    from src.services.task_execution_service import TaskExecutionService
-    from src.models import Task
+    from services.task_execution_service import TaskExecutionService
+    from models import Task
     
     task = db.query(Task).filter(Task.id == task_id).first()
     if not task:
@@ -471,7 +471,7 @@ async def record_exact_tokens(
     - When OpenClaw session has ended
     - For reconciliation of estimated vs actual costs
     """
-    from src.services.exact_token_service import ExactTokenService
+    from services.exact_token_service import ExactTokenService
     
     logger.info(
         "record_exact_tokens_request",
@@ -522,7 +522,7 @@ async def get_exact_token_summary(
     - Exact tracking percentage
     - Total input/output tokens
     """
-    from src.services.exact_token_service import ExactTokenService
+    from services.exact_token_service import ExactTokenService
     
     service = ExactTokenService(db)
     summary = service.get_exact_token_summary(agent_id)
@@ -556,7 +556,7 @@ async def batch_record_exact_tokens(
     - List of successful updates
     - List of failed updates with errors
     """
-    from src.services.exact_token_service import ExactTokenService
+    from services.exact_token_service import ExactTokenService
     
     if not session_keys:
         raise HTTPException(status_code=400, detail="No session keys provided")
@@ -587,7 +587,7 @@ async def delete_task(
     Returns:
         Deletion result
     """
-    from src.models import Task, Agent, TaskStep, TaskStepMessage
+    from models import Task, Agent, TaskStep, TaskStepMessage
     
     # Get task
     task = db.query(Task).filter(Task.id == task_id).first()
@@ -669,8 +669,8 @@ async def report_task_completion(
     - Task update confirmation
     - Budget deduction details
     """
-    from src.models import Task, Agent
-    from src.services.agent_service import AgentService
+    from models import Task, Agent
+    from services.agent_service import AgentService
     
     # Get task
     task = db.query(Task).filter(Task.id == task_id).first()
@@ -726,7 +726,7 @@ async def report_task_completion(
         
         # v0.4.0 - Trigger task dependencies
         try:
-            from src.services.task_dependency_service import TaskDependencyService
+            from services.task_dependency_service import TaskDependencyService
             dep_service = TaskDependencyService(db)
             triggered = dep_service.check_and_trigger_dependencies(task_id, report.status)
             
@@ -745,7 +745,7 @@ async def report_task_completion(
         skill_growth_results = []
         if report.status == "completed":
             try:
-                from src.services.skill_growth_service import SkillGrowthService
+                from services.skill_growth_service import SkillGrowthService
                 growth_service = SkillGrowthService(db)
                 skill_growth_results = growth_service.award_task_completion_exp(agent.id, task)
                 

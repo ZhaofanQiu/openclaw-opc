@@ -8,7 +8,7 @@ from typing import Optional, List
 from sqlalchemy import Column, String, Integer, DateTime, Text, ForeignKey, Boolean, Float
 from sqlalchemy.orm import relationship
 
-from src.database import Base
+from database import Base
 
 
 class TaskStepStatus(str, PyEnum):

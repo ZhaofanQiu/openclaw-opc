@@ -12,8 +12,8 @@ from typing import Dict, Optional
 
 from sqlalchemy.orm import Session
 
-from src.models import Agent, Task, TaskStatus
-from src.utils.logging_config import get_logger
+from models import Agent, Task, TaskStatus
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
@@ -153,7 +153,7 @@ class ExactTokenService:
                     task.actual_cost = exact_cost
                     
                     # Update transaction
-                    from src.models import BudgetTransaction
+                    from models import BudgetTransaction
                     transaction = self.db.query(BudgetTransaction).filter(
                         BudgetTransaction.task_id == task_id
                     ).first()

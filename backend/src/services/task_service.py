@@ -8,9 +8,9 @@ from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
-from src.models import Agent, AgentStatus, Task, TaskStatus
-from src.utils.logging_config import get_logger
-from src.utils.current_user import get_user_id_safe
+from models import Agent, AgentStatus, Task, TaskStatus
+from utils.logging_config import get_logger
+from utils.current_user import get_user_id_safe
 
 logger = get_logger(__name__)
 
@@ -98,7 +98,7 @@ class TaskService:
         
         # Create task step for chat-based collaboration (v0.6.3)
         try:
-            from src.services.task_step_service import TaskStepService
+            from services.task_step_service import TaskStepService
             step_service = TaskStepService(self.db)
             
             # Get current user ID, fallback to 'system' if not authenticated
@@ -127,7 +127,7 @@ class TaskService:
             
             # Generate task manual (v0.6.3 - Manual system)
             try:
-                from src.services.manual_service import ManualService
+                from services.manual_service import ManualService
                 manual_service = ManualService(self.db)
                 manual = manual_service.auto_generate_for_task(task)
                 
@@ -157,7 +157,7 @@ class TaskService:
             # Don't fail the assignment if step creation fails
         
         # Create notification
-        from src.services.notification_service import NotificationService
+        from services.notification_service import NotificationService
         notification_service = NotificationService(self.db)
         notification_service.notify_task_assigned(
             task_id=task.id,
@@ -167,7 +167,7 @@ class TaskService:
         
         # Send task to Agent via execution service (v0.3.0 P0 - execution loop)
         try:
-            from src.services.task_execution_service import TaskExecutionService
+            from services.task_execution_service import TaskExecutionService
             execution_service = TaskExecutionService(self.db)
             result = execution_service.send_task_to_agent(task_id, agent_id)
             

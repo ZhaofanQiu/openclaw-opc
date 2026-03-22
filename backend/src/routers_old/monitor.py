@@ -7,8 +7,8 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from src.database import get_db
-from src.services.task_monitor_service import TaskMonitorService
+from database import get_db
+from services.task_monitor_service import TaskMonitorService
 
 router = APIRouter()
 

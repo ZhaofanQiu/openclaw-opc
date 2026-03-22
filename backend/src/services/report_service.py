@@ -7,7 +7,7 @@ from typing import Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
-from src.models import Agent, BudgetTransaction, Task
+from models import Agent, BudgetTransaction, Task
 
 
 class ReportService:

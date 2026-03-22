@@ -6,7 +6,7 @@ from typing import Dict, Any
 
 from sqlalchemy.orm import Session
 
-from src.models import SystemConfig
+from models import SystemConfig
 
 
 class ConfigService:

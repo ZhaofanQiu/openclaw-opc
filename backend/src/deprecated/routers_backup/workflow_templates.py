@@ -10,9 +10,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from src.database import get_db
-from src.services.workflow_template_service import WorkflowTemplateService
-from src.utils.logging_config import get_logger
+from database import get_db
+from services.workflow_template_service import WorkflowTemplateService
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/workflow-templates", tags=["workflow-templates"])
@@ -271,7 +271,7 @@ async def get_template_stats(
     db: Session = Depends(get_db),
 ):
     """获取模板统计"""
-    from src.models.workflow_template_v2 import WorkflowTemplateV2
+    from models.workflow_template_v2 import WorkflowTemplateV2
     
     template = db.query(WorkflowTemplateV2).filter(
         WorkflowTemplateV2.id == template_id
@@ -287,7 +287,7 @@ async def get_template_stats(
     recent_30 = now - timedelta(days=30)
     prev_30 = recent_30 - timedelta(days=30)
     
-    from src.models.workflow_template_v2 import WorkflowTemplateUsage
+    from models.workflow_template_v2 import WorkflowTemplateUsage
     
     recent_usage = db.query(WorkflowTemplateUsage).filter(
         WorkflowTemplateUsage.template_id == template_id,

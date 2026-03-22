@@ -10,8 +10,8 @@ from typing import Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
-from src.models import ApprovalRequest, ApprovalStatus, Task, TaskStatus, Agent
-from src.utils.logging_config import get_logger
+from models import ApprovalRequest, ApprovalStatus, Task, TaskStatus, Agent
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
@@ -37,7 +37,7 @@ class ApprovalService:
             True if approval is required
         """
         # Get threshold from config or use default
-        from src.models.config import SystemConfig
+        from models.config import SystemConfig
         config = self.db.query(SystemConfig).first()
         threshold = config.approval_threshold if config and config.approval_threshold else self.DEFAULT_APPROVAL_THRESHOLD
         
@@ -96,7 +96,7 @@ class ApprovalService:
             raise ValueError(f"Pending approval request already exists for task '{task_id}'")
         
         # Find Partner (approver)
-        from src.models.agent import PositionLevel
+        from models.agent import PositionLevel
         partner = self.db.query(Agent).filter(
             Agent.position_level == PositionLevel.PARTNER.value
         ).first()
@@ -172,7 +172,7 @@ class ApprovalService:
         if not approver:
             raise ValueError(f"Approver '{approver_id}' not found")
         
-        from src.models.agent import PositionLevel
+        from models.agent import PositionLevel
         if approver.position_level != PositionLevel.PARTNER.value:
             raise ValueError("Only Partner can approve requests")
         
@@ -231,7 +231,7 @@ class ApprovalService:
         if not approver:
             raise ValueError(f"Approver '{approver_id}' not found")
         
-        from src.models.agent import PositionLevel
+        from models.agent import PositionLevel
         if approver.position_level != PositionLevel.PARTNER.value:
             raise ValueError("Only Partner can reject requests")
         

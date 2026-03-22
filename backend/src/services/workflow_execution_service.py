@@ -7,13 +7,13 @@ from typing import Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
-from src.models import WorkflowInstance, WorkflowStep, Agent
-from src.models.workflow_engine import (
+from models import WorkflowInstance, WorkflowStep, Agent
+from models.workflow_engine import (
     StepType, WorkflowStatus, StepStatus,
     WorkflowHistory, WorkflowReworkRecord
 )
-from src.utils.logging_config import get_logger
-from src.services.workflow_notification_service import WorkflowNotificationService
+from utils.logging_config import get_logger
+from services.workflow_notification_service import WorkflowNotificationService
 
 logger = get_logger(__name__)
 
@@ -100,7 +100,7 @@ class WorkflowExecutionService:
         # 验证权限
         if step.assignee_id != actor_id:
             actor = self.db.query(Agent).filter(Agent.id == actor_id).first()
-            from src.models.agent import PositionLevel
+            from models.agent import PositionLevel
             if not actor or actor.position_level != PositionLevel.PARTNER.value:
                 raise ValueError("Only assignee or Partner can complete step")
         

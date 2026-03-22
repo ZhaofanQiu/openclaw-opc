@@ -8,11 +8,11 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from src.database import get_db
-from src.services.task_template_service import TaskTemplateService
-from src.services.task_response_parser import TaskResultHandler
-from src.services.async_message_service import AsyncMessageService
-from src.routers.async_messages import process_message_async
+from database import get_db
+from services.task_template_service import TaskTemplateService
+from services.task_response_parser import TaskResultHandler
+from services.async_message_service import AsyncMessageService
+from routers.async_messages import process_message_async
 
 router = APIRouter(prefix="/api/task-assignment", tags=["Task Assignment"])
 
@@ -231,7 +231,7 @@ async def parse_task_result(
     }
     ```
     """
-    from src.services.task_response_parser import TaskResponseParser
+    from services.task_response_parser import TaskResponseParser
     
     parser = TaskResponseParser()
     result = parser.parse_with_fuzzy_matching(response_text)
@@ -282,7 +282,7 @@ async def get_agent_tasks(
     
     查询分配给某员工的所有任务消息。
     """
-    from src.models import AsyncMessage, AsyncMessageStatus
+    from models import AsyncMessage, AsyncMessageStatus
     
     query = db.query(AsyncMessage).filter(
         AsyncMessage.recipient_id == agent_id,

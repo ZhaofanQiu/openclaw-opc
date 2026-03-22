@@ -8,7 +8,7 @@ from enum import Enum as PyEnum
 from sqlalchemy import Column, DateTime, Float, Integer, String, Text
 from sqlalchemy.orm import relationship
 
-from src.database import Base
+from database import Base
 
 
 class AgentStatus(str, PyEnum):

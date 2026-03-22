@@ -7,7 +7,7 @@ from enum import Enum as PyEnum
 
 from sqlalchemy import Column, DateTime, Integer, String, Text
 
-from src.database import Base
+from database import Base
 
 
 class NotificationType(str, PyEnum):

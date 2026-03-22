@@ -9,13 +9,13 @@ from datetime import datetime
 from typing import Optional, Dict, Any, List
 from sqlalchemy.orm import Session
 
-from src.database import get_db
-from src.services.manual_template_engine import (
+from database import get_db
+from services.manual_template_engine import (
     ManualTemplateEngine,
     TaskManual,
     template_engine,
 )
-from src.utils.logging_config import get_logger
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 

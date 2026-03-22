@@ -10,9 +10,9 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from src.database import get_db
-from src.services.fuse_service import FuseService, FuseAction, FuseEventStatus
-from src.utils.rate_limit import limiter, RATE_LIMITS
+from database import get_db
+from services.fuse_service import FuseService, FuseAction, FuseEventStatus
+from utils.rate_limit import limiter, RATE_LIMITS
 
 router = APIRouter(prefix="/api/fuse", tags=["Budget Fuse"])
 
@@ -85,14 +85,14 @@ async def get_fuse_events(
         events = service.get_pending_events(agent_id=agent_id)
     else:
         # Get all events for agent
-        from src.models import BudgetFuseEvent
+        from models import BudgetFuseEvent
         query = db.query(BudgetFuseEvent)
         if agent_id:
             query = query.filter(BudgetFuseEvent.agent_id == agent_id)
         events = query.order_by(BudgetFuseEvent.created_at.desc()).all()
 
     # Enrich with agent names
-    from src.models import Agent
+    from models import Agent
     result = []
     for event in events:
         agent = db.query(Agent).filter(Agent.id == event.agent_id).first()
@@ -127,7 +127,7 @@ async def get_pending_fuse_events(
     service = FuseService(db)
     events = service.get_pending_events()
 
-    from src.models import Agent
+    from models import Agent
     result = []
     for event in events:
         agent = db.query(Agent).filter(Agent.id == event.agent_id).first()
@@ -167,7 +167,7 @@ async def get_fuse_event(
     if not event:
         raise HTTPException(status_code=404, detail="Fuse event not found")
 
-    from src.models import Agent
+    from models import Agent
     agent = db.query(Agent).filter(Agent.id == event.agent_id).first()
 
     return {

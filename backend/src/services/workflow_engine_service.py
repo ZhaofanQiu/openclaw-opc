@@ -8,12 +8,12 @@ from typing import Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
-from src.models import Agent, WorkflowTemplate, WorkflowInstance, WorkflowStep
-from src.models.workflow_engine import (
+from models import Agent, WorkflowTemplate, WorkflowInstance, WorkflowStep
+from models.workflow_engine import (
     StepType, WorkflowStatus, StepStatus,
     WorkflowHistory, WorkflowReworkRecord
 )
-from src.utils.logging_config import get_logger
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
@@ -182,7 +182,7 @@ class WorkflowEngineService:
             return max(candidates, key=lambda a: a.level, default=None)
         
         if step_type == StepType.APPROVE.value:
-            from src.models.agent import PositionLevel
+            from models.agent import PositionLevel
             return self.db.query(Agent).filter(
                 Agent.position_level == PositionLevel.PARTNER.value
             ).first()
@@ -218,7 +218,7 @@ class WorkflowEngineService:
             return candidates[0] if candidates else None
         
         if step_type == StepType.DELIVER.value:
-            from src.models.agent import PositionLevel
+            from models.agent import PositionLevel
             return self.db.query(Agent).filter(
                 Agent.position_level == PositionLevel.PARTNER.value
             ).first()

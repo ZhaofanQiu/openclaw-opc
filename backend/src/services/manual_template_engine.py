@@ -9,7 +9,7 @@ from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 from jinja2 import Template, Environment, BaseLoader
 
-from src.utils.logging_config import get_logger
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 

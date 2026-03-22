@@ -16,11 +16,11 @@ from collections import defaultdict
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
-from src.models import WorkflowInstance, WorkflowStep, Agent
-from src.models.workflow_engine import (
+from models import WorkflowInstance, WorkflowStep, Agent
+from models.workflow_engine import (
     StepType, WorkflowStatus, WorkflowHistory, WorkflowReworkRecord
 )
-from src.utils.logging_config import get_logger
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
@@ -249,7 +249,7 @@ class WorkflowRecommendationService:
             reasons.append("当前空闲")
         
         # 4. 职级加成
-        from src.models.agent import PositionLevel
+        from models.agent import PositionLevel
         if agent.position_level == PositionLevel.SENIOR.value:
             score += 5
             reasons.append("资深员工")

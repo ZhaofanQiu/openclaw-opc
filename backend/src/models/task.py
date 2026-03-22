@@ -8,7 +8,7 @@ from enum import Enum as PyEnum
 from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
-from src.database import Base
+from database import Base
 
 
 class TaskStatus(str, PyEnum):

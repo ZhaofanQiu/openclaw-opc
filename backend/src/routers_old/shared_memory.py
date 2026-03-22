@@ -10,11 +10,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from src.database import get_db
-from src.models import SharedMemory
-from src.models.shared_memory import MemoryCategory, MemoryScope
-from src.services.shared_memory_service import SharedMemoryService
-from src.utils.logging_config import get_logger
+from database import get_db
+from models import SharedMemory
+from models.shared_memory import MemoryCategory, MemoryScope
+from services.shared_memory_service import SharedMemoryService
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/memory", tags=["shared-memory"])
@@ -330,7 +330,7 @@ def _memory_to_response(memory: SharedMemory, db: Session) -> dict:
     """Convert SharedMemory model to response dict."""
     agent_name = None
     if memory.agent_id:
-        from src.models import Agent
+        from models import Agent
         agent = db.query(Agent).filter(Agent.id == memory.agent_id).first()
         if agent:
             agent_name = agent.name

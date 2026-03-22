@@ -16,11 +16,11 @@ from slowapi.util import get_remote_address
 
 from pydantic import ValidationError
 
-from src.database import init_db, check_database_connection, get_database_info
-from src.routers import agents, agent_interaction_logs, approvals, avatars, budget, communication, config, monitor, notifications, reports, shared_memory, skills, skill_growth, tasks, workflows, workflow_extensions, workflow_templates, agent_skill_paths, workflow_details, websocket, api_keys, share, fuse, async_messages, sub_tasks, task_dependencies, workflows_optimized, task_assignment, task_steps, manuals
-from src.utils.logging_config import configure_logging, get_logger
-from src.utils.rate_limit import limiter, RATE_LIMITS
-from src.utils.api_auth import require_read_permission
+from database import init_db, check_database_connection, get_database_info
+from routers import agents, agent_interaction_logs, approvals, avatars, budget, communication, config, monitor, notifications, reports, shared_memory, skills, skill_growth, tasks, workflows, workflow_extensions, workflow_templates, agent_skill_paths, workflow_details, websocket, api_keys, share, fuse, async_messages, sub_tasks, task_dependencies, workflows_optimized, task_assignment, task_steps, manuals
+from utils.logging_config import configure_logging, get_logger
+from utils.rate_limit import limiter, RATE_LIMITS
+from utils.api_auth import require_read_permission
 
 # Get project root (parent of backend/)
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -240,7 +240,7 @@ app.add_middleware(
 )
 
 # User context middleware (adds current user to request context)
-from src.middleware.context import UserContextMiddleware
+from middleware.context import UserContextMiddleware
 app.add_middleware(UserContextMiddleware)
 
 # Include routers with optional API key auth

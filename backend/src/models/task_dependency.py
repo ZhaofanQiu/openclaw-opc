@@ -10,7 +10,7 @@ from enum import Enum as PyEnum
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
-from src.database import Base
+from database import Base
 
 
 class TaskDependencyStatus(str, PyEnum):

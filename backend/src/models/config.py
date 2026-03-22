@@ -6,7 +6,7 @@ from datetime import datetime
 
 from sqlalchemy import Column, DateTime, Float, Integer, String
 
-from src.database import Base
+from database import Base
 
 
 class SystemConfig(Base):

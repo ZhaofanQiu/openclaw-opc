@@ -8,9 +8,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from src.database import get_db
-from src.services.agent_interaction_log_service import AgentInteractionLogService
-from src.utils.logging_config import get_logger
+from database import get_db
+from services.agent_interaction_log_service import AgentInteractionLogService
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/agent-logs", tags=["agent-logs"])

@@ -5,8 +5,8 @@ Notification service for user messages.
 from datetime import datetime
 from typing import List, Optional
 
-from src.database import Base
-from src.models import Notification, NotificationType
+from database import Base
+from models import Notification, NotificationType
 
 
 class NotificationService:

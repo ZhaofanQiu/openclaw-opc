@@ -11,8 +11,8 @@ from typing import Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
-from src.models import SubTask, SubTaskStatus, Task, TaskStatus, Agent
-from src.utils.logging_config import get_logger
+from models import SubTask, SubTaskStatus, Task, TaskStatus, Agent
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 

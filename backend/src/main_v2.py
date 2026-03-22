@@ -14,11 +14,11 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 
-from src.database import init_db, check_database_connection, get_database_info
-from src.routers import agents, tasks, manuals, budget, approvals, reports, config, skill_api
-from src.utils.logging_config import configure_logging, get_logger
-from src.utils.rate_limit import limiter
-from src.utils.api_auth import require_read_permission
+from database import init_db, check_database_connection, get_database_info
+from routers import agents, tasks, manuals, budget, approvals, reports, config, skill_api
+from utils.logging_config import configure_logging, get_logger
+from utils.rate_limit import limiter
+from utils.api_auth import require_read_permission
 
 # Get project root
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -56,12 +56,12 @@ async def lifespan(app: FastAPI):
     
     # Check skill installation
     try:
-        from src.core.skill_installer import check_skill_installed
+        from core.skill_installer import check_skill_installed
         if check_skill_installed():
             logger.info("✓ opc-bridge skill installed")
         else:
             logger.warning("✗ opc-bridge skill not installed")
-            logger.info("  Run: python -m src.core.skill_installer")
+            logger.info("  Run: python -m core.skill_installer")
     except Exception as e:
         logger.warning(f"Skill check failed: {e}")
     

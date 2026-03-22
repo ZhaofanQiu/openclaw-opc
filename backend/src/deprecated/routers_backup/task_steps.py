@@ -8,9 +8,9 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from src.database import get_db
-from src.services.task_step_service import TaskStepService
-from src.utils.rate_limit import limiter, RATE_LIMITS
+from database import get_db
+from services.task_step_service import TaskStepService
+from utils.rate_limit import limiter, RATE_LIMITS
 
 router = APIRouter(prefix="/api/task-steps", tags=["Task Steps"])
 

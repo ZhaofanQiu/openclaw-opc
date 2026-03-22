@@ -7,7 +7,7 @@ Simplified Agent Model (v2.0)
 from datetime import datetime
 from enum import Enum as PyEnum
 from sqlalchemy import Column, DateTime, Float, Integer, String, Text
-from src.database import Base
+from database import Base
 
 
 class AgentStatus(str, PyEnum):
@@ -27,9 +27,9 @@ class PositionLevel(int, PyEnum):
 
 
 class Agent(Base):
-    """员工模型 (简化版)"""
+    """员工模型 (简化版 v2.0)"""
     
-    __tablename__ = "agents"
+    __tablename__ = "agents_v2"
     
     id = Column(String, primary_key=True)
     name = Column(String, nullable=False)

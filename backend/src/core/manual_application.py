@@ -8,7 +8,7 @@
 import os
 from typing import Optional, Dict, List
 from dataclasses import dataclass
-from src.utils.logging_config import get_logger
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 

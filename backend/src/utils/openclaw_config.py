@@ -16,7 +16,7 @@ def _get_log_service():
     global _agent_log_service
     if _agent_log_service is None:
         try:
-            from src.services.agent_interaction_log_service import AgentInteractionLogService
+            from services.agent_interaction_log_service import AgentInteractionLogService
             _agent_log_service = AgentInteractionLogService()
         except ImportError:
             _agent_log_service = None

@@ -7,7 +7,7 @@
 from typing import Optional, Dict, Any
 
 # 导入上下文获取函数
-from src.middleware.context import get_current_user_context, get_current_user_id
+from middleware.context import get_current_user_context, get_current_user_id
 
 
 __all__ = [

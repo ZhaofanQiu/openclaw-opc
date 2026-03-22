@@ -9,10 +9,10 @@ from datetime import datetime
 from typing import Optional, List, Dict, Any
 from sqlalchemy.orm import Session
 
-from src.models import TaskStep, TaskStepMessage, TaskStepStatus, TaskMessageType, Task, TaskStatus
-from src.services.notification_service import NotificationService
-from src.utils.logging_config import get_logger
-from src.utils.current_user import get_user_id_safe
+from models import TaskStep, TaskStepMessage, TaskStepStatus, TaskMessageType, Task, TaskStatus
+from services.notification_service import NotificationService
+from utils.logging_config import get_logger
+from utils.current_user import get_user_id_safe
 
 logger = get_logger(__name__)
 
@@ -420,7 +420,7 @@ class TaskStepService:
         
         # 如果是最终步骤，重置员工状态为 idle
         if not step.next_step_id:
-            from src.models import Agent, AgentStatus, Task, TaskStatus
+            from models import Agent, AgentStatus, Task, TaskStatus
             
             # 获取执行员工
             agent = self.db.query(Agent).filter(Agent.id == step.executor_id).first()

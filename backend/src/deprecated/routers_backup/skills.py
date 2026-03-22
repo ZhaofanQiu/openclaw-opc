@@ -8,8 +8,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from src.database import get_db
-from src.services.skill_service import SkillService
+from database import get_db
+from services.skill_service import SkillService
 
 router = APIRouter()
 

@@ -9,10 +9,10 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from typing import Optional
 
-from src.database import get_db
-from src.services.workflow_detail_service import WorkflowDetailService
-from src.services.workflow_execution_service import WorkflowExecutionService
-from src.utils.logging_config import get_logger
+from database import get_db
+from services.workflow_detail_service import WorkflowDetailService
+from services.workflow_execution_service import WorkflowExecutionService
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/workflow-details", tags=["workflow-details"])
@@ -179,7 +179,7 @@ async def handle_fuse_action(
     - CANCEL: 取消工作流
     - RESTART: 重新启动
     """
-    from src.services.fuse_service import FuseService
+    from services.fuse_service import FuseService
     
     service = FuseService(db)
     
@@ -209,7 +209,7 @@ async def cancel_workflow(
     db: Session = Depends(get_db),
 ):
     """取消工作流"""
-    from src.services.fuse_service import FuseService
+    from services.fuse_service import FuseService
     
     service = FuseService(db)
     
@@ -230,7 +230,7 @@ async def get_workflow_timeline(
     
     按时间顺序展示所有事件
     """
-    from src.models import WorkflowHistory, WorkflowReworkRecord
+    from models import WorkflowHistory, WorkflowReworkRecord
     
     # 获取历史记录
     history = db.query(WorkflowHistory).filter(

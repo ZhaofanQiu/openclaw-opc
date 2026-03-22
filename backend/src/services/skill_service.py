@@ -6,7 +6,7 @@ from typing import Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
-from src.models import Agent, Skill, Task, TaskSkillRequirement
+from models import Agent, Skill, Task, TaskSkillRequirement
 
 
 class SkillService:
@@ -257,7 +257,7 @@ class SkillService:
         Returns:
             Dict with agent info and match details, or None if no suitable agent
         """
-        from src.models import AgentStatus
+        from models import AgentStatus
         
         task = self.db.query(Task).filter(Task.id == task_id).first()
         if not task:

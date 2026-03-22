@@ -11,12 +11,12 @@ from typing import Dict, List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
-from src.models import Agent
-from src.models.workflow_template_v2 import (
+from models import Agent
+from models.workflow_template_v2 import (
     WorkflowTemplateV2, WorkflowTemplateFavorite, WorkflowTemplateUsage,
     TemplateCategory, TemplateVisibility
 )
-from src.utils.logging_config import get_logger
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 

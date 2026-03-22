@@ -8,8 +8,8 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from src.models import Agent, Task, TaskStatus
-from src.services.task_service import TaskService
+from models import Agent, Task, TaskStatus
+from services.task_service import TaskService
 
 
 class AssignmentStrategy:
@@ -80,7 +80,7 @@ class AssignmentStrategy:
         Score agent based on skill match with task requirements.
         Uses SkillService to calculate match score.
         """
-        from src.services.skill_service import SkillService
+        from services.skill_service import SkillService
         
         skill_service = SkillService(db)
         match_result = skill_service.calculate_agent_task_match_score(agent.id, task.id)
@@ -248,7 +248,7 @@ class PartnerService:
         active_agents = sum(1 for a in agents if a.status in ["idle", "busy"])
         
         # Count tasks by status
-        from src.models import Task
+        from models import Task
         tasks = self.db.query(Task).all()
         pending_count = sum(1 for t in tasks if t.status == TaskStatus.PENDING.value)
         assigned_count = sum(1 for t in tasks if t.status == TaskStatus.ASSIGNED.value)
@@ -287,7 +287,7 @@ class PartnerService:
             Summary with budget, tasks, alerts, and good news
         """
         from datetime import datetime, timedelta
-        from src.models import Task, TaskStatus
+        from models import Task, TaskStatus
         
         # Budget info
         agents = self.db.query(Agent).filter(Agent.position_level < 5).all()

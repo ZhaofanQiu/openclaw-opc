@@ -6,9 +6,9 @@
 
 from typing import Optional, Dict, Any
 from dataclasses import dataclass
-from src.core.agent_interaction_v2 import AgentInteractionV2, TaskContext, assign_task_to_agent
-from src.core.skill_definition import get_skill_definition
-from src.utils.logging_config import get_logger
+from core.agent_interaction_v2 import AgentInteractionV2, TaskContext, assign_task_to_agent
+from core.skill_definition import get_skill_definition
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 

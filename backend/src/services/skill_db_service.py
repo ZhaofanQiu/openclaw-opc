@@ -7,8 +7,8 @@ Skill Database Service
 
 from sqlalchemy.orm import Session
 from typing import Dict, Any, List, Optional
-from src.models import Task, TaskStatus, Agent, Budget
-from src.utils.logging_config import get_logger
+from models import Task, TaskStatus, Agent, Budget
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 

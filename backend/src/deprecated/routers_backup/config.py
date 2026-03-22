@@ -8,8 +8,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from src.database import get_db
-from src.services.config_service import ConfigService
+from database import get_db
+from services.config_service import ConfigService
 
 router = APIRouter()
 
@@ -65,7 +65,7 @@ async def update_config(
 @router.get("/defaults")
 async def get_default_config():
     """Get default configuration values."""
-    from src.models import SystemConfig
+    from models import SystemConfig
     return SystemConfig.get_default_config()
 
 

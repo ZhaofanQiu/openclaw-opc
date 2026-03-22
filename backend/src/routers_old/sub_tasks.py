@@ -10,10 +10,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from src.database import get_db
-from src.models import SubTask, SubTaskStatus, Task
-from src.services.sub_task_service import SubTaskService
-from src.utils.logging_config import get_logger
+from database import get_db
+from models import SubTask, SubTaskStatus, Task
+from services.sub_task_service import SubTaskService
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/sub-tasks", tags=["sub-tasks"])

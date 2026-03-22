@@ -14,7 +14,7 @@ from jose import JWTError, jwt
 from sqlalchemy import Column, String, DateTime, Boolean, Integer, Text
 from sqlalchemy.orm import Session
 
-from src.database import Base
+from database import Base
 
 
 class ShareLink(Base):

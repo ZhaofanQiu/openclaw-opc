@@ -7,8 +7,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from typing import Optional
 
-from src.database import get_db
-from src.services.budget_service import BudgetService
+from database import get_db
+from services.budget_service import BudgetService
 
 router = APIRouter()
 
@@ -43,7 +43,7 @@ async def list_agent_budgets(
     db: Session = Depends(get_db),
 ):
     """Get budget for all agents."""
-    from src.models import Agent
+    from models import Agent
     
     service = BudgetService(db)
     agents = db.query(Agent).all()
@@ -123,7 +123,7 @@ async def record_exact_consumption(
     Record exact token consumption from session_status.
     Called by Partner Agent after task completion with actual token usage.
     """
-    from src.models import Agent
+    from models import Agent
     
     service = BudgetService(db)
     

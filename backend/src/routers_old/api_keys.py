@@ -10,10 +10,10 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 
-from src.database import get_db
-from src.services.api_key_service import APIKeyService
-from src.utils.api_auth import require_admin_permission
-from src.utils.rate_limit import RATE_LIMITS
+from database import get_db
+from services.api_key_service import APIKeyService
+from utils.api_auth import require_admin_permission
+from utils.rate_limit import RATE_LIMITS
 
 
 router = APIRouter(prefix="/api/keys", tags=["API Keys"])

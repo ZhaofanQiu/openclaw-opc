@@ -9,8 +9,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from src.database import get_db
-from src.services.report_service import ReportService
+from database import get_db
+from services.report_service import ReportService
 
 router = APIRouter()
 
@@ -131,7 +131,7 @@ async def get_budget_trend(
     """
     from datetime import datetime, timedelta
     from sqlalchemy import func
-    from src.models import BudgetTransaction
+    from models import BudgetTransaction
 
     if days < 1 or days > 30:
         days = 7
@@ -173,7 +173,7 @@ async def get_agent_status_distribution(
         Count of agents by status
     """
     from sqlalchemy import func
-    from src.models import Agent, AgentStatus
+    from models import Agent, AgentStatus
 
     status_counts = db.query(
         Agent.status,
@@ -201,7 +201,7 @@ async def get_task_status_distribution(
         Count of tasks by status
     """
     from sqlalchemy import func
-    from src.models import Task, TaskStatus
+    from models import Task, TaskStatus
 
     status_counts = db.query(
         Task.status,

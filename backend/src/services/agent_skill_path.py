@@ -12,10 +12,10 @@ from typing import Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
-from src.models import Agent, WorkflowStep, WorkflowInstance
-from src.models.agent import PositionLevel
-from src.models.workflow_engine import StepType
-from src.utils.logging_config import get_logger
+from models import Agent, WorkflowStep, WorkflowInstance
+from models.agent import PositionLevel
+from models.workflow_engine import StepType
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 

@@ -11,9 +11,9 @@ from typing import Dict, List, Optional
 from sqlalchemy import desc, func, or_
 from sqlalchemy.orm import Session
 
-from src.models import Agent, MemoryAccessLog, SharedMemory
-from src.models.shared_memory import MemoryCategory, MemoryScope
-from src.utils.logging_config import get_logger
+from models import Agent, MemoryAccessLog, SharedMemory
+from models.shared_memory import MemoryCategory, MemoryScope
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
@@ -153,7 +153,7 @@ class SharedMemoryService:
         # Check permission (only creator or Partner can update)
         if memory.agent_id and memory.agent_id != agent_id:
             agent = self.db.query(Agent).filter(Agent.id == agent_id).first()
-            from src.models.agent import PositionLevel
+            from models.agent import PositionLevel
             if not agent or agent.position_level != PositionLevel.PARTNER.value:
                 raise ValueError("Only creator or Partner can update this memory")
         
@@ -201,7 +201,7 @@ class SharedMemoryService:
         # Check permission
         if memory.agent_id and memory.agent_id != agent_id:
             agent = self.db.query(Agent).filter(Agent.id == agent_id).first()
-            from src.models.agent import PositionLevel
+            from models.agent import PositionLevel
             if not agent or agent.position_level != PositionLevel.PARTNER.value:
                 raise ValueError("Only creator or Partner can delete this memory")
         

@@ -53,7 +53,7 @@ class UserContextMiddleware(BaseHTTPMiddleware):
         # 尝试从 Authorization header 解析 JWT
         auth_header = request.headers.get("Authorization", "")
         if auth_header.startswith("Bearer "):
-            from src.utils.jwt_auth import decode_token
+            from utils.jwt_auth import decode_token
             token = auth_header[7:]  # Remove "Bearer "
             payload = decode_token(token)
             if payload:

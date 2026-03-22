@@ -9,9 +9,9 @@ from typing import Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
-from src.models import Agent, AgentSkillGrowth, Skill, SkillGrowthHistory, Task, TaskPriority
-from src.models.skill_growth import SKILL_GROWTH_CONFIG
-from src.utils.logging_config import get_logger
+from models import Agent, AgentSkillGrowth, Skill, SkillGrowthHistory, Task, TaskPriority
+from models.skill_growth import SKILL_GROWTH_CONFIG
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 

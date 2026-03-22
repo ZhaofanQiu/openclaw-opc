@@ -11,8 +11,8 @@ from typing import Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
-from src.models import Task, TaskDependency, TaskDependencyStatus, TaskStatus
-from src.utils.logging_config import get_logger
+from models import Task, TaskDependency, TaskDependencyStatus, TaskStatus
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
@@ -146,7 +146,7 @@ class TaskDependencyService:
     
     def _trigger_downstream_task(self, dependency: TaskDependency) -> Optional[Task]:
         """Create and return downstream task from template."""
-        from src.services.task_service import TaskService
+        from services.task_service import TaskService
         
         try:
             template = json.loads(dependency.downstream_task_template or "{}")

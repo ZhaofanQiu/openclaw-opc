@@ -10,9 +10,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from src.database import get_db
-from src.services.agent_skill_path import AgentSkillPathService
-from src.utils.logging_config import get_logger
+from database import get_db
+from services.agent_skill_path import AgentSkillPathService
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/agent-skill-paths", tags=["agent-skill-paths"])
@@ -26,7 +26,7 @@ class CompareRequest(BaseModel):
 async def get_all_paths():
     """获取所有成长路径"""
     # 不需要db，直接返回定义
-    from src.services.agent_skill_path import AgentSkillPathService
+    from services.agent_skill_path import AgentSkillPathService
     service = AgentSkillPathService(None)
     return {"paths": service.get_all_paths()}
 
@@ -69,7 +69,7 @@ async def get_agent_dashboard(
     db: Session = Depends(get_db),
 ):
     """获取员工成长仪表盘"""
-    from src.models import Agent, WorkflowStep
+    from models import Agent, WorkflowStep
     from sqlalchemy import func
     
     agent = db.query(Agent).filter(Agent.id == agent_id).first()

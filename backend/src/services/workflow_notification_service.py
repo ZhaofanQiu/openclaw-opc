@@ -10,12 +10,12 @@ from typing import Dict, List, Optional, Set
 
 from sqlalchemy.orm import Session
 
-from src.models import Agent, WorkflowInstance, WorkflowStep
-from src.models.workflow_notification import (
+from models import Agent, WorkflowInstance, WorkflowStep
+from models.workflow_notification import (
     WorkflowNotification, NotificationSubscription,
     NotificationType, NotificationPriority, NotificationChannel
 )
-from src.utils.logging_config import get_logger
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
@@ -351,7 +351,7 @@ class WorkflowNotificationService:
     
     def _get_partner(self) -> Optional[Agent]:
         """获取Partner"""
-        from src.models.agent import PositionLevel
+        from models.agent import PositionLevel
         return self.db.query(Agent).filter(
             Agent.position_level == PositionLevel.PARTNER.value
         ).first()

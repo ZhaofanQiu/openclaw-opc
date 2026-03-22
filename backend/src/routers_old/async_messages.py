@@ -10,12 +10,12 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from src.database import get_db
-from src.models import AsyncMessage, AsyncMessageStatus, AsyncMessageType, Agent
-from src.services.async_message_service import AsyncMessageService
-from src.utils.openclaw_config import send_message_to_agent
-from src.utils.logging_config import get_logger
-from src.utils.rate_limit import limiter, RATE_LIMITS
+from database import get_db
+from models import AsyncMessage, AsyncMessageStatus, AsyncMessageType, Agent
+from services.async_message_service import AsyncMessageService
+from utils.openclaw_config import send_message_to_agent
+from utils.logging_config import get_logger
+from utils.rate_limit import limiter, RATE_LIMITS
 
 router = APIRouter(prefix="/api/async-messages", tags=["Async Messages"])
 logger = get_logger(__name__)
@@ -73,7 +73,7 @@ async def process_message_async(message_id: str, db_session=None):
     这是真正的发送逻辑，在后台执行，不阻塞API响应
     """
     # 创建新的数据库会话
-    from src.database import SessionLocal
+    from database import SessionLocal
     
     if db_session is None:
         db = SessionLocal()
@@ -113,7 +113,7 @@ async def process_message_async(message_id: str, db_session=None):
                 # 如果是任务类型消息，解析结果
                 if message.message_type == "task":
                     try:
-                        from src.services.task_response_parser import TaskResultHandler
+                        from services.task_response_parser import TaskResultHandler
                         handler = TaskResultHandler(db)
                         task_result = handler.process_agent_response(
                             task_id=message.related_task_id,

@@ -7,7 +7,7 @@ opc-bridge Skill 安装器
 import os
 import shutil
 from pathlib import Path
-from src.utils.logging_config import get_logger
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 

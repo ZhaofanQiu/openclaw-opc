@@ -11,7 +11,7 @@ from typing import List, Optional, Dict, Any
 
 from sqlalchemy.orm import Session
 
-from src.models import AgentMessage, MessagePriority, MessageStatus
+from models import AgentMessage, MessagePriority, MessageStatus
 
 
 class CommunicationService:
@@ -81,7 +81,7 @@ class CommunicationService:
         Returns:
             Delivery result
         """
-        from src.models import Agent
+        from models import Agent
         
         message = self.db.query(AgentMessage).filter(
             AgentMessage.id == message_id
@@ -188,7 +188,7 @@ class CommunicationService:
         # v0.4.0 - Add shared memory context
         if recipient and message.related_type == "task_assignment":
             try:
-                from src.services.shared_memory_service import SharedMemoryService
+                from services.shared_memory_service import SharedMemoryService
                 memory_service = SharedMemoryService(self.db)
                 
                 # Get relevant memories for this agent
@@ -390,7 +390,7 @@ class CommunicationService:
         Returns:
             Created message
         """
-        from src.models import Agent
+        from models import Agent
         
         # Get Partner as sender
         partner = self.db.query(Agent).filter(

@@ -8,8 +8,8 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
-from src.database import get_db
-from src.models import Agent
+from database import get_db
+from models import Agent
 
 # 配置
 SECRET_KEY = "opc-secret-key-change-in-production"  # 生产环境需要修改

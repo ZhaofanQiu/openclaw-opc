@@ -9,14 +9,14 @@ from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
-from src.database import get_db
-from src.models import Agent, AgentStatus, PositionLevel
-from src.services.agent_service import AgentService
-from src.services.agent_lifecycle_service import AgentLifecycleService
-from src.utils.openclaw_config import read_openclaw_agents, get_agent_details, ensure_partner_agent_exists
-from src.services.partner_service import PartnerService
-from src.utils.rate_limit import limiter, RATE_LIMITS
-from src.utils.logging_config import get_logger
+from database import get_db
+from models import Agent, AgentStatus, PositionLevel
+from services.agent_service import AgentService
+from services.agent_lifecycle_service import AgentLifecycleService
+from utils.openclaw_config import read_openclaw_agents, get_agent_details, ensure_partner_agent_exists
+from services.partner_service import PartnerService
+from utils.rate_limit import limiter, RATE_LIMITS
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
@@ -125,7 +125,7 @@ async def create_partner_agent_endpoint(
     
     Returns the created agent info for binding.
     """
-    from src.utils.openclaw_config import create_partner_agent
+    from utils.openclaw_config import create_partner_agent
     
     # Create the Partner Agent
     result = create_partner_agent("OPC Partner Assistant")
@@ -166,7 +166,7 @@ async def setup_partner_auto(
     
     Note: If a new agent is created, you need to restart OpenClaw Gateway.
     """
-    from src.utils.openclaw_config import ensure_partner_agent_exists
+    from utils.openclaw_config import ensure_partner_agent_exists
     
     service = AgentService(db)
     
@@ -375,7 +375,7 @@ async def partner_hire_employee(
         
         # Send avatar design task to Partner (async)
         try:
-            from src.services.async_message_service import AsyncMessageService
+            from services.async_message_service import AsyncMessageService
             async_service = AsyncMessageService(db)
             
             # Check if Partner has agent_id bound
@@ -682,7 +682,7 @@ async def wake_partner(
     
     # Check and send pending avatar design tasks
     try:
-        from src.services.async_message_service import AsyncMessageService
+        from services.async_message_service import AsyncMessageService
         async_service = AsyncMessageService(db)
         pending_messages = async_service.get_pending_messages(recipient_id=partner.id)
         
@@ -693,7 +693,7 @@ async def wake_partner(
                 if msg.message_type == "task" and "设计头像" in (msg.subject or ""):
                     try:
                         # Send to Partner via sessions_send
-                        from src.utils.openclaw_config import send_message_to_agent
+                        from utils.openclaw_config import send_message_to_agent
                         response = send_message_to_agent(
                             partner.agent_id,
                             f"【头像设计任务】\n\n{msg.content}\n\n请回复头像的SVG代码或详细描述。",
@@ -882,7 +882,7 @@ def generate_welcome_message(summary: dict, partner_name: str, agent_id: str = N
     
     # Try to use the bound Agent to generate message
     try:
-        from src.utils.openclaw_config import send_message_to_agent
+        from utils.openclaw_config import send_message_to_agent
         
         # Prepare context for the Agent
         budget = summary.get("budget", {})
@@ -1012,7 +1012,7 @@ async def delete_agent(
     Returns:
         Deletion result with task handling summary
     """
-    from src.models import Task, TaskStatus
+    from models import Task, TaskStatus
     
     service = AgentService(db)
     
@@ -1581,7 +1581,7 @@ async def auto_create_agent(
     **After confirmation**:
     - OpenClaw Gateway restart is required
     """
-    from src.services.agent_lifecycle_service import AgentLifecycleService, ConfigOperationError
+    from services.agent_lifecycle_service import AgentLifecycleService, ConfigOperationError
     
     service = AgentLifecycleService(db)
     
@@ -1665,7 +1665,7 @@ async def auto_delete_agent(
     2. Review via /lifecycle/pending
     3. Call with confirm=true to apply
     """
-    from src.services.agent_lifecycle_service import AgentLifecycleService, ConfigOperationError
+    from services.agent_lifecycle_service import AgentLifecycleService, ConfigOperationError
     
     service = AgentLifecycleService(db)
     
@@ -1731,7 +1731,7 @@ async def get_pending_changes(
     
     Returns information about changes awaiting confirmation.
     """
-    from src.services.agent_lifecycle_service import AgentLifecycleService
+    from services.agent_lifecycle_service import AgentLifecycleService
     
     service = AgentLifecycleService(db)
     pending = service.get_pending_changes()
@@ -1765,7 +1765,7 @@ async def confirm_pending_changes(
     - Changes are written to openclaw.json
     - OpenClaw Gateway restart is required
     """
-    from src.services.agent_lifecycle_service import AgentLifecycleService
+    from services.agent_lifecycle_service import AgentLifecycleService
     
     service = AgentLifecycleService(db)
     result = service.confirm_operation()
@@ -1790,7 +1790,7 @@ async def cancel_pending_changes(
     
     Removes staged changes without applying them.
     """
-    from src.services.agent_lifecycle_service import AgentLifecycleService
+    from services.agent_lifecycle_service import AgentLifecycleService
     
     service = AgentLifecycleService(db)
     result = service.cancel_operation()
@@ -1810,7 +1810,7 @@ async def list_config_backups(
     
     Returns list of backups with timestamps and reasons.
     """
-    from src.services.agent_lifecycle_service import AgentConfigManager
+    from services.agent_lifecycle_service import AgentConfigManager
     
     manager = AgentConfigManager()
     backups = manager.list_backups()
@@ -1840,7 +1840,7 @@ async def restore_config_backup(
     
     Use /lifecycle/backups to get available backup filenames.
     """
-    from src.services.agent_lifecycle_service import AgentConfigManager, ConfigOperationError
+    from services.agent_lifecycle_service import AgentConfigManager, ConfigOperationError
     
     manager = AgentConfigManager()
     
@@ -1871,7 +1871,7 @@ async def get_lifecycle_status(
     - Backup count
     - Gateway status
     """
-    from src.services.agent_lifecycle_service import AgentConfigManager, AgentLifecycleService
+    from services.agent_lifecycle_service import AgentConfigManager, AgentLifecycleService
     import subprocess
     import os
     

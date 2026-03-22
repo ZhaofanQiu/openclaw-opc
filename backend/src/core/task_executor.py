@@ -6,10 +6,10 @@
 
 from typing import Optional, Dict, Any
 from dataclasses import dataclass
-from src.core.agent_interaction import AgentInteraction, AgentContext, interact_with_agent
-from src.core.bridge_skill import get_bridge_skill, get_bridge_skill_summary
-from src.core.manual_application import build_task_context, ManualApplication
-from src.utils.logging_config import get_logger
+from core.agent_interaction import AgentInteraction, AgentContext, interact_with_agent
+from core.bridge_skill import get_bridge_skill, get_bridge_skill_summary
+from core.manual_application import build_task_context, ManualApplication
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
