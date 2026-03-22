@@ -88,6 +88,11 @@ class Task(Base):
                                       cascade="all, delete-orphan")
     sub_tasks = relationship("SubTask", back_populates="parent_task", 
                              cascade="all, delete-orphan", foreign_keys="SubTask.parent_task_id")
+    # v0.4.0 - Task dependencies
+    downstream_dependencies = relationship("TaskDependency", foreign_keys="TaskDependency.upstream_task_id", 
+                                          back_populates="upstream_task", cascade="all, delete-orphan")
+    upstream_dependencies = relationship("TaskDependency", foreign_keys="TaskDependency.downstream_task_id", 
+                                        back_populates="downstream_task")
 
     @property
     def budget_usage_percentage(self) -> float:

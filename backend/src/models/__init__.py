@@ -10,6 +10,7 @@ from src.models.notification import Notification, NotificationType
 from src.models.skill import Skill, TaskSkillRequirement, agent_skills_table
 from src.models.sub_task import SubTask, SubTaskStatus  # v0.4.0
 from src.models.task import Task, TaskPriority, TaskStatus
+from src.models.task_dependency import TaskDependency, TaskDependencyStatus  # v0.4.0
 
 __all__ = [
     "Agent",
@@ -37,4 +38,6 @@ __all__ = [
     "Task",
     "TaskPriority",
     "TaskStatus",
+    "TaskDependency",  # v0.4.0
+    "TaskDependencyStatus",  # v0.4.0
 ]
