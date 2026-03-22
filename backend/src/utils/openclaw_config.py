@@ -5,7 +5,22 @@ OpenClaw configuration reader.
 import json
 import os
 import subprocess
+import time
 from typing import List, Optional, Dict
+
+# Lazy import to avoid circular dependency
+_agent_log_service = None
+
+def _get_log_service():
+    """Lazy initialization of log service"""
+    global _agent_log_service
+    if _agent_log_service is None:
+        try:
+            from src.services.agent_interaction_log_service import AgentInteractionLogService
+            _agent_log_service = AgentInteractionLogService()
+        except ImportError:
+            _agent_log_service = None
+    return _agent_log_service
 
 
 def get_openclaw_config_path() -> str:
@@ -87,11 +102,55 @@ def get_agent_details(agent_id: str) -> Optional[dict]:
     return None
 
 
+def _get_agent_name(agent_id: str) -> str:
+    """Get agent name by ID"""
+    try:
+        agent = get_agent_details(agent_id)
+        if agent:
+            return agent.get("name", agent_id)
+    except:
+        pass
+    return agent_id
+
+
+def _log_interaction(
+    agent_id: str,
+    agent_name: str,
+    direction: str,
+    content: str,
+    response: str = None,
+    duration_ms: int = None,
+    success: bool = True,
+    error_message: str = None,
+    metadata: dict = None
+):
+    """Log agent interaction"""
+    log_service = _get_log_service()
+    if log_service:
+        try:
+            log_service.log_interaction(
+                agent_id=agent_id,
+                agent_name=agent_name,
+                interaction_type="cli",
+                direction=direction,
+                content=content[:2000] if content else "",
+                response=response[:2000] if response else None,
+                duration_ms=duration_ms,
+                success=success,
+                error_message=error_message,
+                metadata=metadata or {}
+            )
+        except Exception as e:
+            # Don't let logging errors break the main flow
+            print(f"[log_interaction] Failed to log: {e}")
+
+
 def send_message_to_agent(agent_id: str, message: str, timeout: int = 30) -> Dict:
     """
     Send a message to an OpenClaw Agent and get response.
     
     Uses openclaw CLI to run agent via Gateway.
+    Logs all interactions for debugging.
     
     Args:
         agent_id: OpenClaw Agent ID
@@ -101,6 +160,18 @@ def send_message_to_agent(agent_id: str, message: str, timeout: int = 30) -> Dic
     Returns:
         Dict with "text" key containing response, or empty dict on failure
     """
+    start_time = time.time()
+    agent_name = _get_agent_name(agent_id)
+    
+    # Log outgoing message
+    _log_interaction(
+        agent_id=agent_id,
+        agent_name=agent_name,
+        direction="outgoing",
+        content=message,
+        metadata={"command": "openclaw agent", "timeout": timeout}
+    )
+    
     try:
         # Use openclaw agent command to run the agent via Gateway
         cmd = [
@@ -118,6 +189,8 @@ def send_message_to_agent(agent_id: str, message: str, timeout: int = 30) -> Dic
             timeout=timeout + 10  # Add buffer
         )
         
+        duration_ms = int((time.time() - start_time) * 1000)
+        
         if result.returncode == 0:
             # Try to parse JSON response
             try:
@@ -125,6 +198,7 @@ def send_message_to_agent(agent_id: str, message: str, timeout: int = 30) -> Dic
                 
                 # The response structure is:
                 # { "status": "ok", "result": { "payloads": [{ "text": "..." }] } }
+                text_content = ""
                 if isinstance(response, dict):
                     # Check if it's the wrapped format
                     if "result" in response and isinstance(response["result"], dict):
@@ -132,173 +206,114 @@ def send_message_to_agent(agent_id: str, message: str, timeout: int = 30) -> Dic
                         payloads = inner_result.get("payloads", [])
                         if payloads and len(payloads) > 0:
                             text_content = payloads[0].get("text", "")
-                            return {"text": text_content}
                     
                     # Check if it's the direct format (older versions)
-                    payloads = response.get("payloads", [])
-                    if payloads and len(payloads) > 0:
-                        text_content = payloads[0].get("text", "")
-                        return {"text": text_content}
+                    if not text_content:
+                        payloads = response.get("payloads", [])
+                        if payloads and len(payloads) > 0:
+                            text_content = payloads[0].get("text", "")
                     
                     # Fallback
-                    return {"text": result.stdout.strip()}
+                    if not text_content:
+                        text_content = result.stdout.strip()
                 else:
-                    return {"text": str(response)}
+                    text_content = str(response)
+                
+                # Log successful response
+                _log_interaction(
+                    agent_id=agent_id,
+                    agent_name=agent_name,
+                    direction="incoming",
+                    content=message,
+                    response=text_content,
+                    duration_ms=duration_ms,
+                    success=True,
+                    metadata={"returncode": 0}
+                )
+                
+                return {"text": text_content}
                     
             except json.JSONDecodeError:
                 # Return raw output
-                return {"text": result.stdout.strip()}
+                response_text = result.stdout.strip()
+                
+                _log_interaction(
+                    agent_id=agent_id,
+                    agent_name=agent_name,
+                    direction="incoming",
+                    content=message,
+                    response=response_text,
+                    duration_ms=duration_ms,
+                    success=True,
+                    metadata={"json_parse_error": True}
+                )
+                
+                return {"text": response_text}
         else:
             # Command failed - log error
-            print(f"[send_message_to_agent] Command failed: {result.stderr}")
+            error_msg = f"Command failed: {result.stderr}"
+            print(f"[send_message_to_agent] {error_msg}")
+            
+            _log_interaction(
+                agent_id=agent_id,
+                agent_name=agent_name,
+                direction="incoming",
+                content=message,
+                duration_ms=duration_ms,
+                success=False,
+                error_message=error_msg,
+                metadata={"returncode": result.returncode, "stderr": result.stderr}
+            )
+            
             return {}
             
     except subprocess.TimeoutExpired:
-        print(f"[send_message_to_agent] Timeout after {timeout + 10}s")
+        duration_ms = int((time.time() - start_time) * 1000)
+        error_msg = f"Timeout after {timeout + 10}s"
+        print(f"[send_message_to_agent] {error_msg}")
+        
+        _log_interaction(
+            agent_id=agent_id,
+            agent_name=agent_name,
+            direction="incoming",
+            content=message,
+            duration_ms=duration_ms,
+            success=False,
+            error_message=error_msg
+        )
+        
         return {}
     except FileNotFoundError:
         # openclaw CLI not found
-        print("[send_message_to_agent] openclaw CLI not found")
+        error_msg = "openclaw CLI not found"
+        print(f"[send_message_to_agent] {error_msg}")
+        
+        _log_interaction(
+            agent_id=agent_id,
+            agent_name=agent_name,
+            direction="outgoing",
+            content=message,
+            success=False,
+            error_message=error_msg
+        )
+        
         return {}
     except Exception as e:
-        print(f"[send_message_to_agent] Exception: {e}")
+        duration_ms = int((time.time() - start_time) * 1000)
+        error_msg = str(e)
+        print(f"[send_message_to_agent] Exception: {error_msg}")
         import traceback
         traceback.print_exc()
+        
+        _log_interaction(
+            agent_id=agent_id,
+            agent_name=agent_name,
+            direction="outgoing",
+            content=message,
+            duration_ms=duration_ms,
+            success=False,
+            error_message=error_msg,
+            metadata={"exception": traceback.format_exc()}
+        )
+        
         return {}
-
-
-def create_partner_agent(agent_name: str = "OPC Partner") -> Optional[Dict]:
-    """
-    Create a new OpenClaw Agent for OPC Partner.
-    
-    This creates a dedicated Agent with isolated workspace and memory.
-    
-    Args:
-        agent_name: Name for the Partner Agent
-    
-    Returns:
-        Dict with agent info if created successfully, None otherwise
-    """
-    import os
-    
-    try:
-        # Generate unique agent ID
-        import uuid
-        agent_id = f"opc_partner_{uuid.uuid4().hex[:8]}"
-        
-        # Agent directory
-        state_dir = os.getenv("OPENCLAW_STATE_DIR", os.path.expanduser("~/.openclaw"))
-        agent_dir = os.path.join(state_dir, "agents", agent_id, "agent")
-        
-        # Create directory structure
-        os.makedirs(os.path.join(agent_dir, "memory"), exist_ok=True)
-        os.makedirs(os.path.join(agent_dir, "workspace"), exist_ok=True)
-        
-        # Create IDENTITY.md
-        identity_content = f"""# IDENTITY.md - Who Am I?
-
-- **Name:** {agent_name}
-- **Creature:** OpenClaw Agent specialized for OPC Dashboard
-- **Vibe:** Professional CEO Assistant | Warm | Proactive
-
-## Role
-You are the Partner Assistant for a One-Person Company (OPC) management system.
-Your human is running a virtual company with AI employees managed through the OPC Dashboard.
-
-## Core Responsibilities
-1. Welcome the user when they open the Dashboard
-2. Provide company status summaries (budget, tasks, alerts)
-3. Help with hiring new AI employees
-4. Assist in task creation and assignment
-5. Generate reports and insights
-
-## Communication Style
-- Professional but friendly
-- Concise but informative
-- Use emojis naturally (💰 📋 ⚠️ ✅)
-- Always offer actionable next steps
-
-## Context
-You have access to company data:
-- Budget usage and remaining
-- Task statuses (pending, in-progress, completed)
-- Employee statuses and workloads
-- Alerts (overdue tasks, budget issues)
-
-## Signature Line
-> "I'm here to help you build your dream company, one task at a time."
-
-## Emoji: 👑
-"""
-        
-        with open(os.path.join(agent_dir, "IDENTITY.md"), "w") as f:
-            f.write(identity_content)
-        
-        # Create empty SOUL.md
-        with open(os.path.join(agent_dir, "SOUL.md"), "w") as f:
-            f.write("# SOUL.md\n\n*Partner Assistant personality and preferences will be learned over time.*\n")
-        
-        # Read current config
-        config_path = get_openclaw_config_path()
-        if os.path.exists(config_path):
-            with open(config_path, 'r') as f:
-                config = json.load(f)
-        else:
-            config = {}
-        
-        # Add to agents list
-        if "agents" not in config:
-            config["agents"] = {}
-        if "list" not in config["agents"]:
-            config["agents"]["list"] = []
-        
-        # Check if already exists
-        existing = [a for a in config["agents"]["list"] if a["id"] == agent_id]
-        if existing:
-            return None
-        
-        # Add new agent
-        config["agents"]["list"].append({
-            "id": agent_id,
-            "name": agent_name,
-            "default": False,
-            "workspace": os.path.join(agent_dir, "workspace"),
-            "agentDir": agent_dir
-        })
-        
-        # Write updated config
-        with open(config_path, 'w') as f:
-            json.dump(config, f, indent=2)
-        
-        return {
-            "id": agent_id,
-            "name": agent_name,
-            "agent_dir": agent_dir,
-            "workspace": os.path.join(agent_dir, "workspace"),
-            "message": f"Partner Agent '{agent_name}' created successfully"
-        }
-        
-    except Exception as e:
-        print(f"Error creating partner agent: {e}")
-        return None
-
-
-def ensure_partner_agent_exists() -> Optional[Dict]:
-    """
-    Ensure a Partner Agent exists for OPC.
-    
-    If no suitable agent exists, creates one automatically.
-    
-    Returns:
-        Dict with agent info, or None if creation failed
-    """
-    # Check existing agents
-    agents = read_openclaw_agents()
-    
-    # Look for an existing OPC partner agent
-    for agent in agents:
-        if "opc_partner" in agent.get("id", ""):
-            return agent
-    
-    # No partner agent found, create one
-    return create_partner_agent("OPC Partner Assistant")

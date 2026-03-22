@@ -1953,6 +1953,9 @@
             <button class="refresh-btn dashboard-tab" data-tab="skill-path" onclick="switchDashboardTab('skill-path')">
                 🎯 <span data-i18n="nav.tabs.skillPath">技能路径</span>
             </button>
+            <button class="refresh-btn dashboard-tab" data-tab="agent-logs" onclick="switchDashboardTab('agent-logs')">
+                📋 <span>Agent日志</span>
+            </button>
         </div>
 
         <!-- Dashboard Tab Content -->
@@ -2281,6 +2284,14 @@
         <!-- Skill Path Container -->
         <div id="skill-path-container" style="height: calc(100vh - 200px);">
             <iframe src="agent-skill-path.html" style="width: 100%; height: 100%; border: none; border-radius: 12px;"></iframe>
+        </div>
+    </div>
+
+    <!-- Agent Logs Tab Content -->
+    <div id="agent-logs-tab-content" class="dashboard-content" style="display: none;">
+        <!-- Agent Logs Container -->
+        <div id="agent-logs-container" style="height: calc(100vh - 200px);">
+            <iframe src="agent-logs.html" style="width: 100%; height: 100%; border: none; border-radius: 12px;"></iframe>
         </div>
     </div>
 
@@ -2634,6 +2645,11 @@
             if (tab === 'skill-path') {
                 loadSkillPathTab();
             }
+
+            // Load agent logs if switching to that tab
+            if (tab === 'agent-logs') {
+                loadAgentLogsTab();
+            }
         }
 
         // Load Pixel Office via iframe or inline
@@ -2680,6 +2696,22 @@
                 <iframe src="/dashboard/agent-skill-path.html" 
                         style="width: 100%; height: calc(100vh - 250px); border: none; border-radius: 8px;"
                         id="skill-path-iframe">
+                </iframe>
+            `;
+        }
+
+        // Load Agent Logs Tab
+        async function loadAgentLogsTab() {
+            const container = document.getElementById('agent-logs-container');
+
+            // Check if already loaded
+            if (container.querySelector('iframe')) return;
+
+            // Load agent logs page in iframe
+            container.innerHTML = `
+                <iframe src="/dashboard/agent-logs.html" 
+                        style="width: 100%; height: calc(100vh - 250px); border: none; border-radius: 8px;"
+                        id="agent-logs-iframe">
                 </iframe>
             `;
         }
