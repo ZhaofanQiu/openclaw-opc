@@ -22,7 +22,7 @@ router = APIRouter(tags=["Skill API"])
 # ============ 数据模型 ============
 
 class TaskReportRequest(BaseModel):
-    agent_id: str
+    agent_id: str  # OpenClaw Agent ID (如 opc_partner)
     result: str
     tokens_used: int = Field(..., ge=0)
 
@@ -38,16 +38,33 @@ class DbWriteRequest(BaseModel):
 
 # ============ 任务管理 ============
 
-@router.get("/agents/{agent_id}/current-task")
-def get_current_task(agent_id: str, db: Session = Depends(get_db)):
+@router.get("/agents/{openclaw_agent_id}/current-task")
+def get_current_task(openclaw_agent_id: str, db: Session = Depends(get_db)):
     """
     获取当前分配给 Agent 的任务
     
     Skill 方法: opc_get_current_task()
+    
+    Args:
+        openclaw_agent_id: OpenClaw Agent ID (如 opc_partner)
     """
     try:
+        # 1. 通过 openclaw_agent_id 找到员工
+        from models.agent_v2 import Agent
+        agent = db.query(Agent).filter(
+            Agent.openclaw_agent_id == openclaw_agent_id
+        ).first()
+        
+        if not agent:
+            return {
+                "has_task": False,
+                "task": None,
+                "error": f"Agent not found: {openclaw_agent_id}"
+            }
+        
+        # 2. 使用员工内部 ID 查询任务
         service = SkillDBService(db)
-        task = service.get_current_task(agent_id)
+        task = service.get_current_task(agent.id)
         
         if task:
             return {
@@ -76,9 +93,19 @@ def report_task_result(
     Skill 方法: opc_report_task_result(task_id, result, tokens_used)
     """
     try:
+        # 1. 通过 openclaw_agent_id 找到员工
+        from models.agent_v2 import Agent
+        agent = db.query(Agent).filter(
+            Agent.openclaw_agent_id == data.agent_id
+        ).first()
+        
+        if not agent:
+            return {"success": False, "error": f"Agent not found for openclaw_agent_id: {data.agent_id}"}
+        
+        # 2. 使用员工内部 ID 报告任务
         service = SkillDBService(db)
         result = service.report_task_completion(
-            agent_id=data.agent_id,
+            agent_id=agent.id,  # 使用内部员工 ID
             task_id=task_id,
             result=data.result,
             tokens_used=data.tokens_used
@@ -213,16 +240,29 @@ def db_write(data: DbWriteRequest, db: Session = Depends(get_db)):
 
 # ============ 预算查询 ============
 
-@router.get("/agents/{agent_id}/budget")
-def get_budget(agent_id: str, db: Session = Depends(get_db)):
+@router.get("/agents/{openclaw_agent_id}/budget")
+def get_budget(openclaw_agent_id: str, db: Session = Depends(get_db)):
     """
     获取预算状态
     
     Skill 方法: opc_get_budget()
+    
+    Args:
+        openclaw_agent_id: OpenClaw Agent ID (如 opc_partner)
     """
     try:
+        # 1. 通过 openclaw_agent_id 找到员工
+        from models.agent_v2 import Agent
+        agent = db.query(Agent).filter(
+            Agent.openclaw_agent_id == openclaw_agent_id
+        ).first()
+        
+        if not agent:
+            raise HTTPException(status_code=404, detail=f"Agent not found: {openclaw_agent_id}")
+        
+        # 2. 使用员工内部 ID 查询预算
         service = SkillDBService(db)
-        budget = service.get_budget(agent_id)
+        budget = service.get_budget(agent.id)
         
         if "error" in budget:
             raise HTTPException(status_code=404, detail=budget["error"])

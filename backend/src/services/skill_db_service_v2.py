@@ -4,9 +4,10 @@ Skill Database Service (v2.0)
 使用简化版模型
 """
 
-import json
+from datetime import datetime
 from sqlalchemy.orm import Session
 from typing import Dict, Any, List, Optional
+
 from models.agent_v2 import Agent, AgentStatus
 from models.task_v2 import Task, TaskStatus
 from utils.logging_config import get_logger
@@ -161,6 +162,3 @@ class SkillDBService:
         except Exception as e:
             logger.error(f"Failed to write data: {e}")
             return {"success": False, "error": str(e)}
-
-
-from datetime import datetime
