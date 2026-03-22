@@ -5,6 +5,7 @@ Skill API Router
 Agent 通过这些接口与 OPC 交互
 """
 
+import os
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -113,40 +114,69 @@ def get_pending_messages(agent_id: str):
 
 # ============ 手册读取 ============
 
-@router.get("/manuals/{manual_type}/{manual_id}")
-def read_manual(
-    manual_type: str,  # task, position, company
-    manual_id: str,
+@router.get("/manuals/read")
+def read_manual_by_path(
+    path: str,  # 文件路径或手册类型
     agent_id: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     """
     读取手册内容
     
-    Skill 方法: opc_read_manual(manual_type, manual_id)
+    Skill 方法: opc_read_manual(path)
+    
+    支持:
+    - 绝对路径: /path/to/manual.md
+    - 相对路径: data/manuals/task_123.md
+    - 类型+ID: task:123, position:senior, company:default
     """
     try:
-        # TODO: 从文件系统读取手册
-        # manuals_dir = "data/manuals"
-        # file_path = f"{manuals_dir}/{manual_type}_{manual_id}.md"
+        logger.info(f"Reading manual: {path} for agent {agent_id}")
         
-        logger.info(f"Reading manual: {manual_type}/{manual_id}")
+        content = ""
         
-        # 临时返回示例
+        # 处理类型:ID 格式
+        if ":" in path:
+            manual_type, manual_id = path.split(":", 1)
+            # 构建实际路径
+            base_dir = os.path.join(os.getcwd(), "data", "manuals")
+            file_path = os.path.join(base_dir, f"{manual_type}_{manual_id}.md")
+        else:
+            # 直接使用路径
+            file_path = path if os.path.isabs(path) else os.path.join(os.getcwd(), path)
+        
+        # 安全检查：确保在允许的目录内
+        allowed_dirs = [
+            os.path.join(os.getcwd(), "data", "manuals"),
+            os.path.join(os.getcwd(), "docs"),
+        ]
+        
+        real_path = os.path.realpath(file_path)
+        is_allowed = any(real_path.startswith(d) for d in allowed_dirs)
+        
+        if not is_allowed:
+            raise HTTPException(status_code=403, detail="Access denied: path not allowed")
+        
+        # 读取文件
+        if os.path.exists(real_path) and os.path.isfile(real_path):
+            with open(real_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+        else:
+            # 文件不存在，返回默认内容
+            content = f"# {path}\n\n手册内容待补充..."
+        
         return {
-            "content": f"这是 {manual_type} 手册的内容",
-            "constraints": [
-                "约束条件 1: 请遵循规范",
-                "约束条件 2: 注意预算"
-            ],
-            "references": [
-                "参考文档 1",
-                "参考文档 2"
-            ]
+            "path": path,
+            "file_path": real_path,
+            "content": content,
+            "size": len(content)
         }
+        
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to read manual: {e}")
-        raise HTTPException(status_code=404, detail="Manual not found")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # ============ 数据库操作 ============
 
