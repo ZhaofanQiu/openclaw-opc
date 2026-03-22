@@ -17,7 +17,7 @@ from slowapi.util import get_remote_address
 from pydantic import ValidationError
 
 from src.database import init_db, check_database_connection, get_database_info
-from src.routers import agents, approvals, avatars, budget, communication, config, monitor, notifications, reports, shared_memory, skills, skill_growth, tasks, workflows, workflow_extensions, workflow_templates, api_keys, share, fuse, async_messages, sub_tasks, task_dependencies
+from src.routers import agents, approvals, avatars, budget, communication, config, monitor, notifications, reports, shared_memory, skills, skill_growth, tasks, workflows, workflow_extensions, workflow_templates, agent_skill_paths, api_keys, share, fuse, async_messages, sub_tasks, task_dependencies
 from src.utils.logging_config import configure_logging, get_logger
 from src.utils.rate_limit import limiter, RATE_LIMITS
 from src.utils.api_auth import require_read_permission
@@ -246,6 +246,11 @@ app.include_router(
 # Workflow templates router (v0.5.4)
 app.include_router(
     workflow_templates.router,
+    dependencies=get_router_dependencies()
+)
+# Agent skill paths router (v0.5.5)
+app.include_router(
+    agent_skill_paths.router,
     dependencies=get_router_dependencies()
 )
 
