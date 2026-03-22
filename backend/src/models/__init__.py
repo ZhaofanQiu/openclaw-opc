@@ -23,6 +23,10 @@ from src.models.workflow_template_v2 import (
     WorkflowTemplateV2, WorkflowTemplateFavorite, WorkflowTemplateUsage,
     TemplateCategory, TemplateVisibility
 )
+from src.models.workflow_notification import (
+    WorkflowNotification, NotificationSubscription,
+    NotificationType, NotificationPriority, NotificationChannel
+)
 
 __all__ = [
     "Agent",
@@ -74,4 +78,6 @@ __all__ = [
     "WorkflowTemplateUsage",
     "TemplateCategory",
     "TemplateVisibility",
+    "WorkflowNotification",
+    "NotificationSubscription",
 ]

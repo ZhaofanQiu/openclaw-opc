@@ -13,6 +13,7 @@ from src.models.workflow_engine import (
     WorkflowHistory, WorkflowReworkRecord
 )
 from src.utils.logging_config import get_logger
+from src.services.workflow_notification_service import WorkflowNotificationService
 
 logger = get_logger(__name__)
 
@@ -205,11 +206,19 @@ class WorkflowExecutionService:
                 to_status=WorkflowStatus.COMPLETED.value,
             )
             self.db.commit()
-            return {"success": True, "workflow_completed": True}
+        # 发送完成通知
+        notification_service = WorkflowNotificationService(self.db)
+        notification_service.notify_workflow_completed(workflow)
+        
+        return {"success": True, "workflow_completed": True}
         
         # 进入下一步
         next_step = self._advance_to_next_step(workflow, step.sequence)
         workflow.current_step_index = next_step.sequence
+        
+        # 发送通知
+        notification_service = WorkflowNotificationService(self.db)
+        notification_service.notify_step_assigned(next_step, workflow)
         
         self.db.commit()
         return {
@@ -231,6 +240,15 @@ class WorkflowExecutionService:
         if step.rework_count >= step.rework_limit:
             workflow.status = WorkflowStatus.REWORK_FUSED.value
             self.db.commit()
+            
+            # 发送熔断通知
+            notification_service = WorkflowNotificationService(self.db)
+            notification_service.notify_fused(
+                workflow=workflow,
+                fuse_type="rework",
+                details={"rework_count": step.rework_count, "rework_limit": step.rework_limit}
+            )
+            
             return {
                 "success": False,
                 "fused": True,
@@ -285,6 +303,15 @@ class WorkflowExecutionService:
         
         self.db.commit()
         self._notify_rework(target_step, step, result.get("comment", ""))
+        
+        # 发送通知
+        notification_service = WorkflowNotificationService(self.db)
+        notification_service.notify_rework_triggered(
+            from_step=step,
+            to_step=target_step,
+            workflow=workflow,
+            reason=result.get("comment", "")
+        )
         
         return {
             "success": True,
