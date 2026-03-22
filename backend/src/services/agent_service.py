@@ -281,6 +281,14 @@ class AgentService:
         
         self.db.commit()
         
+        # Check and trigger task dependencies (v0.4.0)
+        try:
+            from src.services.task_dependency_service import TaskDependencyService
+            dep_service = TaskDependencyService(self.db)
+            dep_service.check_and_trigger_dependencies(task.id, task.status)
+        except Exception as e:
+            logger.error(f"Error checking task dependencies: {e}", exc_info=True)
+        
         # Create notification
         from src.services.notification_service import NotificationService
         notification_service = NotificationService(self.db)
