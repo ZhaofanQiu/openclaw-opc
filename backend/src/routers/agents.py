@@ -329,10 +329,20 @@ async def partner_hire_employee(
     """
     logger.info(f"Hire request: partner_id={partner_id}, employee_name={employee.name}")
     
+    # Validate partner_id
+    if not partner_id or partner_id in ['null', 'undefined', '']:
+        logger.error(f"Invalid partner_id: {partner_id}")
+        raise HTTPException(status_code=400, detail="Invalid partner_id")
+    
     service = AgentService(db)
     
     # Verify partner
-    partner = service.get_agent_by_id(partner_id)
+    try:
+        partner = service.get_agent_by_id(partner_id)
+    except Exception as e:
+        logger.error(f"Error querying partner: {e}")
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    
     if not partner:
         logger.error(f"Partner not found: partner_id={partner_id}")
         raise HTTPException(status_code=404, detail="Partner not found")
@@ -425,7 +435,11 @@ async def partner_hire_employee(
             "message": f"{partner.name} 成功雇佣了 {new_employee.name} ({new_employee.position_title})!\\n\\n头像设计任务已发送给 Partner，请稍后查看。"
         }
     except ValueError as e:
+        logger.error(f"ValueError in hire: {e}")
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Unexpected error in hire: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
 
 
 @router.post("/report")
@@ -660,6 +674,45 @@ async def wake_partner(
     partner.is_online = "awake"
     partner.last_heartbeat = datetime.utcnow()
     db.commit()
+    
+    # Check and send pending avatar design tasks
+    try:
+        from src.services.async_message_service import AsyncMessageService
+        async_service = AsyncMessageService(db)
+        pending_messages = async_service.get_pending_messages(recipient_id=partner.id)
+        
+        if pending_messages and partner.agent_id:
+            logger.info(f"Sending {len(pending_messages)} pending messages to Partner {partner.name}")
+            
+            for msg in pending_messages:
+                if msg.message_type == "task" and "设计头像" in (msg.subject or ""):
+                    try:
+                        # Send to Partner via sessions_send
+                        from src.utils.openclaw_config import send_message_to_agent
+                        response = send_message_to_agent(
+                            partner.agent_id,
+                            f"【头像设计任务】\n\n{msg.content}\n\n请回复头像的SVG代码或详细描述。",
+                            timeout=60
+                        )
+                        
+                        if response and response.get("text"):
+                            # Update message status
+                            msg.status = "responded"
+                            msg.response_content = response.get("text")
+                            msg.responded_at = datetime.utcnow()
+                            db.commit()
+                            
+                            logger.info(f"Avatar design task {msg.id} processed successfully")
+                        else:
+                            msg.status = "sent"
+                            db.commit()
+                            
+                    except Exception as e:
+                        logger.error(f"Failed to send avatar task {msg.id}: {e}")
+                        msg.status = "failed"
+                        db.commit()
+    except Exception as e:
+        logger.error(f"Error processing pending messages: {e}")
     
     # Generate company summary
     summary = partner_service.get_company_summary()

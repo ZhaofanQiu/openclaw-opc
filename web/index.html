@@ -4324,6 +4324,7 @@
         async function hireEmployee(name, position, budget) {
             // Ensure Partner ID is loaded
             if (!PARTNER_ID) {
+                console.log('PARTNER_ID not loaded, attempting to load...');
                 const loaded = await loadPartnerId();
                 if (!loaded) {
                     alert('无法获取 Partner 信息，请刷新页面后重试');
@@ -4331,26 +4332,45 @@
                 }
             }
             
+            // Validate PARTNER_ID
+            if (!PARTNER_ID || PARTNER_ID === 'null' || PARTNER_ID === 'undefined') {
+                console.error('Invalid PARTNER_ID:', PARTNER_ID);
+                alert('Partner ID 无效，请刷新页面后重试');
+                return;
+            }
+            
+            console.log('Hiring employee with PARTNER_ID:', PARTNER_ID);
+            
             try {
+                const requestBody = {
+                    name: name,
+                    agent_id: null,
+                    emoji: '👤',
+                    monthly_budget: budget,
+                    position_title: position
+                };
+                console.log('Request body:', requestBody);
+                
                 const response = await Auth.authFetch(`${API_BASE}/api/agents/partner/hire?partner_id=${PARTNER_ID}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        name: name,
-                        agent_id: null,  // 新员工未绑定 Agent
-                        emoji: '👤',
-                        monthly_budget: budget,
-                        position_title: position  // 添加职位
-                    })
+                    body: JSON.stringify(requestBody)
                 });
 
                 if (response.ok) {
                     const data = await response.json();
                     alert(`✅ ${data.message || '成功雇佣: ' + name}`);
-                    loadData(); // Refresh agent list
+                    loadData();
                 } else {
-                    const error = await response.json().catch(() => ({ detail: '未知错误' }));
-                    const errorMsg = typeof error.detail === 'string' ? error.detail : JSON.stringify(error.detail || error);
+                    const errorText = await response.text();
+                    console.error('Hire error response:', errorText);
+                    let errorMsg = '未知错误';
+                    try {
+                        const error = JSON.parse(errorText);
+                        errorMsg = typeof error.detail === 'string' ? error.detail : JSON.stringify(error.detail || error);
+                    } catch (e) {
+                        errorMsg = errorText || '服务器错误';
+                    }
                     alert('雇佣失败: ' + errorMsg);
                 }
             } catch (error) {
