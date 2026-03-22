@@ -1,5 +1,5 @@
 """
-Workflow Engine Router v0.5.1 - 并行执行与返工预算熔断
+Workflow Engine Router v0.5.2 - 纯串行执行
 """
 
 from typing import Dict, List, Optional
@@ -20,16 +20,14 @@ router = APIRouter(prefix="/api/workflows", tags=["workflows"])
 # ============== Request/Response Models ==============
 
 class WorkflowCreate(BaseModel):
-    """创建工作流请求"""
     title: str = Field(..., min_length=1, max_length=200)
     description: str = Field(..., min_length=1)
     total_budget: float = Field(..., gt=0)
     template_id: Optional[str] = Field(default=None)
-    rework_budget_ratio: float = Field(default=0.2, ge=0.1, le=0.5)  # 返工预算比例
+    rework_budget_ratio: float = Field(default=0.2, ge=0.1, le=0.5)
 
 
 class StepComplete(BaseModel):
-    """完成步骤请求"""
     action: str = Field(..., description="PASS/REWORK")
     comment: str = Field(default="")
     artifacts: List[str] = Field(default=[])
@@ -39,10 +37,9 @@ class StepComplete(BaseModel):
 
 
 class FuseHandle(BaseModel):
-    """处理熔断请求"""
     action: str = Field(..., description="ADD_BUDGET/FORCE_PASS/RESTART/CANCEL")
     reason: str = Field(default="")
-    params: Dict = Field(default={})  # ADD_BUDGET时: {"amount": 500}
+    params: Dict = Field(default={})
 
 
 # ============== API Endpoints ==============
@@ -53,13 +50,7 @@ async def create_workflow(
     created_by: str,
     db: Session = Depends(get_db),
 ):
-    """
-    创建工作流
-    
-    总预算自动分配：
-    - 基础预算 = 总预算 × (1 - rework_budget_ratio)
-    - 返工预算池 = 总预算 × rework_budget_ratio (默认20%)
-    """
+    """创建工作流（串行执行）"""
     service = WorkflowEngineService(db)
     try:
         workflow = service.create_workflow(
@@ -71,7 +62,6 @@ async def create_workflow(
             rework_budget_ratio=data.rework_budget_ratio,
         )
         
-        # 自动规划
         plan_result = service.auto_plan_workflow(workflow.id)
         
         return {
@@ -87,7 +77,6 @@ async def create_workflow(
                 }
             },
             "plan": plan_result,
-            "is_complex": plan_result.get("is_complex", False),
             "next_action": "启动工作流",
         }
     except ValueError as e:
@@ -107,7 +96,7 @@ async def start_workflow(
             "success": True,
             "workflow_id": workflow.id,
             "status": workflow.status,
-            "current_steps": _get_current_steps_info(db, workflow_id),
+            "current_step": _get_current_step_info(db, workflow_id),
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -138,16 +127,10 @@ async def complete_current_step(
     actor_id: str,
     db: Session = Depends(get_db),
 ):
-    """
-    完成当前步骤
-    
-    预算扣除规则：
-    - 首次执行：从基础预算扣除
-    - 返工：从返工储备扣除，储备耗尽触发熔断
-    """
+    """完成当前步骤"""
     service = WorkflowExecutionService(db)
     
-    from src.models import WorkflowInstance
+    from src.models import WorkflowInstance, WorkflowStep
     workflow = db.query(WorkflowInstance).filter(
         WorkflowInstance.id == workflow_id
     ).first()
@@ -155,38 +138,36 @@ async def complete_current_step(
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
     
-    if not workflow.current_step_ids:
+    if workflow.current_step_index < 0:
         raise HTTPException(status_code=400, detail="No current step")
     
-    # 支持同时完成多个并行步骤
-    results = []
-    for step_id in workflow.current_step_ids:
-        result = {
-            "action": data.action,
-            "comment": data.comment,
-            "artifacts": data.artifacts,
-            "actual_hours": data.actual_hours,
-            "budget_used": data.budget_used,
-            "review_scores": data.review_scores,
-        }
-        
-        try:
-            outcome = service.complete_step(
-                step_id=step_id,
-                action=data.action,
-                result=result,
-                actor_id=actor_id,
-            )
-            results.append(outcome)
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e))
+    current_step = db.query(WorkflowStep).filter(
+        WorkflowStep.workflow_id == workflow_id,
+        WorkflowStep.sequence == workflow.current_step_index
+    ).first()
     
-    # 返回汇总结果
-    fused_results = [r for r in results if r.get("fused")]
-    if fused_results:
-        return fused_results[0]  # 返回第一个熔断结果
+    if not current_step:
+        raise HTTPException(status_code=400, detail="Current step not found")
     
-    return results[0] if results else {"success": True}
+    result = {
+        "action": data.action,
+        "comment": data.comment,
+        "artifacts": data.artifacts,
+        "actual_hours": data.actual_hours,
+        "budget_used": data.budget_used,
+        "review_scores": data.review_scores,
+    }
+    
+    try:
+        outcome = service.complete_step(
+            step_id=current_step.id,
+            action=data.action,
+            result=result,
+            actor_id=actor_id,
+        )
+        return outcome
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post("/{workflow_id}/fuse/handle")
@@ -196,19 +177,7 @@ async def handle_fuse(
     actor_id: str,
     db: Session = Depends(get_db),
 ):
-    """
-    处理熔断
-    
-    熔断类型：
-    - BUDGET_FUSED: 返工预算耗尽
-    - REWORK_FUSED: 返工次数超限
-    
-    处理选项：
-    - ADD_BUDGET: 追加预算 (params: {"amount": 500})
-    - FORCE_PASS: 强行通过
-    - RESTART: 重新规划启动
-    - CANCEL: 取消任务
-    """
+    """处理熔断"""
     service = WorkflowExecutionService(db)
     try:
         outcome = service.handle_fuse(
@@ -223,26 +192,20 @@ async def handle_fuse(
 
 
 @router.get("/{workflow_id}/steps")
-async def get_workflow_steps(
-    workflow_id: str,
-    db: Session = Depends(get_db),
-):
-    """获取工作流所有步骤（含并行结构）"""
+async def get_workflow_steps(workflow_id: str, db: Session = Depends(get_db)):
+    """获取工作流所有步骤"""
     from src.models import WorkflowStep
     
     steps = db.query(WorkflowStep).filter(
         WorkflowStep.workflow_id == workflow_id
-    ).order_by(WorkflowStep.sequence, WorkflowStep.id).all()
+    ).order_by(WorkflowStep.sequence).all()
     
     return [_format_step_response(s) for s in steps]
 
 
 @router.get("/{workflow_id}/history")
-async def get_workflow_history(
-    workflow_id: str,
-    db: Session = Depends(get_db),
-):
-    """获取工作流历史（含预算变动）"""
+async def get_workflow_history(workflow_id: str, db: Session = Depends(get_db)):
+    """获取工作流历史"""
     from src.models.workflow_engine import WorkflowHistory
     
     history = db.query(WorkflowHistory).filter(
@@ -255,8 +218,6 @@ async def get_workflow_history(
             "action": h.action,
             "step_id": h.step_id,
             "actor_id": h.actor_id,
-            "from_status": h.from_status,
-            "to_status": h.to_status,
             "details": h.details,
             "budget_impact": h.budget_impact,
             "created_at": h.created_at.isoformat() if h.created_at else None,
@@ -266,10 +227,7 @@ async def get_workflow_history(
 
 
 @router.get("/{workflow_id}/budget")
-async def get_workflow_budget(
-    workflow_id: str,
-    db: Session = Depends(get_db),
-):
+async def get_workflow_budget(workflow_id: str, db: Session = Depends(get_db)):
     """获取预算详情"""
     from src.models import WorkflowInstance
     
@@ -291,18 +249,13 @@ async def get_workflow_budget(
             "allocated": workflow.rework_budget,
             "used": workflow.used_rework_budget,
             "remaining": workflow.rework_budget - workflow.used_rework_budget,
-            "threshold": workflow.rework_budget_threshold,
-            "fused": workflow.used_rework_budget >= workflow.rework_budget * (1 - workflow.rework_budget_threshold),
         },
         "total_remaining": workflow.remaining_budget,
     }
 
 
 @router.get("/agent/{agent_id}/pending")
-async def get_agent_pending_workflows(
-    agent_id: str,
-    db: Session = Depends(get_db),
-):
+async def get_agent_pending_workflows(agent_id: str, db: Session = Depends(get_db)):
     """获取员工的待办工作流"""
     from src.models import WorkflowStep, WorkflowInstance
     
@@ -327,7 +280,7 @@ async def get_agent_pending_workflows(
 
 # ============== Helper Functions ==============
 
-def _get_current_steps_info(db: Session, workflow_id: str) -> List[Dict]:
+def _get_current_step_info(db: Session, workflow_id: str) -> Optional[Dict]:
     """获取当前步骤信息"""
     from src.models import WorkflowInstance, WorkflowStep
     
@@ -335,14 +288,15 @@ def _get_current_steps_info(db: Session, workflow_id: str) -> List[Dict]:
         WorkflowInstance.id == workflow_id
     ).first()
     
-    if not workflow or not workflow.current_step_ids:
-        return []
+    if not workflow or workflow.current_step_index < 0:
+        return None
     
-    steps = db.query(WorkflowStep).filter(
-        WorkflowStep.id.in_(workflow.current_step_ids)
-    ).all()
+    step = db.query(WorkflowStep).filter(
+        WorkflowStep.workflow_id == workflow_id,
+        WorkflowStep.sequence == workflow.current_step_index
+    ).first()
     
-    return [_format_step_response(s) for s in steps]
+    return _format_step_response(step) if step else None
 
 
 def _format_workflow_response(workflow) -> Dict:
@@ -363,7 +317,7 @@ def _format_workflow_response(workflow) -> Dict:
             "total_count": workflow.total_rework_count,
             "total_cost": workflow.total_rework_cost,
         },
-        "current_step_ids": workflow.current_step_ids,
+        "current_step_index": workflow.current_step_index,
         "created_at": workflow.created_at.isoformat() if workflow.created_at else None,
         "started_at": workflow.started_at.isoformat() if workflow.started_at else None,
         "completed_at": workflow.completed_at.isoformat() if workflow.completed_at else None,
@@ -379,9 +333,6 @@ def _format_step_response(step) -> Dict:
         "type": step.step_type,
         "sequence": step.sequence,
         "status": step.status,
-        "is_parallel": step.is_parallel == "true",
-        "parent_step_id": step.parent_step_id,
-        "parallel_group": step.parallel_group,
         "assignee": {
             "id": step.assignee.id if step.assignee else None,
             "name": step.assignee.name if step.assignee else None,
