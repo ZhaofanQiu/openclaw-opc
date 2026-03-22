@@ -183,6 +183,35 @@ class CommunicationService:
             "",
             message.content,
             "",
+        ])
+        
+        # v0.4.0 - Add shared memory context
+        if recipient and message.related_type == "task_assignment":
+            try:
+                from src.services.shared_memory_service import SharedMemoryService
+                memory_service = SharedMemoryService(self.db)
+                
+                # Get relevant memories for this agent
+                memories = memory_service.get_memories_for_agent_context(
+                    agent_id=recipient.id,
+                    task_type=message.subject or "",
+                    limit=3,
+                )
+                
+                if memories:
+                    lines.append("📚 相关记忆:")
+                    lines.append("-" * 30)
+                    for m in memories:
+                        lines.append(f"[{m['category']}] {m['title']}:")
+                        # Truncate content if too long
+                        content = m['content'][:200] + "..." if len(m['content']) > 200 else m['content']
+                        lines.append(f"  {content}")
+                        lines.append("")
+            except Exception as e:
+                # Don't fail message formatting if memory lookup fails
+                pass
+        
+        lines.extend([
             "---",
             f"发送时间: {message.created_at.strftime('%Y-%m-%d %H:%M')}",
         ])
