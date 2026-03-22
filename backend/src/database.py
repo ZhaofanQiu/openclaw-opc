@@ -83,7 +83,7 @@ def get_db():
 
 def init_db():
     """Initialize database tables."""
-    from src.models import agent, approval_request, async_message, budget, shared_memory, skill_growth, task, sub_task, task_dependency, workflow_engine, workflow_template_v2  # noqa: F401
+    from src.models import agent, approval_request, async_message, budget, shared_memory, skill_growth, task, sub_task, task_dependency, workflow_engine, workflow_template_v2, workflow_notification  # noqa: F401
     Base.metadata.create_all(bind=engine)
 
 
