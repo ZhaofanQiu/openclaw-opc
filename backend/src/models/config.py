@@ -32,6 +32,9 @@ class SystemConfig(Base):
     heartbeat_interval_seconds = Column(Integer, default=30)  # 心跳间隔
     heartbeat_timeout_seconds = Column(Integer, default=60)  # 心跳超时
     
+    # v0.4.0 - Approval workflow
+    approval_threshold = Column(Float, default=1000.0)  # 需要审批的预算阈值（OC币）
+    
     # Metadata
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     updated_by = Column(String, default="system")  # 最后更新者
@@ -48,4 +51,5 @@ class SystemConfig(Base):
             "default_strategy": "combined",
             "heartbeat_interval_seconds": 30,
             "heartbeat_timeout_seconds": 60,
+            "approval_threshold": 1000.0,
         }

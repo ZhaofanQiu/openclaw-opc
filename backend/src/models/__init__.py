@@ -1,6 +1,7 @@
 """Models package."""
 
 from src.models.agent import Agent, AgentStatus, PositionLevel
+from src.models.approval_request import ApprovalRequest, ApprovalStatus  # v0.4.0
 from src.models.async_message import AsyncMessage, AsyncMessageStatus, AsyncMessageType
 from src.models.budget import BudgetTransaction, TransactionType
 from src.models.communication import AgentMessage, MessagePriority, MessageStatus
@@ -16,6 +17,8 @@ __all__ = [
     "Agent",
     "AgentStatus",
     "PositionLevel",
+    "ApprovalRequest",  # v0.4.0
+    "ApprovalStatus",  # v0.4.0
     "AsyncMessage",
     "AsyncMessageStatus",
     "AsyncMessageType",
