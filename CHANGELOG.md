@@ -7,11 +7,89 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Planned
-- Sub-task system for complex tasks
-- Task dependency chains
-- Approval workflows for high-budget tasks
-- Cross-agent direct messaging
-- Multi-user/team support
+- Memory hygiene system for automatic memory cleanup
+- Advanced analytics dashboard
+- Multi-company support
+
+## [0.4.0-alpha] - 2026-03-22
+
+### Added
+
+#### Sub-task System (P0)
+- **Complex task splitting** - Break down large tasks into manageable sub-tasks
+- **SubTask model** with dependency support, sequence order, and critical path marking
+- **SubTaskService** for complete sub-task lifecycle management
+  - `create_sub_task()` - Create individual sub-tasks
+  - `split_task()` - Split parent task into multiple sub-tasks
+  - `assign_sub_task()` - Assign to agents with dependency checking
+  - `update_sub_task_status()` - Status updates with parent progress sync
+  - `get_next_executable_sub_task()` - Get next available sub-task
+  - `get_sub_task_stats()` - Progress statistics
+- **API endpoints** (`/api/sub-tasks`)
+  - Full CRUD operations for sub-tasks
+  - Task splitting endpoint
+  - Progress tracking and statistics
+- **Dependency management** - Automatic unblocking when dependencies complete
+- **Parent task sync** - Auto-update parent progress when sub-tasks complete
+
+#### Task Dependencies (P0)
+- **Workflow automation** - Upstream tasks trigger downstream tasks
+- **TaskDependency model** with trigger conditions and delay support
+- **TaskDependencyService**
+  - `create_dependency()` - Define task relationships
+  - `check_and_trigger_dependencies()` - Auto-trigger on task completion
+  - `get_dependency_chain()` - Full workflow visualization
+  - `get_workflow_status()` - Workflow progress tracking
+- **Trigger conditions** - completed/failed/any
+- **Delay support** - Schedule downstream tasks with delay
+- **Integration** - Automatic triggering when tasks complete
+
+#### Approval Workflow (P1)
+- **Budget approval system** - High-budget tasks require Partner approval
+- **ApprovalRequest model** with expiration support
+- **ApprovalService**
+  - `requires_approval()` - Check if task needs approval
+  - `create_approval_request()` - Submit approval request
+  - `approve_request()` / `reject_request()` - Partner decisions
+  - `get_pending_for_partner()` - Partner's approval queue
+  - `cleanup_expired_requests()` - Auto-cleanup expired requests
+- **Configurable threshold** - Default 1000 OC coins
+- **24-hour expiration** - Auto-cancel expired requests
+- **Integration** - Task assignment blocked until approved
+
+#### Skill Growth System (P1)
+- **Agent skill progression** - Earn experience from task completion
+- **AgentSkillGrowth & SkillGrowthHistory models**
+- **SkillGrowthService**
+  - `add_experience()` - Award XP with level-up handling
+  - `calculate_task_completion_exp()` - Smart XP calculation
+  - `award_task_completion_exp()` - Auto-award on task completion
+  - `get_skill_leaderboard()` - Company-wide rankings
+  - `get_growth_stats()` - Overall statistics
+- **Experience formula**
+  - Base: 50 XP
+  - Difficulty multiplier: low(0.8)/normal(1.0)/high(1.5)/urgent(2.0)
+  - Efficiency bonus: Save budget, earn extra XP
+  - Skill match bonus: +15 XP for using relevant skills
+  - Level curve: 100 * 1.1^(level-1) XP to next level
+- **Leaderboards** - Overall and per-skill rankings
+
+#### OpenClaw Memory Sharing (P2)
+- **Company-wide shared memory** - All agents can read/write
+- **SharedMemory & MemoryAccessLog models**
+- **Categories**: GENERAL, PROJECT, DECISION, LESSON, PREFERENCE, CONTACT, TODO, NOTE
+- **SharedMemoryService**
+  - Full CRUD operations
+  - `search_memories()` - Text search with filters
+  - `get_memories_for_agent_context()` - Relevant memories for agents
+  - Access tracking and statistics
+- **Integration** - Task assignments include relevant memories as context
+- **Permission control** - Creator or Partner can edit/delete
+
+### Changed
+- Task assignment now checks for required approvals
+- Message delivery includes shared memory context
+- Task completion triggers dependency workflows
 
 ## [0.3.0-beta] - 2026-03-22
 
