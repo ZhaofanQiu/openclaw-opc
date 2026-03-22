@@ -8,10 +8,13 @@ Agent 通过这些接口与 OPC 交互
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
-from typing import Dict, Any, Optional
-from src.database import get_db
-from src.services.skill_db_service import SkillDBService
-from src.utils.logging_config import get_logger
+from typing import Dict, Any, Optional, List
+from database import get_db
+from services.skill_db_service_v2 import SkillDBService
+from models.agent_v2 import AgentStatus
+from models.task_v2 import TaskStatus
+from core.openclaw_client import get_pending_messages_for_agent
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/skill", tags=["Skill API"])
@@ -86,6 +89,27 @@ def report_task_result(
     except Exception as e:
         logger.error(f"Failed to report task: {e}")
         return {"success": False, "error": str(e)}
+
+@router.get("/agents/{agent_id}/messages")
+def get_pending_messages(agent_id: str):
+    """
+    获取 Agent 的待处理消息
+    
+    Agent 轮询使用，获取 OPC 发送的任务消息
+    
+    Skill 方法: opc_get_pending_messages()
+    """
+    try:
+        messages = get_pending_messages_for_agent(agent_id)
+        return {
+            "has_messages": len(messages) > 0,
+            "messages": messages,
+            "count": len(messages)
+        }
+    except Exception as e:
+        logger.error(f"Failed to get pending messages: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 # ============ 手册读取 ============
 
