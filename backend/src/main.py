@@ -17,7 +17,7 @@ from slowapi.util import get_remote_address
 from pydantic import ValidationError
 
 from src.database import init_db, check_database_connection, get_database_info
-from src.routers import agents, approvals, avatars, budget, communication, config, monitor, notifications, reports, skills, tasks, api_keys, share, fuse, async_messages, sub_tasks, task_dependencies
+from src.routers import agents, approvals, avatars, budget, communication, config, monitor, notifications, reports, skills, skill_growth, tasks, api_keys, share, fuse, async_messages, sub_tasks, task_dependencies
 from src.utils.logging_config import configure_logging, get_logger
 from src.utils.rate_limit import limiter, RATE_LIMITS
 from src.utils.api_auth import require_read_permission
@@ -221,6 +221,11 @@ app.include_router(
 # Approval workflow router (v0.4.0)
 app.include_router(
     approvals.router,
+    dependencies=get_router_dependencies()
+)
+# Skill growth router (v0.4.0)
+app.include_router(
+    skill_growth.router,
     dependencies=get_router_dependencies()
 )
 

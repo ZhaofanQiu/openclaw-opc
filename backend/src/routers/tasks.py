@@ -733,13 +733,33 @@ async def report_task_completion(
             # Don't fail the task report if dependency trigger fails
             logger.error("dependency_trigger_failed", task_id=task_id, error=str(e))
         
+        # v0.4.0 - Award skill growth experience for completed tasks
+        skill_growth_results = []
+        if report.status == "completed":
+            try:
+                from src.services.skill_growth_service import SkillGrowthService
+                growth_service = SkillGrowthService(db)
+                skill_growth_results = growth_service.award_task_completion_exp(agent.id, task)
+                
+                if skill_growth_results:
+                    logger.info(
+                        "skill_experience_awarded",
+                        task_id=task_id,
+                        agent_id=agent.id,
+                        skills_count=len(skill_growth_results),
+                    )
+            except Exception as e:
+                # Don't fail the task report if skill growth fails
+                logger.error("skill_growth_award_failed", task_id=task_id, error=str(e))
+        
         return {
             "success": True,
             "task_id": task_id,
             "status": report.status,
             "message": f"Task '{task.title}' marked as {report.status}",
             "budget_deducted": result.get("token_used", report.token_used),
-            "agent_remaining_budget": agent.remaining_budget
+            "agent_remaining_budget": agent.remaining_budget,
+            "skill_growth": skill_growth_results if skill_growth_results else None,
         }
         
     except ValueError as e:
