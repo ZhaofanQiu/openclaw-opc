@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from typing import Dict, Any, Optional
 from src.database import get_db
+from src.services.skill_db_service import SkillDBService
 from src.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -42,19 +43,20 @@ def get_current_task(agent_id: str, db: Session = Depends(get_db)):
     Skill 方法: opc_get_current_task()
     """
     try:
-        # TODO: 从数据库查询分配给该 agent 的任务
-        # task = db.query(Task).filter(...).first()
+        service = SkillDBService(db)
+        task = service.get_current_task(agent_id)
         
-        # 临时返回示例
-        return {
-            "has_task": True,
-            "task": {
-                "id": "task_demo",
-                "title": "示例任务",
-                "description": "这是一个示例任务描述",
-                "estimated_cost": 100
+        if task:
+            return {
+                "has_task": True,
+                "task": task
             }
-        }
+        else:
+            return {
+                "has_task": False,
+                "task": None
+            }
+            
     except Exception as e:
         logger.error(f"Failed to get current task: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -71,25 +73,16 @@ def report_task_result(
     Skill 方法: opc_report_task_result(task_id, result, tokens_used)
     """
     try:
-        logger.info(f"Task {task_id} reported by {data.agent_id}")
+        service = SkillDBService(db)
+        result = service.report_task_completion(
+            agent_id=data.agent_id,
+            task_id=task_id,
+            result=data.result,
+            tokens_used=data.tokens_used
+        )
         
-        # TODO:
-        # 1. 验证 task_id 和 agent_id 匹配
-        # 2. 更新任务状态为完成
-        # 3. 计算成本
-        # 4. 更新预算
-        # 5. 记录 Token 消耗
+        return result
         
-        # 临时计算
-        cost = data.tokens_used / 100  # 假设 100 tokens = 1 OC币
-        remaining = 1000 - cost
-        
-        return {
-            "success": True,
-            "cost": cost,
-            "remaining_budget": remaining,
-            "message": "任务结果已记录"
-        }
     except Exception as e:
         logger.error(f"Failed to report task: {e}")
         return {"success": False, "error": str(e)}
@@ -143,19 +136,19 @@ def db_read(data: DbReadRequest, db: Session = Depends(get_db)):
     注意: 带权限检查，Agent 只能访问自己的数据
     """
     try:
-        logger.info(f"DB read by {data.agent_id}: {data.table}")
+        service = SkillDBService(db)
+        result = service.read_data(
+            agent_id=data.agent_id,
+            table=data.table,
+            query=data.query
+        )
         
-        # TODO:
-        # 1. 验证 Agent 权限
-        # 2. 执行查询（带过滤）
-        # 3. 返回结果
-        
-        # 临时返回
         return {
-            "data": [],
-            "count": 0,
+            "data": result,
+            "count": len(result),
             "table": data.table
         }
+        
     except Exception as e:
         logger.error(f"DB read failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -195,17 +188,14 @@ def get_budget(agent_id: str, db: Session = Depends(get_db)):
     Skill 方法: opc_get_budget()
     """
     try:
-        logger.info(f"Get budget for {agent_id}")
+        service = SkillDBService(db)
+        budget = service.get_budget(agent_id)
         
-        # TODO: 从数据库查询预算
+        if "error" in budget:
+            raise HTTPException(status_code=404, detail=budget["error"])
         
-        return {
-            "monthly_budget": 1000,
-            "used_budget": 100,
-            "remaining_budget": 900,
-            "mood": "😊",
-            "mood_text": "很好"
-        }
+        return budget
+        
     except Exception as e:
         logger.error(f"Failed to get budget: {e}")
         raise HTTPException(status_code=500, detail=str(e))

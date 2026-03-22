@@ -15,6 +15,11 @@ import json
 from typing import Optional, Dict, Any, Callable
 from dataclasses import dataclass
 from src.utils.logging_config import get_logger
+from src.core.openclaw_client import (
+    spawn_agent_session,
+    send_to_agent,
+    get_agent_response
+)
 
 logger = get_logger(__name__)
 
@@ -110,23 +115,32 @@ class AgentInteractionV2:
         
         流程:
         1. 构建任务消息
-        2. 通过 sessions_send 发送给 Agent
-        3. Agent 收到后通过 skill 获取详细信息并执行
+        2. 通过 sessions_spawn 创建会话
+        3. 发送任务消息给 Agent
+        4. Agent 收到后通过 skill 获取详细信息并执行
         """
         try:
             message = self.build_task_message(context)
             
-            # TODO: 调用 OpenClaw sessions_send
-            # session_id = await sessions_send(
-            #     agent_id=context.agent_id,
-            #     message=message
-            # )
+            # 1. 创建 Agent 会话
+            session_key = await spawn_agent_session(
+                agent_id=context.agent_id,
+                task_id=context.task_id,
+                message=message
+            )
             
-            logger.info(f"Task {context.task_id} assigned to {context.agent_id}")
+            if not session_key:
+                return InteractionResult(
+                    success=False,
+                    content="",
+                    error="Failed to spawn agent session"
+                )
+            
+            logger.info(f"Task {context.task_id} assigned to {context.agent_id}, session: {session_key}")
             
             return InteractionResult(
                 success=True,
-                content=f"任务已分配给 {context.agent_name}",
+                content=f"任务已分配给 {context.agent_name} (会话: {session_key})",
                 tokens_used=len(message) // 4  # 粗略估计
             )
             
