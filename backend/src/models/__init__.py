@@ -19,6 +19,10 @@ from src.models.workflow_engine import (
     WorkflowHistory, WorkflowReworkRecord,
     StepType, WorkflowStatus, StepStatus
 )
+from src.models.workflow_template_v2 import (
+    WorkflowTemplateV2, WorkflowTemplateFavorite, WorkflowTemplateUsage,
+    TemplateCategory, TemplateVisibility
+)
 
 __all__ = [
     "Agent",
@@ -65,4 +69,9 @@ __all__ = [
     "StepType",
     "WorkflowStatus",
     "StepStatus",
+    "WorkflowTemplateV2",
+    "WorkflowTemplateFavorite",
+    "WorkflowTemplateUsage",
+    "TemplateCategory",
+    "TemplateVisibility",
 ]
