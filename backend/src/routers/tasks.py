@@ -166,8 +166,41 @@ async def assign_task(
     assign: TaskAssign,
     db: Session = Depends(get_db),
 ):
-    """Assign task to agent with validation."""
+    """
+    Assign task to agent with validation.
+    
+    v0.4.0: 高预算任务需要先获得Partner审批
+    """
     logger.info("assign_task", task_id=task_id, agent_id=assign.agent_id)
+    
+    # v0.4.0 - Check if approval is required
+    from src.models import Task, Agent, ApprovalRequest, ApprovalStatus
+    from src.services.approval_service import ApprovalService
+    
+    task = db.query(Task).filter(Task.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    approval_service = ApprovalService(db)
+    
+    if approval_service.requires_approval(task.estimated_cost, task_id):
+        # Check if already approved
+        existing_approval = db.query(ApprovalRequest).filter(
+            ApprovalRequest.task_id == task_id,
+            ApprovalRequest.status == ApprovalStatus.APPROVED.value
+        ).first()
+        
+        if not existing_approval:
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "message": "Task requires budget approval before assignment",
+                    "task_id": task_id,
+                    "estimated_cost": task.estimated_cost,
+                    "threshold": 1000.0,
+                    "action": "Create approval request first",
+                }
+            )
     
     service = TaskService(db)
     try:
