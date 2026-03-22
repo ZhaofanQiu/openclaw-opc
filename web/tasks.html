@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>任务管理 | OpenClaw OPC v2.0</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+        
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #334155;
+        }
+        .header-left { display: flex; align-items: center; gap: 16px; }
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            background: #334155;
+            border: none;
+            border-radius: 8px;
+            color: #e2e8f0;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .back-btn:hover { background: #475569; }
+        .header h1 { font-size: 24px; }
+        
+        /* Filter tabs */
+        .filters {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+        .filter-tab {
+            padding: 8px 16px;
+            border-radius: 8px;
+            background: #1e293b;
+            border: 1px solid #334155;
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .filter-tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: transparent;
+        }
+        .filter-tab:hover:not(.active) { background: #334155; }
+        
+        /* Table */
+        .table-container {
+            background: #1e293b;
+            border-radius: 12px;
+            border: 1px solid #334155;
+            overflow: hidden;
+        }
+        table { width: 100%; border-collapse: collapse; }
+        th {
+            text-align: left;
+            padding: 16px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #334155;
+            background: #0f172a;
+        }
+        td { padding: 16px; border-bottom: 1px solid #334155; font-size: 14px; }
+        tr:hover { background: #252f47; }
+        
+        /* Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .badge-pending { background: #64748b20; color: #64748b; }
+        .badge-assigned { background: #3b82f620; color: #3b82f6; }
+        .badge-completed { background: #22c55e20; color: #22c55e; }
+        .badge-high { background: #ef444420; color: #ef4444; }
+        .badge-medium { background: #f59e0b20; color: #f59e0b; }
+        .badge-low { background: #22c55e20; color: #22c55e; }
+        
+        /* Task name */
+        .task-name { display: flex; flex-direction: column; }
+        .task-title { font-weight: 500; color: #e2e8f0; }
+        .task-desc { font-size: 12px; color: #64748b; margin-top: 4px; }
+        
+        /* Buttons */
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-primary:hover { opacity: 0.9; }
+        .btn-secondary {
+            background: #334155;
+            color: #e2e8f0;
+            padding: 8px 16px;
+            font-size: 13px;
+        }
+        .btn-secondary:hover { background: #475569; }
+        
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: #1e293b;
+            border-radius: 16px;
+            padding: 24px;
+            width: 100%;
+            max-width: 480px;
+            border: 1px solid #334155;
+        }
+        .modal-header {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        .form-group { margin-bottom: 16px; }
+        .form-label {
+            display: block;
+            font-size: 14px;
+            color: #94a3b8;
+            margin-bottom: 8px;
+        }
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 12px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            color: #e2e8f0;
+            font-size: 14px;
+        }
+        .form-textarea { min-height: 100px; resize: vertical; }
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 24px;
+        }
+        
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            top: 24px; right: 24px;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .toast {
+            padding: 16px 24px;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            animation: slideIn 0.3s ease;
+        }
+        .toast.success { background: #22c55e; }
+        .toast.error { background: #ef4444; }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        /* Empty */
+        .empty-state {
+            padding: 48px;
+            text-align: center;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-left">
+                <a href="/dashboard/v2.html" class="back-btn">← 返回 Dashboard</a>
+                <h1>📋 任务管理</h1>
+            </div>
+            <button class="btn btn-primary" onclick="openCreateModal()">+ 创建任务</button>
+        </div>
+
+        <div class="filters">
+            <button class="filter-tab active" data-filter="all" onclick="setFilter('all')">全部</button>
+            <button class="filter-tab" data-filter="pending" onclick="setFilter('pending')">待处理</button>
+            <button class="filter-tab" data-filter="assigned" onclick="setFilter('assigned')">进行中</button>
+            <button class="filter-tab" data-filter="completed" onclick="setFilter('completed')">已完成</button>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>任务</th>
+                        <th>优先级</th>
+                        <th>状态</th>
+                        <th>分配给</th>
+                        <th>预估/实际成本</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="tasks-table">
+                    <tr><td colspan="6" class="empty-state">加载中...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Create Modal -->
+    <div class="modal-overlay" id="create-modal">
+        <div class="modal">
+            <div class="modal-header">创建新任务</div>
+            <form id="create-form">
+                <div class="form-group">
+                    <label class="form-label">标题 *</label>
+                    <input type="text" class="form-input" name="title" required placeholder="输入任务标题">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">描述</label>
+                    <textarea class="form-textarea" name="description" placeholder="输入任务描述"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">优先级</label>
+                    <select class="form-select" name="priority">
+                        <option value="low">低</option>
+                        <option value="medium" selected>中</option>
+                        <option value="high">高</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">预估成本 (tokens)</label>
+                    <input type="number" class="form-input" name="estimated_cost" value="1000" min="0">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">取消</button>
+                    <button type="submit" class="btn btn-primary">创建</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Assign Modal -->
+    <div class="modal-overlay" id="assign-modal">
+        <div class="modal">
+            <div class="modal-header">分配任务</div>
+            <form id="assign-form">
+                <input type="hidden" name="task_id">
+                <div class="form-group">
+                    <label class="form-label">选择员工</label>
+                    <select class="form-select" name="agent_id" id="agent-select" required>
+                        <option value="">选择员工...</option>
+                    </select>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeAssignModal()">取消</button>
+                    <button type="submit" class="btn btn-primary">分配</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toast-container"></div>
+
+    <script>
+        const API_BASE = '/api';
+        let currentFilter = 'all';
+        
+        function showToast(msg, type='success') {
+            const c = document.getElementById('toast-container');
+            const t = document.createElement('div');
+            t.className = `toast ${type}`;
+            t.textContent = msg;
+            c.appendChild(t);
+            setTimeout(() => t.remove(), 3000);
+        }
+        
+        function openModal() {
+            document.getElementById('create-form').reset();
+            document.getElementById('create-modal').classList.add('active');
+        }
+        
+        function closeModal() {
+            document.getElementById('create-modal').classList.remove('active');
+        }
+        
+        function openAssignModal(taskId) {
+            document.getElementById('assign-form').reset();
+            document.querySelector('#assign-form [name="task_id"]').value = taskId;
+            loadEmployees();
+            document.getElementById('assign-modal').classList.add('active');
+        }
+        
+        function closeAssignModal() {
+            document.getElementById('assign-modal').classList.remove('active');
+        }
+        
+        function setFilter(filter) {
+            currentFilter = filter;
+            document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`[data-filter="${filter}"]`).classList.add('active');
+            loadData();
+        }
+        
+        function getStatusBadge(status) {
+            const badges = {
+                'pending': '<span class="badge badge-pending">待处理</span>',
+                'assigned': '<span class="badge badge-assigned">已分配</span>',
+                'completed': '<span class="badge badge-completed">已完成</span>'
+            };
+            return badges[status] || `<span class="badge">${status}</span>`;
+        }
+        
+        function getPriorityBadge(priority) {
+            const badges = {
+                'high': '<span class="badge badge-high">高</span>',
+                'medium': '<span class="badge badge-medium">中</span>',
+                'low': '<span class="badge badge-low">低</span>'
+            };
+            return badges[priority] || priority;
+        }
+        
+        async function loadEmployees() {
+            try {
+                const res = await fetch(`${API_BASE}/agents`);
+                const data = await res.json();
+                const select = document.getElementById('agent-select');
+                select.innerHTML = '<option value="">选择员工...>' +
+                    data.agents.map(e => `<option value="${e.id}">${e.emoji} ${e.name} (剩余: ${e.remaining_budget?.toFixed?.(2) || 0} OC币)</option>`).join('');
+            } catch (e) {
+                console.error(e);
+            }
+        }
+        
+        async function loadData() {
+            try {
+                let url = `${API_BASE}/tasks`;
+                if (currentFilter !== 'all') url += `?status=${currentFilter}`;
+                
+                const res = await fetch(url);
+                const data = await res.json();
+                const tasks = data.tasks || [];
+                
+                const tbody = document.getElementById('tasks-table');
+                if (tasks.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="empty-state">
+                        <div style="font-size: 48px; margin-bottom: 16px;">📋</div>
+                        <div>暂无任务</div>
+                        <button class="btn btn-primary" style="margin-top: 16px;" onclick="openModal()">创建第一个任务</button>
+                    </td></tr>`;
+                    return;
+                }
+                
+                tbody.innerHTML = tasks.map(task => `
+                    <tr>
+                        <td>
+                            <div class="task-name">
+                                <div class="task-title">${task.title}</div>
+                                <div class="task-desc">${task.description ? task.description.substring(0, 40) + '...' : '-'}</div>
+                            </div>
+                        </td>
+                        <td>${getPriorityBadge(task.priority)}</td>
+                        <td>${getStatusBadge(task.status)}</td>
+                        <td>${task.assigned_to || '-'}</td>
+                        <td>${task.estimated_cost || 0} / ${task.actual_cost?.toFixed?.(2) || 0} tokens</td>
+                        <td>
+                            ${task.status === 'pending' 
+                                ? `<button class="btn btn-secondary" onclick="openAssignModal('${task.id}')">分配</button>`
+                                : `<a href="/dashboard/task-detail.html?task=${task.id}" style="color: #667eea;">查看详情</a>`
+                            }
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                console.error(e);
+                showToast('加载失败', 'error');
+            }
+        }
+        
+        document.getElementById('create-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+            data.estimated_cost = parseFloat(data.estimated_cost);
+            
+            try {
+                const res = await fetch(`${API_BASE}/tasks`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                if (res.ok) {
+                    showToast('任务创建成功！');
+                    closeModal();
+                    loadData();
+                } else {
+                    const err = await res.json();
+                    showToast(err.detail || '创建失败', 'error');
+                }
+            } catch (e) {
+                showToast('创建失败: ' + e.message, 'error');
+            }
+        });
+        
+        document.getElementById('assign-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+            
+            try {
+                const res = await fetch(`${API_BASE}/tasks/${data.task_id}/assign`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ agent_id: data.agent_id })
+                });
+                
+                if (res.ok) {
+                    showToast('任务分配成功！');
+                    closeAssignModal();
+                    loadData();
+                } else {
+                    const err = await res.json();
+                    showToast(err.detail || '分配失败', 'error');
+                }
+            } catch (e) {
+                showToast('分配失败: ' + e.message, 'error');
+            }
+        });
+        
+        loadData();
+        setInterval(loadData, 10000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>员工管理 | OpenClaw OPC v2.0</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+        
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #334155;
+        }
+        .header-left { display: flex; align-items: center; gap: 16px; }
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            background: #334155;
+            border: none;
+            border-radius: 8px;
+            color: #e2e8f0;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .back-btn:hover { background: #475569; }
+        .header h1 { font-size: 24px; }
+        
+        /* Stats */
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .stat-card {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #334155;
+        }
+        .stat-label { font-size: 12px; color: #94a3b8; margin-bottom: 8px; }
+        .stat-value { font-size: 28px; font-weight: 700; color: #fff; }
+        
+        /* Table */
+        .table-container {
+            background: #1e293b;
+            border-radius: 12px;
+            border: 1px solid #334155;
+            overflow: hidden;
+        }
+        table { width: 100%; border-collapse: collapse; }
+        th {
+            text-align: left;
+            padding: 16px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #334155;
+            background: #0f172a;
+        }
+        td { padding: 16px; border-bottom: 1px solid #334155; font-size: 14px; }
+        tr:hover { background: #252f47; }
+        
+        /* Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .badge-idle { background: #22c55e20; color: #22c55e; }
+        .badge-working { background: #f59e0b20; color: #f59e0b; }
+        
+        /* Employee */
+        .employee-name {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .employee-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        .employee-info { display: flex; flex-direction: column; }
+        .employee-name-text { font-weight: 500; color: #e2e8f0; }
+        .employee-agent { font-size: 12px; color: #64748b; }
+        
+        /* Budget bar */
+        .budget-bar {
+            width: 120px;
+            height: 8px;
+            background: #334155;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 4px;
+        }
+        .budget-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #22c55e, #f59e0b);
+            border-radius: 4px;
+        }
+        .budget-fill.high { background: linear-gradient(90deg, #f59e0b, #ef4444); }
+        
+        /* Buttons */
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-primary:hover { opacity: 0.9; }
+        .btn-secondary {
+            background: #334155;
+            color: #e2e8f0;
+            padding: 8px 16px;
+            font-size: 13px;
+        }
+        .btn-secondary:hover { background: #475569; }
+        .btn-danger {
+            background: #ef444420;
+            color: #ef4444;
+            padding: 8px 16px;
+            font-size: 13px;
+        }
+        .btn-danger:hover { background: #ef444440; }
+        
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: #1e293b;
+            border-radius: 16px;
+            padding: 24px;
+            width: 100%;
+            max-width: 480px;
+            border: 1px solid #334155;
+        }
+        .modal-header {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        .form-group { margin-bottom: 16px; }
+        .form-label {
+            display: block;
+            font-size: 14px;
+            color: #94a3b8;
+            margin-bottom: 8px;
+        }
+        .form-input, .form-select {
+            width: 100%;
+            padding: 12px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            color: #e2e8f0;
+            font-size: 14px;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 24px;
+        }
+        
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            top: 24px; right: 24px;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .toast {
+            padding: 16px 24px;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            animation: slideIn 0.3s ease;
+        }
+        .toast.success { background: #22c55e; }
+        .toast.error { background: #ef4444; }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        /* Empty */
+        .empty-state {
+            padding: 48px;
+            text-align: center;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-left">
+                <a href="/dashboard/v2.html" class="back-btn">← 返回 Dashboard</a>
+                <h1>👥 员工管理</h1>
+            </div>
+            <button class="btn btn-primary" onclick="openCreateModal()">+ 创建员工</button>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-label">员工总数</div>
+                <div class="stat-value" id="stat-total">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">工作中</div>
+                <div class="stat-value" id="stat-working">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">空闲</div>
+                <div class="stat-value" id="stat-idle">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">总预算</div>
+                <div class="stat-value" id="stat-budget">-</div>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>员工</th>
+                        <th>OpenClaw Agent</th>
+                        <th>状态</th>
+                        <th>预算使用</th>
+                        <th>当前任务</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="employees-table">
+                    <tr><td colspan="6" class="empty-state">加载中...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Create Modal -->
+    <div class="modal-overlay" id="create-modal">
+        <div class="modal">
+            <div class="modal-header">创建新员工</div>
+            <form id="create-form">
+                <div class="form-group">
+                    <label class="form-label">姓名 *</label>
+                    <input type="text" class="form-input" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Emoji</label>
+                    <input type="text" class="form-input" name="emoji" value="🤖" maxlength="2">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">职位级别</label>
+                    <select class="form-select" name="position_level">
+                        <option value="1">初级 (Level 1)</option>
+                        <option value="2" selected>中级 (Level 2)</option>
+                        <option value="3">高级 (Level 3)</option>
+                        <option value="4">专家 (Level 4)</option>
+                        <option value="5">Partner (Level 5)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">月度预算 (OC币)</label>
+                    <input type="number" class="form-input" name="monthly_budget" value="5000" min="100">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">OpenClaw Agent ID (可选)</label>
+                    <input type="text" class="form-input" name="openclaw_agent_id" placeholder="如: opc_partner">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">取消</button>
+                    <button type="submit" class="btn btn-primary">创建</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bind Modal -->
+    <div class="modal-overlay" id="bind-modal">
+        <div class="modal">
+            <div class="modal-header">绑定 OpenClaw Agent</div>
+            <form id="bind-form">
+                <input type="hidden" name="agent_id">
+                <div class="form-group">
+                    <label class="form-label">Agent ID</label>
+                    <input type="text" class="form-input" name="openclaw_agent_id" required placeholder="如: opc_partner">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeBindModal()">取消</button>
+                    <button type="submit" class="btn btn-primary">绑定</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toast-container"></div>
+
+    <script>
+        const API_BASE = '/api';
+        
+        function formatCurrency(v) { return v?.toLocaleString('zh-CN', {maximumFractionDigits: 2}) || '0'; }
+        
+        function showToast(msg, type='success') {
+            const c = document.getElementById('toast-container');
+            const t = document.createElement('div');
+            t.className = `toast ${type}`;
+            t.textContent = msg;
+            c.appendChild(t);
+            setTimeout(() => t.remove(), 3000);
+        }
+        
+        function openModal() {
+            document.getElementById('create-form').reset();
+            document.getElementById('create-modal').classList.add('active');
+        }
+        
+        function closeModal() {
+            document.getElementById('create-modal').classList.remove('active');
+        }
+        
+        function openBindModal(agentId) {
+            document.getElementById('bind-form').reset();
+            document.querySelector('#bind-form [name="agent_id"]').value = agentId;
+            document.getElementById('bind-modal').classList.add('active');
+        }
+        
+        function closeBindModal() {
+            document.getElementById('bind-modal').classList.remove('active');
+        }
+        
+        function getBadge(status) {
+            return status === 'idle' 
+                ? '<span class="badge badge-idle">空闲</span>'
+                : '<span class="badge badge-working">工作中</span>';
+        }
+        
+        async function loadData() {
+            try {
+                const res = await fetch(`${API_BASE}/agents`);
+                const data = await res.json();
+                const employees = data.agents || [];
+                
+                document.getElementById('stat-total').textContent = employees.length;
+                document.getElementById('stat-working').textContent = employees.filter(e => e.status === 'working').length;
+                document.getElementById('stat-idle').textContent = employees.filter(e => e.status === 'idle').length;
+                document.getElementById('stat-budget').textContent = formatCurrency(employees.reduce((s, e) => s + e.monthly_budget, 0));
+                
+                const tbody = document.getElementById('employees-table');
+                if (employees.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="empty-state">
+                        <div style="font-size: 48px; margin-bottom: 16px;">👥</div>
+                        <div>暂无员工</div>
+                        <button class="btn btn-primary" style="margin-top: 16px;" onclick="openModal()">创建第一个员工</button>
+                    </td></tr>`;
+                    return;
+                }
+                
+                tbody.innerHTML = employees.map(emp => {
+                    const pct = (emp.used_budget / emp.monthly_budget * 100).toFixed(1);
+                    return `<tr>
+                        <td>
+                            <div class="employee-name">
+                                <div class="employee-avatar">${emp.emoji}</div>
+                                <div class="employee-info">
+                                    <div class="employee-name-text">${emp.name}</div>
+                                    <div class="employee-agent">Level ${emp.position_level}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>${emp.openclaw_agent_id || `<button class="btn btn-secondary" onclick="openBindModal('${emp.id}')">绑定 Agent</button>`}</td>
+                        <td>${getBadge(emp.status)}</td>
+                        <td>
+                            <div>${formatCurrency(emp.used_budget)} / ${formatCurrency(emp.monthly_budget)} OC币</div>
+                            <div class="budget-bar"><div class="budget-fill ${pct > 80 ? 'high' : ''}" style="width: ${Math.min(pct, 100)}%"></div></div>
+                        </td>
+                        <td>${emp.current_task_id ? `<a href="/dashboard/task-detail.html?task=${emp.current_task_id}" style="color: #667eea;">查看</a>` : '-'}</td>
+                        <td><button class="btn btn-danger" onclick="deleteEmployee('${emp.id}')">删除</button></td>
+                    </tr>`;
+                }).join('');
+            } catch (e) {
+                console.error(e);
+                showToast('加载失败', 'error');
+            }
+        }
+        
+        async function deleteEmployee(id) {
+            if (!confirm('确定删除此员工？')) return;
+            try {
+                const res = await fetch(`${API_BASE}/agents/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    showToast('删除成功');
+                    loadData();
+                } else {
+                    showToast('删除失败', 'error');
+                }
+            } catch (e) {
+                showToast('删除失败: ' + e.message, 'error');
+            }
+        }
+        
+        document.getElementById('create-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+            data.monthly_budget = parseFloat(data.monthly_budget);
+            data.position_level = parseInt(data.position_level);
+            
+            try {
+                const res = await fetch(`${API_BASE}/agents`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                if (res.ok) {
+                    const result = await res.json();
+                    showToast('员工创建成功！');
+                    closeModal();
+                    
+                    if (data.openclaw_agent_id) {
+                        await fetch(`${API_BASE}/agents/${result.id}/bind`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ openclaw_agent_id: data.openclaw_agent_id })
+                        });
+                    }
+                    
+                    loadData();
+                } else {
+                    const err = await res.json();
+                    showToast(err.detail || '创建失败', 'error');
+                }
+            } catch (e) {
+                showToast('创建失败: ' + e.message, 'error');
+            }
+        });
+        
+        document.getElementById('bind-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+            
+            try {
+                const res = await fetch(`${API_BASE}/agents/${data.agent_id}/bind`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ openclaw_agent_id: data.openclaw_agent_id })
+                });
+                
+                if (res.ok) {
+                    showToast('绑定成功！');
+                    closeBindModal();
+                    loadData();
+                } else {
+                    const err = await res.json();
+                    showToast(err.detail || '绑定失败', 'error');
+                }
+            } catch (e) {
+                showToast('绑定失败: ' + e.message, 'error');
+            }
+        });
+        
+        loadData();
+        setInterval(loadData, 10000);
+    </script>
+</body>
+</html>

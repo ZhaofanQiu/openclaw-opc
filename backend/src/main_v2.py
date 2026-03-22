@@ -175,7 +175,7 @@ def health_check():
 # Root redirect
 @app.get("/")
 def root():
-    return {"message": "OpenClaw OPC v2.0", "docs": "/docs"}
+    return {"message": "OpenClaw OPC v2.0", "docs": "/docs", "dashboard": "/dashboard/v2.html"}
 
 
 # Static files
