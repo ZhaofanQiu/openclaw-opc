@@ -78,9 +78,16 @@ class Task(Base):
     execution_session_id = Column(String, nullable=True)  # OpenClaw session ID
     token_used = Column(Integer, default=0)  # Actual tokens consumed (reported by agent)
 
+    # v0.4.0 - Sub-task support
+    is_parent_task = Column(String, default="false")  # "true" if this task has sub-tasks
+    sub_task_count = Column(Integer, default=0)  # Number of sub-tasks
+    completed_sub_task_count = Column(Integer, default=0)  # Number of completed sub-tasks
+
     # Relationships
     skill_requirements = relationship("TaskSkillRequirement", back_populates="task",
                                       cascade="all, delete-orphan")
+    sub_tasks = relationship("SubTask", back_populates="parent_task", 
+                             cascade="all, delete-orphan", foreign_keys="SubTask.parent_task_id")
 
     @property
     def budget_usage_percentage(self) -> float:
