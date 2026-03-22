@@ -215,8 +215,10 @@ class OpenClawClient:
             data = json.loads(stdout)
             
             # 处理嵌套结构
-            # { "status": "ok", "result": { "payloads": [{ "text": "..." }] } }
+            # { "status": "ok", "result": { "payloads": [{ "text": "..." }], "meta": { "agentMeta": { "usage": {...} } } } }
             text_content = ""
+            tokens_input = 0
+            tokens_output = 0
             
             if isinstance(data, dict):
                 if "result" in data and isinstance(data["result"], dict):
@@ -224,6 +226,13 @@ class OpenClawClient:
                     payloads = inner.get("payloads", [])
                     if payloads:
                         text_content = payloads[0].get("text", "")
+                    
+                    # 解析 token 使用情况
+                    meta = inner.get("meta", {})
+                    agent_meta = meta.get("agentMeta", {})
+                    usage = agent_meta.get("usage", {})
+                    tokens_input = usage.get("input", 0)
+                    tokens_output = usage.get("output", 0)
                 
                 if not text_content:
                     payloads = data.get("payloads", [])
@@ -238,8 +247,8 @@ class OpenClawClient:
             return AgentResponse(
                 success=True,
                 text=text_content,
-                tokens_input=0,  # TODO: 从响应中解析
-                tokens_output=0
+                tokens_input=tokens_input,
+                tokens_output=tokens_output
             )
             
         except json.JSONDecodeError:
