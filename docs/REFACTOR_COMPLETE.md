@@ -140,11 +140,28 @@ ab1dcaf chore: 保存当前状态（Review前）
 
 ### 接入真实 OpenClaw API
 
-目前 `openclaw_client.py` 使用的是模拟实现，需要接入真实 API：
+✅ 已完成：通过 `openclaw agent --message` CLI 实现
 
 ```python
-# TODO: 替换为真实调用
-from openclaw import sessions_spawn, sessions_send, session_status
+from core.openclaw_client import send_to_agent, assign_task
+
+# 同步发送
+response = await send_to_agent(
+    agent_id="agent_001",
+    message="任务描述...",
+    async_mode=False
+)
+
+# 异步发送
+response = await assign_task(
+    agent_id="agent_001",
+    agent_name="员工A",
+    task_id="task_001",
+    task_title="写代码",
+    task_description="...",
+    manual_paths={"task": "data/manuals/task_001.md"},
+    async_mode=True
+)
 ```
 
 ### 前端适配
@@ -164,29 +181,55 @@ from openclaw import sessions_spawn, sessions_send, session_status
 
 ## 使用方式
 
-### 1. 安装 opc-bridge skill
+### 1. 唤醒 Agent
 
 ```python
-from src.core.skill_installer import install_skill
+from core.openclaw_client import wake_up_agent
 
-install_skill(
-    opc_api_key="your-api-key",
-    openclaw_dir="~/.openclaw"
+result = await wake_up_agent(
+    agent_id="agent_001",
+    agent_name="员工A"
 )
 ```
 
 ### 2. 分配任务
 
 ```python
-from src.core.agent_interaction_v2 import assign_task_to_agent
+from core.openclaw_client import assign_task
 
-result = await assign_task_to_agent(
-    task_id="task_001",
+result = await assign_task(
     agent_id="agent_001",
-    agent_name="测试员工",
-    title="写代码",
-    description="编写一个 Python 函数"
+    agent_name="员工A",
+    task_id="task_001",
+    task_title="写代码",
+    task_description="编写一个 Python 函数",
+    manual_paths={
+        "task": "data/manuals/task_001.md",
+        "position": "data/manuals/position_senior.md"
+    },
+    async_mode=True  # 异步执行
 )
+
+# 查询异步任务状态
+execution_id = result.execution_id
+status = client.get_execution_status(execution_id)
+```
+
+### 3. Agent 通过 Skill 读取手册
+
+Agent 在 OpenClaw 中：
+```python
+# 读取手册内容
+manual = opc_read_manual("data/manuals/task_001.md")
+print(manual["content"])
+
+# 报告任务结果
+opc_report_task_result(
+    task_id="task_001",
+    result="完成",
+    tokens_used=150
+)
+```
 ```
 
 ### 3. Agent 通过 skill 获取任务
