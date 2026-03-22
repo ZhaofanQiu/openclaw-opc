@@ -17,7 +17,7 @@ from models.task_v2 import TaskStatus
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-router = APIRouter(prefix="/api/skill", tags=["Skill API"])
+router = APIRouter(tags=["Skill API"])
 
 # ============ 数据模型 ============
 

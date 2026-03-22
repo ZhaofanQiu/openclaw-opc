@@ -11,7 +11,7 @@ from database import get_db
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-router = APIRouter(prefix="/api/manuals", tags=["Manuals"])
+router = APIRouter(tags=["Manuals"])
 
 # ============ 数据模型 ============
 

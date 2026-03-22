@@ -166,19 +166,7 @@ for router_module, prefix, tag in routers_config:
         logger.error(f"✗ Failed to register {tag}: {e}")
 
 
-# Static files
-static_dirs = [
-    ("web", "/"),
-    ("data/avatars", "/avatars"),
-]
-
-for dir_name, url_path in static_dirs:
-    static_path = os.path.join(PROJECT_ROOT, dir_name)
-    if os.path.exists(static_path):
-        app.mount(url_path, StaticFiles(directory=static_path), name=dir_name)
-
-
-# Health check
+# Health check (必须在 static files 之前)
 @app.get("/health")
 def health_check():
     db_info = get_database_info()
@@ -193,6 +181,18 @@ def health_check():
 @app.get("/")
 def root():
     return {"message": "OpenClaw OPC v2.0", "docs": "/docs"}
+
+
+# Static files
+static_dirs = [
+    ("web", "/dashboard"),
+    ("data/avatars", "/avatars"),
+]
+
+for dir_name, url_path in static_dirs:
+    static_path = os.path.join(PROJECT_ROOT, dir_name)
+    if os.path.exists(static_path):
+        app.mount(url_path, StaticFiles(directory=static_path), name=dir_name)
 
 
 if __name__ == "__main__":

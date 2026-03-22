@@ -16,7 +16,7 @@ from services.approval_service import ApprovalService
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-router = APIRouter(prefix="/api/approvals", tags=["approvals"])
+router = APIRouter(tags=["approvals"])
 
 
 # ============== Request/Response Models ==============

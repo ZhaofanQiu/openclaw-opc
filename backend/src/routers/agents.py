@@ -14,7 +14,7 @@ from utils.rate_limit import limiter
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-router = APIRouter(prefix="/api/agents", tags=["Agents"])
+router = APIRouter(tags=["Agents"])
 
 # ============ 数据模型 ============
 
