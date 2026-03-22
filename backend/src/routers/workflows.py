@@ -1,7 +1,5 @@
 """
-Workflow Engine Router for v0.5.0
-
-统一工作流引擎API路由
+Workflow Engine Router v0.5.1 - 并行执行与返工预算熔断
 """
 
 from typing import Dict, List, Optional
@@ -23,35 +21,28 @@ router = APIRouter(prefix="/api/workflows", tags=["workflows"])
 
 class WorkflowCreate(BaseModel):
     """创建工作流请求"""
-    title: str = Field(..., min_length=1, max_length=200, description="任务主题")
-    description: str = Field(..., min_length=1, description="任务描述")
-    total_budget: float = Field(..., gt=0, description="总预算（OC币）")
-    template_id: Optional[str] = Field(default=None, description="可选：使用模板")
-
-
-class WorkflowPlanResult(BaseModel):
-    """规划结果"""
-    analysis: str
-    selected_steps: List[str]
-    step_plans: Dict
-    handbook: str
-    total_estimated_hours: float
+    title: str = Field(..., min_length=1, max_length=200)
+    description: str = Field(..., min_length=1)
+    total_budget: float = Field(..., gt=0)
+    template_id: Optional[str] = Field(default=None)
+    rework_budget_ratio: float = Field(default=0.2, ge=0.1, le=0.5)  # 返工预算比例
 
 
 class StepComplete(BaseModel):
     """完成步骤请求"""
     action: str = Field(..., description="PASS/REWORK")
-    comment: str = Field(default="", description="评语")
-    artifacts: List[str] = Field(default=[], description="产出物链接")
-    actual_hours: float = Field(default=0, description="实际工时")
-    budget_used: float = Field(default=0, description="实际使用预算")
-    review_scores: Optional[Dict[str, int]] = Field(default=None, description="评审评分")
+    comment: str = Field(default="")
+    artifacts: List[str] = Field(default=[])
+    actual_hours: float = Field(default=0)
+    budget_used: float = Field(default=0)
+    review_scores: Optional[Dict[str, int]] = Field(default=None)
 
 
-class ReworkWarningHandle(BaseModel):
-    """处理返工预警"""
-    action: str = Field(..., description="FORCE_PASS/RESTART/ESCALATE")
-    reason: str = Field(default="", description="处理原因")
+class FuseHandle(BaseModel):
+    """处理熔断请求"""
+    action: str = Field(..., description="ADD_BUDGET/FORCE_PASS/RESTART/CANCEL")
+    reason: str = Field(default="")
+    params: Dict = Field(default={})  # ADD_BUDGET时: {"amount": 500}
 
 
 # ============== API Endpoints ==============
@@ -59,14 +50,15 @@ class ReworkWarningHandle(BaseModel):
 @router.post("")
 async def create_workflow(
     data: WorkflowCreate,
-    created_by: str,  # Partner ID
+    created_by: str,
     db: Session = Depends(get_db),
 ):
     """
     创建工作流
     
-    用户只需提供：主题、描述、总预算
-    系统会自动进入"规划中"状态，等待Partner规划
+    总预算自动分配：
+    - 基础预算 = 总预算 × (1 - rework_budget_ratio)
+    - 返工预算池 = 总预算 × rework_budget_ratio (默认20%)
     """
     service = WorkflowEngineService(db)
     try:
@@ -76,6 +68,7 @@ async def create_workflow(
             total_budget=data.total_budget,
             created_by=created_by,
             template_id=data.template_id,
+            rework_budget_ratio=data.rework_budget_ratio,
         )
         
         # 自动规划
@@ -87,8 +80,14 @@ async def create_workflow(
                 "id": workflow.id,
                 "title": workflow.title,
                 "status": workflow.status,
+                "budget": {
+                    "total": workflow.total_budget,
+                    "base": workflow.base_budget,
+                    "rework_reserve": workflow.rework_budget,
+                }
             },
             "plan": plan_result,
+            "is_complex": plan_result.get("is_complex", False),
             "next_action": "启动工作流",
         }
     except ValueError as e:
@@ -108,7 +107,7 @@ async def start_workflow(
             "success": True,
             "workflow_id": workflow.id,
             "status": workflow.status,
-            "current_step": _get_current_step_info(db, workflow_id),
+            "current_steps": _get_current_steps_info(db, workflow_id),
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -142,14 +141,13 @@ async def complete_current_step(
     """
     完成当前步骤
     
-    支持动作：
-    - PASS: 通过，进入下一步
-    - REWORK: 返工，回到最近的EXECUTE步骤
+    预算扣除规则：
+    - 首次执行：从基础预算扣除
+    - 返工：从返工储备扣除，储备耗尽触发熔断
     """
     service = WorkflowExecutionService(db)
     
-    # 获取当前步骤
-    from src.models import WorkflowInstance, WorkflowStep
+    from src.models import WorkflowInstance
     workflow = db.query(WorkflowInstance).filter(
         WorkflowInstance.id == workflow_id
     ).first()
@@ -157,57 +155,67 @@ async def complete_current_step(
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
     
-    current_step = db.query(WorkflowStep).filter(
-        WorkflowStep.workflow_id == workflow_id,
-        WorkflowStep.sequence == workflow.current_step_index
-    ).first()
-    
-    if not current_step:
+    if not workflow.current_step_ids:
         raise HTTPException(status_code=400, detail="No current step")
     
-    result = {
-        "action": data.action,
-        "comment": data.comment,
-        "artifacts": data.artifacts,
-        "actual_hours": data.actual_hours,
-        "budget_used": data.budget_used,
-        "review_scores": data.review_scores,
-    }
+    # 支持同时完成多个并行步骤
+    results = []
+    for step_id in workflow.current_step_ids:
+        result = {
+            "action": data.action,
+            "comment": data.comment,
+            "artifacts": data.artifacts,
+            "actual_hours": data.actual_hours,
+            "budget_used": data.budget_used,
+            "review_scores": data.review_scores,
+        }
+        
+        try:
+            outcome = service.complete_step(
+                step_id=step_id,
+                action=data.action,
+                result=result,
+                actor_id=actor_id,
+            )
+            results.append(outcome)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
     
-    try:
-        outcome = service.complete_step(
-            step_id=current_step.id,
-            action=data.action,
-            result=result,
-            actor_id=actor_id,
-        )
-        return outcome
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    # 返回汇总结果
+    fused_results = [r for r in results if r.get("fused")]
+    if fused_results:
+        return fused_results[0]  # 返回第一个熔断结果
+    
+    return results[0] if results else {"success": True}
 
 
-@router.post("/{workflow_id}/rework-warning/handle")
-async def handle_rework_warning(
+@router.post("/{workflow_id}/fuse/handle")
+async def handle_fuse(
     workflow_id: str,
-    data: ReworkWarningHandle,
+    data: FuseHandle,
     actor_id: str,
     db: Session = Depends(get_db),
 ):
     """
-    处理返工超限预警
+    处理熔断
     
-    选项：
-    - FORCE_PASS: 强行通过当前环节
-    - RESTART: 编辑任务后重新启动
-    - ESCALATE: 升级给Partner处理
+    熔断类型：
+    - BUDGET_FUSED: 返工预算耗尽
+    - REWORK_FUSED: 返工次数超限
+    
+    处理选项：
+    - ADD_BUDGET: 追加预算 (params: {"amount": 500})
+    - FORCE_PASS: 强行通过
+    - RESTART: 重新规划启动
+    - CANCEL: 取消任务
     """
     service = WorkflowExecutionService(db)
     try:
-        outcome = service.handle_rework_warning(
+        outcome = service.handle_fuse(
             workflow_id=workflow_id,
             action=data.action,
             actor_id=actor_id,
-            reason=data.reason,
+            params=data.params,
         )
         return outcome
     except ValueError as e:
@@ -219,12 +227,12 @@ async def get_workflow_steps(
     workflow_id: str,
     db: Session = Depends(get_db),
 ):
-    """获取工作流所有步骤"""
+    """获取工作流所有步骤（含并行结构）"""
     from src.models import WorkflowStep
     
     steps = db.query(WorkflowStep).filter(
         WorkflowStep.workflow_id == workflow_id
-    ).order_by(WorkflowStep.sequence).all()
+    ).order_by(WorkflowStep.sequence, WorkflowStep.id).all()
     
     return [_format_step_response(s) for s in steps]
 
@@ -234,7 +242,7 @@ async def get_workflow_history(
     workflow_id: str,
     db: Session = Depends(get_db),
 ):
-    """获取工作流历史记录"""
+    """获取工作流历史（含预算变动）"""
     from src.models.workflow_engine import WorkflowHistory
     
     history = db.query(WorkflowHistory).filter(
@@ -250,10 +258,44 @@ async def get_workflow_history(
             "from_status": h.from_status,
             "to_status": h.to_status,
             "details": h.details,
+            "budget_impact": h.budget_impact,
             "created_at": h.created_at.isoformat() if h.created_at else None,
         }
         for h in history
     ]
+
+
+@router.get("/{workflow_id}/budget")
+async def get_workflow_budget(
+    workflow_id: str,
+    db: Session = Depends(get_db),
+):
+    """获取预算详情"""
+    from src.models import WorkflowInstance
+    
+    workflow = db.query(WorkflowInstance).filter(
+        WorkflowInstance.id == workflow_id
+    ).first()
+    
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+    
+    return {
+        "total": workflow.total_budget,
+        "base": {
+            "allocated": workflow.base_budget,
+            "used": workflow.used_base_budget,
+            "remaining": workflow.base_budget - workflow.used_base_budget,
+        },
+        "rework": {
+            "allocated": workflow.rework_budget,
+            "used": workflow.used_rework_budget,
+            "remaining": workflow.rework_budget - workflow.used_rework_budget,
+            "threshold": workflow.rework_budget_threshold,
+            "fused": workflow.used_rework_budget >= workflow.rework_budget * (1 - workflow.rework_budget_threshold),
+        },
+        "total_remaining": workflow.remaining_budget,
+    }
 
 
 @router.get("/agent/{agent_id}/pending")
@@ -267,7 +309,7 @@ async def get_agent_pending_workflows(
     steps = db.query(WorkflowStep).join(WorkflowInstance).filter(
         WorkflowStep.assignee_id == agent_id,
         WorkflowStep.status.in_(["assigned", "in_progress", "rework"]),
-        WorkflowInstance.status.in_(["in_progress", "rework", "warning"])
+        WorkflowInstance.status.in_(["in_progress", "rework"])
     ).all()
     
     return [
@@ -285,7 +327,7 @@ async def get_agent_pending_workflows(
 
 # ============== Helper Functions ==============
 
-def _get_current_step_info(db: Session, workflow_id: str) -> Optional[Dict]:
+def _get_current_steps_info(db: Session, workflow_id: str) -> List[Dict]:
     """获取当前步骤信息"""
     from src.models import WorkflowInstance, WorkflowStep
     
@@ -293,15 +335,14 @@ def _get_current_step_info(db: Session, workflow_id: str) -> Optional[Dict]:
         WorkflowInstance.id == workflow_id
     ).first()
     
-    if not workflow or workflow.current_step_index < 0:
-        return None
+    if not workflow or not workflow.current_step_ids:
+        return []
     
-    step = db.query(WorkflowStep).filter(
-        WorkflowStep.workflow_id == workflow_id,
-        WorkflowStep.sequence == workflow.current_step_index
-    ).first()
+    steps = db.query(WorkflowStep).filter(
+        WorkflowStep.id.in_(workflow.current_step_ids)
+    ).all()
     
-    return _format_step_response(step) if step else None
+    return [_format_step_response(s) for s in steps]
 
 
 def _format_workflow_response(workflow) -> Dict:
@@ -311,12 +352,18 @@ def _format_workflow_response(workflow) -> Dict:
         "title": workflow.title,
         "description": workflow.description,
         "status": workflow.status,
-        "total_budget": workflow.total_budget,
-        "used_budget": workflow.used_budget,
-        "remaining_budget": workflow.remaining_budget,
-        "current_step_index": workflow.current_step_index,
-        "total_rework_count": workflow.total_rework_count,
-        "plan_result": workflow.plan_result,
+        "budget": {
+            "total": workflow.total_budget,
+            "base": workflow.base_budget,
+            "rework_reserve": workflow.rework_budget,
+            "used": workflow.used_base_budget + workflow.used_rework_budget,
+            "remaining": workflow.remaining_budget,
+        },
+        "rework_stats": {
+            "total_count": workflow.total_rework_count,
+            "total_cost": workflow.total_rework_cost,
+        },
+        "current_step_ids": workflow.current_step_ids,
         "created_at": workflow.created_at.isoformat() if workflow.created_at else None,
         "started_at": workflow.started_at.isoformat() if workflow.started_at else None,
         "completed_at": workflow.completed_at.isoformat() if workflow.completed_at else None,
@@ -332,18 +379,28 @@ def _format_step_response(step) -> Dict:
         "type": step.step_type,
         "sequence": step.sequence,
         "status": step.status,
+        "is_parallel": step.is_parallel == "true",
+        "parent_step_id": step.parent_step_id,
+        "parallel_group": step.parallel_group,
         "assignee": {
             "id": step.assignee.id if step.assignee else None,
             "name": step.assignee.name if step.assignee else None,
         },
-        "allocated_budget": step.allocated_budget,
-        "used_budget": step.used_budget,
-        "estimated_hours": step.estimated_hours,
-        "actual_hours": step.actual_hours,
-        "rework_count": step.rework_count,
-        "rework_limit": step.rework_limit,
+        "budget": {
+            "base": step.base_budget,
+            "rework_reserve": step.rework_reserve,
+            "used": step.used_budget,
+            "rework_cost": step.rework_cost,
+        },
+        "hours": {
+            "estimated": step.estimated_hours,
+            "actual": step.actual_hours,
+        },
+        "rework": {
+            "count": step.rework_count,
+            "limit": step.rework_limit,
+            "is_rework": step.is_rework == "true",
+        },
         "result": step.result,
         "review_scores": step.review_scores,
-        "assigned_at": step.assigned_at.isoformat() if step.assigned_at else None,
-        "completed_at": step.completed_at.isoformat() if step.completed_at else None,
     }
