@@ -12,7 +12,8 @@
     "tabs": {
       "dashboard": "Dashboard",
       "pixelOffice": "Pixel Office",
-      "workflows": "Workflows"
+      "workflows": "Workflows",
+      "skillPath": "Skill Path"
     }
   },
   "header": {
