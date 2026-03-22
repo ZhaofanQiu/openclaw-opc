@@ -14,8 +14,8 @@ Agent 交互核心模块 (v2 - Skill 集成版)
 import json
 from typing import Optional, Dict, Any, Callable
 from dataclasses import dataclass
-from src.utils.logging_config import get_logger
-from src.core.openclaw_client import (
+from utils.logging_config import get_logger
+from core.openclaw_client import (
     spawn_agent_session,
     send_to_agent,
     get_agent_response
