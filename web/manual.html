@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>任务手册 | OpenClaw OPC v2.0</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        .container { max-width: 900px; margin: 0 auto; padding: 24px; }
+        
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #334155;
+        }
+        .header-left { display: flex; align-items: center; gap: 16px; }
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            background: #334155;
+            border: none;
+            border-radius: 8px;
+            color: #e2e8f0;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .back-btn:hover { background: #475569; }
+        .header h1 { font-size: 24px; }
+        
+        /* Template badge */
+        .template-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            background: linear-gradient(135deg, #667eea20, #764ba220);
+            color: #a78bfa;
+            border: 1px solid #667eea40;
+        }
+        
+        /* Manual content */
+        .manual-container {
+            background: #1e293b;
+            border-radius: 12px;
+            border: 1px solid #334155;
+            overflow: hidden;
+        }
+        
+        .manual-header {
+            padding: 20px 24px;
+            background: #0f172a;
+            border-bottom: 1px solid #334155;
+        }
+        
+        .manual-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .manual-meta {
+            display: flex;
+            gap: 16px;
+            font-size: 13px;
+            color: #94a3b8;
+        }
+        
+        .manual-content {
+            padding: 24px;
+        }
+        
+        /* Markdown styles */
+        .manual-content h1 {
+            font-size: 28px;
+            margin-bottom: 16px;
+            color: #fff;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 12px;
+        }
+        
+        .manual-content h2 {
+            font-size: 20px;
+            margin-top: 32px;
+            margin-bottom: 16px;
+            color: #e2e8f0;
+        }
+        
+        .manual-content h3 {
+            font-size: 16px;
+            margin-top: 24px;
+            margin-bottom: 12px;
+            color: #94a3b8;
+        }
+        
+        .manual-content p {
+            margin-bottom: 16px;
+            color: #cbd5e1;
+        }
+        
+        .manual-content ul, .manual-content ol {
+            margin-bottom: 16px;
+            padding-left: 24px;
+        }
+        
+        .manual-content li {
+            margin-bottom: 8px;
+            color: #cbd5e1;
+        }
+        
+        .manual-content code {
+            background: #0f172a;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Fira Code', monospace;
+            font-size: 13px;
+            color: #a78bfa;
+        }
+        
+        .manual-content pre {
+            background: #0f172a;
+            padding: 16px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin-bottom: 16px;
+            border: 1px solid #334155;
+        }
+        
+        .manual-content pre code {
+            background: transparent;
+            padding: 0;
+            color: #e2e8f0;
+        }
+        
+        .manual-content blockquote {
+            border-left: 4px solid #667eea;
+            padding-left: 16px;
+            margin-bottom: 16px;
+            color: #94a3b8;
+        }
+        
+        .manual-content hr {
+            border: none;
+            border-top: 1px solid #334155;
+            margin: 24px 0;
+        }
+        
+        .manual-content input[type="checkbox"] {
+            margin-right: 8px;
+        }
+        
+        /* Empty state */
+        .empty-state {
+            padding: 48px;
+            text-align: center;
+            color: #64748b;
+        }
+        
+        .loading {
+            padding: 48px;
+            text-align: center;
+            color: #94a3b8;
+        }
+        
+        /* Actions */
+        .actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid #334155;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover { opacity: 0.9; }
+        
+        .btn-secondary {
+            background: #334155;
+            color: #e2e8f0;
+        }
+        
+        .btn-secondary:hover { background: #475569; }
+        
+        /* Raw content toggle */
+        .raw-content {
+            display: none;
+            background: #0f172a;
+            padding: 16px;
+            border-radius: 8px;
+            font-family: 'Fira Code', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            overflow-x: auto;
+            color: #94a3b8;
+            border: 1px solid #334155;
+        }
+        
+        .raw-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-left">
+                <a href="/dashboard/tasks.html" class="back-btn">← 返回任务列表</a>
+                <h1>📖 任务手册</h1>
+            </div>
+            <span class="template-badge" id="template-badge">-</span>
+        </div>
+
+        <div class="manual-container">
+            <div class="manual-header">
+                <div class="manual-title" id="task-title">加载中...</div>
+                <div class="manual-meta">
+                    <span id="task-id">-</span>
+                    <span id="manual-size">-</span>
+                </div>
+            </div>
+            
+            <div class="manual-content" id="manual-content">
+                <div class="loading">正在加载手册内容...</div>
+            </div>
+            
+            <pre class="raw-content" id="raw-content"></pre>
+            
+            <div class="actions">
+                <button class="btn btn-secondary" onclick="toggleRaw()">切换源码视图</button>
+                <button class="btn btn-primary" onclick="copyToClipboard()">复制手册内容</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        let rawMarkdown = '';
+        
+        // Get task ID from URL
+        function getTaskId() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('task');
+        }
+        
+        async function loadManual() {
+            const taskId = getTaskId();
+            if (!taskId) {
+                document.getElementById('manual-content').innerHTML = `
+                    <div class="empty-state">
+                        <div style="font-size: 48px; margin-bottom: 16px;">📖</div>
+                        <div>未指定任务 ID</div>
+                        <a href="/dashboard/tasks.html" class="back-btn" style="margin-top: 16px; display: inline-block;">返回任务列表</a>
+                    </div>
+                `;
+                return;
+            }
+            
+            try {
+                // Load task info
+                const taskRes = await fetch(`${API_BASE}/tasks/${taskId}`);
+                if (!taskRes.ok) {
+                    throw new Error('Task not found');
+                }
+                const task = await taskRes.json();
+                
+                document.getElementById('task-title').textContent = task.title;
+                document.getElementById('task-id').textContent = `ID: ${task.id}`;
+                
+                // Load manual
+                const manualRes = await fetch(`${API_BASE}/tasks/${taskId}/manual`);
+                if (!manualRes.ok) {
+                    document.getElementById('manual-content').innerHTML = `
+                        <div class="empty-state">
+                            <div style="font-size: 48px; margin-bottom: 16px;">📝</div>
+                            <div>手册尚未生成</div>
+                            <div style="margin-top: 8px; font-size: 14px;">任务分配后将自动生成手册</div>
+                        </div>
+                    `;
+                    document.getElementById('template-badge').textContent = '未生成';
+                    return;
+                }
+                
+                const manual = await manualRes.json();
+                rawMarkdown = manual.content;
+                
+                // Update UI
+                document.getElementById('template-badge').textContent = 
+                    manual.template === 'code_review' ? '代码审查' :
+                    manual.template === 'research' ? '研究调研' :
+                    manual.template === 'writing' ? '内容创作' :
+                    manual.template === 'data_analysis' ? '数据分析' : '通用任务';
+                
+                document.getElementById('manual-size').textContent = 
+                    `${(manual.size / 1024).toFixed(1)} KB`;
+                
+                // Render markdown
+                document.getElementById('manual-content').innerHTML = marked.parse(manual.content);
+                
+                // Set raw content
+                document.getElementById('raw-content').textContent = manual.content;
+                
+            } catch (error) {
+                document.getElementById('manual-content').innerHTML = `
+                    <div class="empty-state">
+                        <div style="font-size: 48px; margin-bottom: 16px;">❌</div>
+                        <div>加载失败</div>
+                        <div style="margin-top: 8px; font-size: 14px;">${error.message}</div>
+                    </div>
+                `;
+            }
+        }
+        
+        function toggleRaw() {
+            const rawEl = document.getElementById('raw-content');
+            const contentEl = document.getElementById('manual-content');
+            
+            if (rawEl.classList.contains('active')) {
+                rawEl.classList.remove('active');
+                contentEl.style.display = 'block';
+            } else {
+                rawEl.classList.add('active');
+                contentEl.style.display = 'none';
+            }
+        }
+        
+        async function copyToClipboard() {
+            if (!rawMarkdown) return;
+            
+            try {
+                await navigator.clipboard.writeText(rawMarkdown);
+                alert('已复制到剪贴板');
+            } catch (err) {
+                // Fallback
+                const textarea = document.createElement('textarea');
+                textarea.value = rawMarkdown;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                alert('已复制到剪贴板');
+            }
+        }
+        
+        // Load on page load
+        loadManual();
+    </script>
+</body>
+</html>

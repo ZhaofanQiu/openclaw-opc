@@ -116,6 +116,18 @@ def delete_task(task_id: str, db: Session = Depends(get_db)):
     
     return {"message": "Task deleted"}
 
+
+@router.get("/{task_id}/manual")
+def get_task_manual(task_id: str, db: Session = Depends(get_db)):
+    """获取任务手册"""
+    from services.manual_service import get_task_manual
+    
+    manual = get_task_manual(task_id)
+    if not manual:
+        raise HTTPException(status_code=404, detail="Manual not found")
+    
+    return manual
+
 # ============ 任务分配与执行 ============
 
 @router.post("/{task_id}/assign")
@@ -159,6 +171,17 @@ async def assign_task_endpoint(
     
     logger.info(f"Task {task_id} assigned to agent {data.agent_id}")
     
+    # 生成任务手册
+    from services.manual_service import generate_task_manual
+    manual_result = generate_task_manual(
+        task_id=task_id,
+        title=task.title,
+        description=task.description,
+        estimated_cost=task.estimated_cost
+    )
+    
+    logger.info(f"Manual generated: {manual_result['relative_path']} (template: {manual_result['template']})")
+    
     # 发送消息到 Agent（异步）
     try:
         import asyncio
@@ -168,6 +191,7 @@ async def assign_task_endpoint(
             task_id=task_id,
             task_title=task.title,
             task_description=task.description,
+            manual_paths={"task": manual_result['relative_path']},
             async_mode=True
         )
         
@@ -176,7 +200,11 @@ async def assign_task_endpoint(
             "task_id": task_id,
             "agent_id": data.agent_id,
             "execution_id": response.execution_id,
-            "status": response.status
+            "status": response.status,
+            "manual": {
+                "template": manual_result['template'],
+                "path": manual_result['relative_path']
+            }
         }
     except Exception as e:
         logger.error(f"Failed to notify agent: {e}")
@@ -184,7 +212,11 @@ async def assign_task_endpoint(
             "message": "Task assigned but failed to notify agent",
             "task_id": task_id,
             "agent_id": data.agent_id,
-            "error": str(e)
+            "error": str(e),
+            "manual": {
+                "template": manual_result['template'],
+                "path": manual_result['relative_path']
+            }
         }
 
 @router.post("/{task_id}/start")
