@@ -89,7 +89,12 @@ class AgentResponse(BaseModel):
         return self
 
 
-@router.get("/openclaw/agents")
+@router.get(
+    "/openclaw/agents",
+    summary="列出可用的OpenClaw Agent",
+    description="列出OpenClaw配置中已定义的所有Agent，用于选择Partner",
+    response_description="OpenClaw Agent列表"
+)
 @limiter.limit(RATE_LIMITS["default"])
 async def list_openclaw_agents(request: Request):
     """

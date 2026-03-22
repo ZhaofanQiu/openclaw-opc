@@ -35,6 +35,63 @@ configure_logging(log_level, json_format)
 logger = get_logger(__name__)
 
 
+# OpenAPI documentation metadata
+OPENAPI_TAGS = [
+    {
+        "name": "agents",
+        "description": "员工(Agent)管理 - 创建、查询、绑定OpenClaw Agent",
+    },
+    {
+        "name": "tasks",
+        "description": "任务管理 - 分配、执行、报告",
+    },
+    {
+        "name": "workflows",
+        "description": "工作流引擎 - 多步骤协作流程管理",
+    },
+    {
+        "name": "workflows-optimized",
+        "description": "工作流查询优化版 - 支持分页和性能优化",
+    },
+    {
+        "name": "budget",
+        "description": "预算管理 - OC币分配和统计",
+    },
+    {
+        "name": "skills",
+        "description": "技能管理 - 员工技能库",
+    },
+    {
+        "name": "communication",
+        "description": "员工间通信 - 消息传递",
+    },
+    {
+        "name": "async-messages",
+        "description": "异步消息系统 - 非阻塞通信",
+    },
+    {
+        "name": "notifications",
+        "description": "通知系统 - WebSocket实时推送",
+    },
+    {
+        "name": "reports",
+        "description": "报告和分析 - 数据统计",
+    },
+    {
+        "name": "avatars",
+        "description": "头像管理 - 像素头像上传和生成",
+    },
+    {
+        "name": "config",
+        "description": "系统配置 - OpenClaw集成配置",
+    },
+    {
+        "name": "monitor",
+        "description": "系统监控 - 健康检查和状态",
+    },
+]
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan handler."""
@@ -56,12 +113,50 @@ async def lifespan(app: FastAPI):
     logger.info("Application stopping")
 
 
+# Create FastAPI application with enhanced documentation
 app = FastAPI(
-    title="OpenClaw OPC",
-    description="One-Person Company management system for OpenClaw Agents",
-    version="0.2.0-alpha",
+    title="OpenClaw OPC API",
+    description="""
+    # OpenClaw OPC - One-Person Company
+    
+    将 OpenClaw Agent 作为员工管理的虚拟一人公司系统。
+    
+    ## 核心功能
+    
+    - **员工管理**: 雇佣、绑定、管理 AI Agent 员工
+    - **任务系统**: 分配任务、追踪进度、自动结算预算
+    - **工作流引擎**: 多步骤协作流程，支持返工和熔断机制
+    - **预算控制**: OC币预算管理，防止超支
+    - **技能成长**: 员工技能路径和成长追踪
+    - **实时通知**: WebSocket 推送关键事件
+    
+    ## 认证
+    
+    默认启用 API Key 认证。在请求头中添加:
+    ```
+    X-API-Key: your-api-key
+    ```
+    
+    ## 快速开始
+    
+    1. 创建 Partner: `POST /api/agents/partner/setup-auto`
+    2. 雇佣员工: `POST /api/agents/partner/hire`
+    3. 分配任务: `POST /api/tasks`
+    4. 查看工作流: `GET /api/workflows`
+    """,
+    version="0.6.0",
     lifespan=lifespan,
+    openapi_tags=OPENAPI_TAGS,
+    contact={
+        "name": "OpenClaw OPC Team",
+        "url": "https://github.com/ZhaofanQiu/openclaw-opc",
+    },
+    license_info={
+        "name": "MIT",
+        "url": "https://opensource.org/licenses/MIT",
+    },
 )
+app.state.limiter = limiter
 app.state.limiter = limiter
 
 # Rate limit exception handler
