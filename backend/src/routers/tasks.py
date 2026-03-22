@@ -683,6 +683,23 @@ async def report_task_completion(
             is_exact=report.is_exact
         )
         
+        # v0.4.0 - Trigger task dependencies
+        try:
+            from src.services.task_dependency_service import TaskDependencyService
+            dep_service = TaskDependencyService(db)
+            triggered = dep_service.check_and_trigger_dependencies(task_id, report.status)
+            
+            if triggered:
+                logger.info(
+                    "dependencies_triggered",
+                    task_id=task_id,
+                    triggered_count=len(triggered),
+                    triggered_task_ids=[t.id for t in triggered],
+                )
+        except Exception as e:
+            # Don't fail the task report if dependency trigger fails
+            logger.error("dependency_trigger_failed", task_id=task_id, error=str(e))
+        
         return {
             "success": True,
             "task_id": task_id,
