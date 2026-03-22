@@ -8,6 +8,7 @@ from src.models.config import SystemConfig
 from src.models.fuse import BudgetFuseEvent, FuseAction, FuseEventStatus
 from src.models.notification import Notification, NotificationType
 from src.models.skill import Skill, TaskSkillRequirement, agent_skills_table
+from src.models.sub_task import SubTask, SubTaskStatus  # v0.4.0
 from src.models.task import Task, TaskPriority, TaskStatus
 
 __all__ = [
@@ -31,6 +32,8 @@ __all__ = [
     "Skill",
     "TaskSkillRequirement",
     "agent_skills_table",
+    "SubTask",  # v0.4.0
+    "SubTaskStatus",  # v0.4.0
     "Task",
     "TaskPriority",
     "TaskStatus",

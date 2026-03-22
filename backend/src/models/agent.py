@@ -74,6 +74,7 @@ class Agent(Base):
     
     # Relationships
     skills = relationship("Skill", secondary="agent_skills", back_populates="agents")
+    sub_tasks = relationship("SubTask", back_populates="agent")  # v0.4.0 - Sub-task support
     
     @property
     def remaining_budget(self) -> float:
