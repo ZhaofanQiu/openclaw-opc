@@ -17,7 +17,7 @@ from slowapi.util import get_remote_address
 from pydantic import ValidationError
 
 from src.database import init_db, check_database_connection, get_database_info
-from src.routers import agents, agent_interaction_logs, approvals, avatars, budget, communication, config, monitor, notifications, reports, shared_memory, skills, skill_growth, tasks, workflows, workflow_extensions, workflow_templates, agent_skill_paths, workflow_details, websocket, api_keys, share, fuse, async_messages, sub_tasks, task_dependencies, workflows_optimized
+from src.routers import agents, agent_interaction_logs, approvals, avatars, budget, communication, config, monitor, notifications, reports, shared_memory, skills, skill_growth, tasks, workflows, workflow_extensions, workflow_templates, agent_skill_paths, workflow_details, websocket, api_keys, share, fuse, async_messages, sub_tasks, task_dependencies, workflows_optimized, task_assignment, task_steps, manuals
 from src.utils.logging_config import configure_logging, get_logger
 from src.utils.rate_limit import limiter, RATE_LIMITS
 from src.utils.api_auth import require_read_permission
@@ -239,6 +239,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# User context middleware (adds current user to request context)
+from src.middleware.context import UserContextMiddleware
+app.add_middleware(UserContextMiddleware)
+
 # Include routers with optional API key auth
 def get_router_dependencies():
     """Get router dependencies based on auth config."""
@@ -365,6 +369,21 @@ app.include_router(
 # Optimized workflow router (v0.6.1)
 app.include_router(
     workflows_optimized.router,
+    dependencies=get_router_dependencies()
+)
+# Task assignment router (v0.6.2)
+app.include_router(
+    task_assignment.router,
+    dependencies=get_router_dependencies()
+)
+# Task steps router (v0.6.3) - Chat-based collaboration
+app.include_router(
+    task_steps.router,
+    dependencies=get_router_dependencies()
+)
+# Manuals router (v0.6.3) - Task manual system
+app.include_router(
+    manuals.router,
     dependencies=get_router_dependencies()
 )
 # WebSocket router (v0.5.6)

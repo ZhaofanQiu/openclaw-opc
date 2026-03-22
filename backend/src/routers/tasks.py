@@ -587,7 +587,7 @@ async def delete_task(
     Returns:
         Deletion result
     """
-    from src.models import Task, Agent
+    from src.models import Task, Agent, TaskStep, TaskStepMessage
     
     # Get task
     task = db.query(Task).filter(Task.id == task_id).first()
@@ -603,6 +603,14 @@ async def delete_task(
         if agent and agent.current_task_id == task_id:
             agent.current_task_id = None
             agent.status = "idle"
+    
+    # Delete task steps and messages first (cascade delete)
+    steps = db.query(TaskStep).filter(TaskStep.task_id == task_id).all()
+    for step in steps:
+        # Delete messages for this step
+        db.query(TaskStepMessage).filter(TaskStepMessage.step_id == step.id).delete()
+        # Delete the step
+        db.delete(step)
     
     # Delete task
     db.delete(task)

@@ -100,11 +100,19 @@ async def require_api_key(
     # Record usage (async fire-and-forget)
     service.record_usage(key_obj.id)
     
+    # Get user info from key (v1.1 - support user association)
+    user_id = getattr(key_obj, 'user_id', None) or getattr(key_obj, 'created_by', 'system')
+    user_name = getattr(key_obj, 'user_name', None) or key_obj.name
+    
     return {
         "key_id": key_obj.id,
         "name": key_obj.name,
         "permissions": key_obj.permissions.split(","),
         "auth_type": "api_key",
+        # User context for service layer
+        "user_id": user_id,
+        "user_name": user_name,
+        "user_type": "api_key_user",
     }
 
 
@@ -125,6 +133,8 @@ async def get_current_permission(
         key_obj = service.validate_key(api_key)
         if key_obj:
             service.record_usage(key_obj.id)
+            # Get user info from key
+            user_id = getattr(key_obj, 'user_id', None) or getattr(key_obj, 'created_by', 'system')
             return {
                 "key_id": key_obj.id,
                 "name": key_obj.name,
@@ -133,6 +143,10 @@ async def get_current_permission(
                 "employee_id": None,  # API keys don't have employee_id
                 "auth_type": "api_key",
                 "is_admin": "admin" in key_obj.permissions.split(","),
+                # User context
+                "user_id": user_id,
+                "user_name": getattr(key_obj, 'user_name', None) or key_obj.name,
+                "user_type": "api_key_user",
             }
     
     # Try share link
@@ -150,15 +164,21 @@ async def get_current_permission(
                 "employee_id": None,
                 "auth_type": "share_link",
                 "is_admin": False,
+                "user_id": "share_link_user",
+                "user_name": "Share Link User",
+                "user_type": "share_link",
             }
     
-    # No valid auth
+    # No valid auth - return anonymous context
     return {
         "permissions": [],
         "permission": None,
         "employee_id": None,
         "auth_type": None,
         "is_admin": False,
+        "user_id": "anonymous",
+        "user_name": "Anonymous",
+        "user_type": "anonymous",
     }
 
 

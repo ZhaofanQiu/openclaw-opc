@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>任务详情 - OpenClaw OPC</title>
+    <script src="auth.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            color: #1f2937;
+            line-height: 1.6;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        /* Main Layout */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: 300px 1fr 350px;
+            gap: 1.5rem;
+        }
+
+        /* Card Style */
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid #e5e7eb;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card-body {
+            padding: 1.25rem;
+        }
+
+        /* Left Sidebar - Task Info */
+        .task-info .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.375rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 1rem;
+        }
+
+        .status-pending { background: #fef3c7; color: #92400e; }
+        .status-assigned { background: #dbeafe; color: #1e40af; }
+        .status-in_progress { background: #fef3c7; color: #92400e; }
+        .status-completed { background: #d1fae5; color: #065f46; }
+        .status-failed { background: #fee2e2; color: #991b1b; }
+        .status-rework { background: #fce7f3; color: #9d174d; }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+
+        .info-value {
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+
+        /* Steps Timeline */
+        .steps-timeline {
+            position: relative;
+        }
+
+        .step-item {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem 0;
+            position: relative;
+        }
+
+        .step-item:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 40px;
+            bottom: 0;
+            width: 2px;
+            background: #e5e7eb;
+        }
+
+        .step-indicator {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+            flex-shrink: 0;
+            z-index: 1;
+        }
+
+        .step-pending { background: #f3f4f6; color: #9ca3af; }
+        .step-active { background: #3b82f6; color: white; }
+        .step-completed { background: #10b981; color: white; }
+        .step-failed { background: #ef4444; color: white; }
+        .step-rework { background: #ec4899; color: white; }
+
+        .step-content {
+            flex: 1;
+        }
+
+        .step-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .step-meta {
+            font-size: 0.75rem;
+            color: #6b7280;
+        }
+
+        /* Chat Area */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 200px);
+        }
+
+        .chat-header {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-header h2 {
+            font-size: 1.125rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .step-status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+            background: #f9fafb;
+        }
+
+        .message {
+            margin-bottom: 1.5rem;
+            max-width: 80%;
+        }
+
+        .message-own {
+            margin-left: auto;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .message-sender {
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .message-time {
+            font-size: 0.75rem;
+            color: #9ca3af;
+        }
+
+        .message-body {
+            padding: 1rem;
+            border-radius: 12px;
+            font-size: 0.9375rem;
+            line-height: 1.6;
+        }
+
+        .message-other .message-body {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message-own .message-body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message-type-assignment {
+            border-left: 4px solid #3b82f6;
+        }
+
+        .message-type-completion {
+            border-left: 4px solid #10b981;
+        }
+
+        .message-type-rework_notice {
+            border-left: 4px solid #ec4899;
+            background: #fdf2f8 !important;
+        }
+
+        .message-type-failure {
+            border-left: 4px solid #ef4444;
+            background: #fef2f2 !important;
+        }
+
+        .chat-input-area {
+            padding: 1rem 1.25rem;
+            border-top: 1px solid #e5e7eb;
+            background: white;
+        }
+
+        .chat-input-wrapper {
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-end;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            resize: none;
+            font-family: inherit;
+            font-size: 0.9375rem;
+            min-height: 44px;
+            max-height: 120px;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn-send {
+            padding: 0.75rem 1.25rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: opacity 0.2s;
+        }
+
+        .btn-send:hover {
+            opacity: 0.9;
+        }
+
+        .btn-send:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Action Buttons */
+        .actions-panel {
+            padding: 1.25rem;
+        }
+
+        .actions-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .actions-group-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.75rem;
+        }
+
+        .action-btn {
+            width: 100%;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: all 0.2s;
+            font-size: 0.9375rem;
+        }
+
+        .action-btn:hover {
+            background: #f9fafb;
+            border-color: #d1d5db;
+        }
+
+        .action-btn.primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+        }
+
+        .action-btn.primary:hover {
+            opacity: 0.9;
+        }
+
+        .action-btn.success {
+            background: #10b981;
+            color: white;
+            border: none;
+        }
+
+        .action-btn.danger {
+            background: #ef4444;
+            color: white;
+            border: none;
+        }
+
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .action-icon {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            background: rgba(0,0,0,0.1);
+        }
+
+        /* Rating */
+        .rating-stars {
+            display: flex;
+            gap: 0.5rem;
+            margin: 1rem 0;
+        }
+
+        .star {
+            font-size: 1.5rem;
+            color: #d1d5db;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .star:hover,
+        .star.active {
+            color: #fbbf24;
+        }
+
+        /* Loading */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            color: #6b7280;
+        }
+
+        .loading::after {
+            content: '';
+            width: 20px;
+            height: 20px;
+            border: 2px solid #e5e7eb;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 0.5rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1.5rem;
+            color: #6b7280;
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .container {
+                grid-template-columns: 250px 1fr 300px;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            .sidebar {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <h1><i class="fas fa-tasks"></i> 任务详情</h1>
+            <div class="header-actions">
+                <button class="btn btn-secondary" onclick="window.location.href='/dashboard/'">
+                    <i class="fas fa-arrow-left"></i> 返回
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Left Sidebar: Task Info -->
+        <aside class="sidebar">
+            <div class="card task-info">
+                <div class="card-header">
+                    <i class="fas fa-info-circle"></i> 任务信息
+                </div>
+                <div class="card-body" id="task-info-content">
+                    <div class="loading">加载中...</div>
+                </div>
+            </div>
+
+            <div class="card" style="margin-top: 1rem;">
+                <div class="card-header">
+                    <i class="fas fa-stream"></i> 执行步骤
+                </div>
+                <div class="card-body">
+                    <div class="steps-timeline" id="steps-timeline">
+                        <div class="loading">加载中...</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main: Chat Area -->
+        <main class="card chat-container">
+            <div class="chat-header">
+                <h2>
+                    <i class="fas fa-comments"></i>
+                    <span id="current-step-name">加载中...</span>
+                </h2>
+                <span class="step-status-badge" id="current-step-status">-</span>
+            </div>
+            
+            <div class="chat-messages" id="chat-messages">
+                <div class="loading">加载聊天记录...</div>
+            </div>
+
+            <div class="chat-input-area" id="chat-input-area">
+                <div class="chat-input-wrapper">
+                    <textarea class="chat-input" id="message-input" placeholder="输入消息..." rows="1"></textarea>
+                    <button class="btn-send" id="btn-send" onclick="sendMessage()">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Right Sidebar: Actions -->
+        <aside class="sidebar">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-bolt"></i> 操作面板
+                </div>
+                <div class="actions-panel" id="actions-panel">
+                    <div class="loading">加载中...</div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        // Global state
+        const API_BASE = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') 
+            ? 'http://localhost:8080' 
+            : window.location.origin;
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        const taskId = urlParams.get('task');
+        let currentStepId = null;
+        let currentStep = null;
+        let taskData = null;
+        let stepsData = [];
+        let currentUserId = 'user_current'; // TODO: Get from auth
+        let currentUserType = 'user';
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!taskId) {
+                alert('缺少任务ID');
+                window.location.href = '/dashboard/';
+                return;
+            }
+
+            await loadTaskData();
+            await loadSteps();
+            
+            // Setup chat input
+            const input = document.getElementById('message-input');
+            input.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+            });
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+
+            // Auto refresh messages every 10 seconds
+            setInterval(loadMessages, 10000);
+        });
+
+        // Load task data
+        async function loadTaskData() {
+            try {
+                const response = await Auth.authFetch(`${API_BASE}/api/tasks/${taskId}`);
+                if (!response.ok) throw new Error('Failed to load task');
+                taskData = await response.json();
+                renderTaskInfo();
+            } catch (error) {
+                console.error('Error loading task:', error);
+                document.getElementById('task-info-content').innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <p>加载任务信息失败</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Render task info
+        function renderTaskInfo() {
+            const statusMap = {
+                'pending': { text: '待分配', class: 'status-pending' },
+                'assigned': { text: '已分配', class: 'status-assigned' },
+                'in_progress': { text: '进行中', class: 'status-in_progress' },
+                'completed': { text: '已完成', class: 'status-completed' },
+                'failed': { text: '失败', class: 'status-failed' },
+            };
+            const status = statusMap[taskData.status] || { text: taskData.status, class: '' };
+
+            document.getElementById('task-info-content').innerHTML = `
+                <div class="status-badge ${status.class}">
+                    <i class="fas fa-circle" style="font-size: 0.5rem;"></i>
+                    ${status.text}
+                </div>
+                <div class="info-row">
+                    <span class="info-label">任务标题</span>
+                    <span class="info-value">${taskData.title}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">描述</span>
+                    <span class="info-value">${taskData.description || '-'}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">优先级</span>
+                    <span class="info-value">${taskData.priority || 'normal'}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">预算</span>
+                    <span class="info-value">${taskData.estimated_cost || 0} OC币</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">实际消耗</span>
+                    <span class="info-value">${taskData.actual_cost || 0} OC币</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">创建时间</span>
+                    <span class="info-value">${formatDate(taskData.created_at)}</span>
+                </div>
+            `;
+        }
+
+        // Load steps
+        async function loadSteps() {
+            try {
+                const response = await Auth.authFetch(`${API_BASE}/api/task-steps/task/${taskId}`);
+                if (!response.ok) throw new Error('Failed to load steps');
+                const data = await response.json();
+                stepsData = data.steps || [];
+                renderSteps();
+                
+                // Select first active or pending step
+                const activeStep = stepsData.find(s => s.status === 'in_progress') ||
+                                  stepsData.find(s => s.status === 'assigned') ||
+                                  stepsData[0];
+                if (activeStep && !currentStepId) {
+                    selectStep(activeStep.id);
+                }
+            } catch (error) {
+                console.error('Error loading steps:', error);
+                document.getElementById('steps-timeline').innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <p>加载步骤失败</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Render steps timeline
+        function renderSteps() {
+            if (stepsData.length === 0) {
+                document.getElementById('steps-timeline').innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <p>暂无执行步骤</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const statusClassMap = {
+                'pending': 'step-pending',
+                'assigned': 'step-active',
+                'in_progress': 'step-active',
+                'completed': 'step-completed',
+                'failed': 'step-failed',
+                'rework': 'step-rework',
+                'waiting_rework': 'step-rework',
+            };
+
+            const statusIconMap = {
+                'pending': '<i class="fas fa-clock"></i>',
+                'assigned': '<i class="fas fa-user"></i>',
+                'in_progress': '<i class="fas fa-spinner fa-spin"></i>',
+                'completed': '<i class="fas fa-check"></i>',
+                'failed': '<i class="fas fa-times"></i>',
+                'rework': '<i class="fas fa-undo"></i>',
+                'waiting_rework': '<i class="fas fa-hourglass"></i>',
+            };
+
+            document.getElementById('steps-timeline').innerHTML = stepsData.map((step, index) => {
+                const isActive = step.id === currentStepId;
+                const statusClass = statusClassMap[step.status] || 'step-pending';
+                const icon = statusIconMap[step.status] || (index + 1);
+                
+                return `
+                    <div class="step-item ${isActive ? 'active' : ''}" onclick="selectStep('${step.id}')" style="cursor: pointer;">
+                        <div class="step-indicator ${statusClass}">
+                            ${icon}
+                        </div>
+                        <div class="step-content">
+                            <div class="step-title">${step.step_name}</div>
+                            <div class="step-meta">
+                                ${step.executor_id ? '执行者: ' + step.executor_id.substring(0, 8) : '待分配'}
+                                ${step.rework_count > 0 ? ` · 返工${step.rework_count}次` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Select step
+        async function selectStep(stepId) {
+            currentStepId = stepId;
+            currentStep = stepsData.find(s => s.id === stepId);
+            
+            // Update UI
+            renderSteps();
+            
+            if (currentStep) {
+                document.getElementById('current-step-name').textContent = currentStep.step_name;
+                
+                const statusMap = {
+                    'pending': '待分配',
+                    'assigned': '已分配',
+                    'in_progress': '进行中',
+                    'completed': '已完成',
+                    'failed': '失败',
+                    'rework': '返工中',
+                    'waiting_rework': '等待返工',
+                };
+                document.getElementById('current-step-status').textContent = statusMap[currentStep.status] || currentStep.status;
+                document.getElementById('current-step-status').className = 'step-status-badge status-' + currentStep.status;
+                
+                renderActions();
+                await loadMessages();
+            }
+        }
+
+        // Load messages
+        async function loadMessages() {
+            if (!currentStepId) return;
+            
+            try {
+                const response = await Auth.authFetch(`${API_BASE}/api/task-steps/${currentStepId}?reader_id=${currentUserId}`);
+                if (!response.ok) throw new Error('Failed to load messages');
+                const data = await response.json();
+                renderMessages(data.messages || []);
+            } catch (error) {
+                console.error('Error loading messages:', error);
+            }
+        }
+
+        // Render messages
+        function renderMessages(messages) {
+            const container = document.getElementById('chat-messages');
+            
+            if (messages.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-comments"></i>
+                        <p>暂无消息</p>
+                        <p style="font-size: 0.875rem; margin-top: 0.5rem;">任务分配后将显示在这里</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = messages.map(msg => {
+                const isOwn = msg.sender_id === currentUserId;
+                const typeClass = `message-type-${msg.message_type}`;
+                
+                return `
+                    <div class="message ${isOwn ? 'message-own' : 'message-other'} ${typeClass}">
+                        <div class="message-header">
+                            <div class="message-avatar">${msg.sender_name[0]?.toUpperCase() || '?'}</div>
+                            <span class="message-sender">${msg.sender_name}</span>
+                            <span class="message-time">${formatDateTime(msg.created_at)}</span>
+                        </div>
+                        <div class="message-body">${escapeHtml(msg.content)}</div>
+                    </div>
+                `;
+            }).join('');
+            
+            // Scroll to bottom
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Send message
+        async function sendMessage() {
+            const input = document.getElementById('message-input');
+            const content = input.value.trim();
+            
+            if (!content || !currentStepId) return;
+            
+            const btn = document.getElementById('btn-send');
+            btn.disabled = true;
+            
+            try {
+                const response = await Auth.authFetch(`${API_BASE}/api/task-steps/${currentStepId}/messages`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sender_id: currentUserId,
+                        sender_type: currentUserType,
+                        sender_name: '我',
+                        content: content,
+                        message_type: 'reply'
+                    })
+                });
+                
+                if (response.ok) {
+                    input.value = '';
+                    input.style.height = 'auto';
+                    await loadMessages();
+                } else {
+                    const error = await response.json();
+                    alert('发送失败: ' + (error.detail || '未知错误'));
+                }
+            } catch (error) {
+                console.error('Error sending message:', error);
+                alert('发送失败: ' + error.message);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        // Render action buttons
+        function renderActions() {
+            if (!currentStep) return;
+            
+            const container = document.getElementById('actions-panel');
+            const isExecutor = currentUserId === currentStep.executor_id;
+            const isAssigner = currentUserId === currentStep.assigner_id;
+            
+            let html = '';
+            
+            // 执行者操作
+            if (isExecutor || currentUserType === 'user') {
+                html += '<div class="actions-group">';
+                html += '<div class="actions-group-title">执行操作</div>';
+                
+                if (currentStep.status === 'assigned') {
+                    html += `
+                        <button class="action-btn primary" onclick="startExecution()">
+                            <span class="action-icon"><i class="fas fa-play"></i></span>
+                            开始执行
+                        </button>
+                    `;
+                }
+                
+                if (currentStep.status === 'in_progress') {
+                    html += `
+                        <button class="action-btn success" onclick="completeStep()">
+                            <span class="action-icon"><i class="fas fa-check"></i></span>
+                            完成任务
+                        </button>
+                        <button class="action-btn" onclick="requestRework()" ${!currentStep.prev_step_id ? 'disabled' : ''}>
+                            <span class="action-icon"><i class="fas fa-undo"></i></span>
+                            请求返工
+                        </button>
+                        <button class="action-btn danger" onclick="failStep()">
+                            <span class="action-icon"><i class="fas fa-times"></i></span>
+                            报告失败
+                        </button>
+                    `;
+                }
+                
+                html += '</div>';
+            }
+            
+            // 发布者操作
+            if ((isAssigner || currentUserType === 'user') && currentStep.status === 'completed' && !currentStep.settled) {
+                html += '<div class="actions-group">';
+                html += '<div class="actions-group-title">评价结算</div>';
+                html += `
+                    <div style="padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 0.75rem;">
+                        <div style="font-size: 0.875rem; margin-bottom: 0.5rem;">评分</div>
+                        <div class="rating-stars" id="rating-stars">
+                            ${[1,2,3,4,5].map(i => `<span class="star" onclick="setRating(${i})">★</span>`).join('')}
+                        </div>
+                        <textarea id="feedback-text" placeholder="输入反馈（可选）..." style="width: 100%; padding: 0.5rem; border: 1px solid #e5e7eb; border-radius: 6px; resize: vertical; margin-top: 0.5rem; font-family: inherit;"></textarea>
+                    </div>
+                    <button class="action-btn success" onclick="settleStep()">
+                        <span class="action-icon"><i class="fas fa-check-double"></i></span>
+                        确认结算
+                    </button>
+                `;
+                html += '</div>';
+            }
+            
+            // 任务信息
+            html += '<div class="actions-group">';
+            html += '<div class="actions-group-title">步骤信息</div>';
+            html += `
+                <div style="font-size: 0.875rem; color: #6b7280; padding: 0.5rem 0;">
+                    <div style="margin-bottom: 0.5rem;"><strong>状态:</strong> ${currentStep.status}</div>
+                    <div style="margin-bottom: 0.5rem;"><strong>预算:</strong> ${currentStep.budget_tokens} tokens</div>
+                    <div style="margin-bottom: 0.5rem;"><strong>消耗:</strong> ${currentStep.actual_tokens} tokens</div>
+                    ${currentStep.rework_count > 0 ? `<div style="margin-bottom: 0.5rem;"><strong>返工次数:</strong> ${currentStep.rework_count}/${currentStep.max_rework}</div>` : ''}
+                    ${currentStep.settled ? `<div style="margin-bottom: 0.5rem;"><strong>评分:</strong> ${currentStep.score}/5</div>` : ''}
+                </div>
+            `;
+            html += '</div>';
+            
+            container.innerHTML = html || '<p style="color: #6b7280; text-align: center;">暂无可用操作</p>';
+        }
+
+        // Action handlers
+        async function startExecution() {
+            if (!confirm('确认开始执行此任务？')) return;
+            
+            try {
+                const response = await Auth.authFetch(`${API_BASE}/api/task-steps/${currentStepId}/start`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    await loadSteps();
+                    await selectStep(currentStepId);
+                } else {
+                    const error = await response.json();
+                    alert('操作失败: ' + (error.detail || '未知错误'));
+                }
+            } catch (error) {
+                alert('操作失败: ' + error.message);
+            }
+        }
+
+        async function completeStep() {
+            const result = prompt('请输入完成结果摘要：');
+            if (!result) return;
+            
+            try {
+                const response = await Auth.authFetch(`${API_BASE}/api/task-steps/${currentStepId}/complete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        result_summary: result,
+                        output_result: {}
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    await loadSteps();
+                    
+                    if (data.is_final) {
+                        alert('🎉 任务全部完成！请等待发布者评价。');
+                    } else {
+                        alert('✅ 步骤完成，已推进到下一步。');
+                    }
+                    await selectStep(currentStepId);
+                } else {
+                    const error = await response.json();
+                    alert('操作失败: ' + (error.detail || '未知错误'));
+                }
+            } catch (error) {
+                alert('操作失败: ' + error.message);
+            }
+        }
+
+        async function requestRework() {
+            const reason = prompt('请输入返工原因：');
+            if (!reason) return;
+            
+            const suggestions = prompt('请输入改进建议（可选）：') || '';
+            
+            try {
+                const response = await Auth.authFetch(`${API_BASE}/api/task-steps/${currentStepId}/rework`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        rework_reason: reason,
+                        suggestions: suggestions,
+                        requester_id: currentUserId,
+                        requester_type: currentUserType
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('✅ 返工请求已发送');
+                    await loadSteps();
+                    await selectStep(currentStepId);
+                } else {
+                    const error = await response.json();
+                    alert('操作失败: ' + (error.detail || '未知错误'));
+                }
+            } catch (error) {
+                alert('操作失败: ' + error.message);
+            }
+        }
+
+        async function failStep() {
+            const reason = prompt('请输入失败原因：');
+            if (!reason) return;
+            
+            if (!confirm('确认报告任务失败？这将暂停整个任务流。')) return;
+            
+            try {
+                const response = await Auth.authFetch(`${API_BASE}/api/task-steps/${currentStepId}/fail`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        fail_reason: reason
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('⚠️ 任务已标记为失败');
+                    await loadSteps();
+                    await selectStep(currentStepId);
+                } else {
+                    const error = await response.json();
+                    alert('操作失败: ' + (error.detail || '未知错误'));
+                }
+            } catch (error) {
+                alert('操作失败: ' + error.message);
+            }
+        }
+
+        let currentRating = 0;
+
+        function setRating(rating) {
+            currentRating = rating;
+            const stars = document.querySelectorAll('#rating-stars .star');
+            stars.forEach((star, index) => {
+                star.classList.toggle('active', index < rating);
+            });
+        }
+
+        async function settleStep() {
+            if (currentRating === 0) {
+                alert('请先选择评分');
+                return;
+            }
+            
+            const feedback = document.getElementById('feedback-text')?.value || '';
+            
+            try {
+                const response = await Auth.authFetch(`${API_BASE}/api/task-steps/${currentStepId}/settle`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        score: currentRating,
+                        feedback: feedback,
+                        settled_by: currentUserId
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('✅ 评价已提交，任务结算完成！');
+                    await loadSteps();
+                    await selectStep(currentStepId);
+                } else {
+                    const error = await response.json();
+                    alert('操作失败: ' + (error.detail || '未知错误'));
+                }
+            } catch (error) {
+                alert('操作失败: ' + error.message);
+            }
+        }
+
+        // Utilities
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('zh-CN');
+        }
+
+        function formatDateTime(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            return date.toLocaleString('zh-CN', { 
+                month: 'short', 
+                day: 'numeric', 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

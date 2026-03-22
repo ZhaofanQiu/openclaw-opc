@@ -17,6 +17,7 @@ from src.services.communication_service import (
     MessageStatus
 )
 from src.utils.rate_limit import limiter, RATE_LIMITS
+from src.utils.current_user import get_user_id_safe
 
 router = APIRouter(prefix="/api/communication", tags=["Agent Communication"])
 
@@ -72,8 +73,8 @@ async def send_message(
     
     Creates a pending message that will be delivered via Partner Agent.
     """
-    # TODO: Get sender_id from authenticated user
-    sender_id = "system"  # Placeholder
+    # Get sender_id from authenticated user context
+    sender_id = get_user_id_safe(fallback="system")
     
     service = CommunicationService(db)
     
@@ -116,7 +117,7 @@ async def broadcast_message(
     
     Creates individual messages for each recipient.
     """
-    sender_id = "system"  # TODO: Get from auth
+    sender_id = get_user_id_safe(fallback="system")
     
     service = CommunicationService(db)
     

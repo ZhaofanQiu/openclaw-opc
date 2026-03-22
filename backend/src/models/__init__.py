@@ -14,6 +14,7 @@ from src.models.skill_growth import AgentSkillGrowth, SkillGrowthHistory, SKILL_
 from src.models.sub_task import SubTask, SubTaskStatus
 from src.models.task import Task, TaskPriority, TaskStatus
 from src.models.task_dependency import TaskDependency, TaskDependencyStatus
+from src.models.task_step import TaskStep, TaskStepMessage, TaskStepStatus, TaskMessageType
 from src.models.workflow_engine import (
     WorkflowTemplate, WorkflowInstance, WorkflowStep,
     WorkflowHistory, WorkflowReworkRecord,
@@ -25,7 +26,7 @@ from src.models.workflow_template_v2 import (
 )
 from src.models.workflow_notification import (
     WorkflowNotification, NotificationSubscription,
-    NotificationType, NotificationPriority, NotificationChannel
+    NotificationType as WorkflowNotificationType, NotificationPriority, NotificationChannel
 )
 
 __all__ = [
@@ -65,6 +66,11 @@ __all__ = [
     "TaskStatus",
     "TaskDependency",
     "TaskDependencyStatus",
+    # v0.5.0 - Chat-based collaboration
+    "TaskStep",
+    "TaskStepMessage",
+    "TaskStepStatus",
+    "TaskMessageType",
     "WorkflowTemplate",
     "WorkflowInstance",
     "WorkflowStep",
@@ -80,4 +86,7 @@ __all__ = [
     "TemplateVisibility",
     "WorkflowNotification",
     "NotificationSubscription",
+    "WorkflowNotificationType",
+    "NotificationPriority",
+    "NotificationChannel",
 ]

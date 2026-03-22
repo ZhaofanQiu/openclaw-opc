@@ -143,7 +143,7 @@ class AgentService:
             {
                 "id": agent["id"],
                 "name": agent["name"],
-                "model": agent.get("model", "default"),
+                "model": agent.get("model") or "kimi-coding/k2p5",
             }
             for agent in all_agents
             if agent["id"] not in bound_ids

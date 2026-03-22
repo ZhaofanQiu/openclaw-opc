@@ -152,10 +152,11 @@ class TaskExecutionService:
         except:
             pass  # Skills not available, skip
         
-        # Handle due date safely
+        # Handle due date safely - Task model doesn't have due_date field
+        # Use is_overdue flag instead
         try:
-            if hasattr(task, 'due_date') and task.due_date:
-                message_parts.append(f"**截止日期**: {task.due_date.strftime('%Y-%m-%d %H:%M')}")
+            if hasattr(task, 'is_overdue') and task.is_overdue == "true":
+                message_parts.append(f"**⚠️ 注意**: 此任务已逾期")
         except:
             pass
         

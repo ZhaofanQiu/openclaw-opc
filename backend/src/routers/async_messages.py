@@ -109,6 +109,20 @@ async def process_message_async(message_id: str, db_session=None):
                     tokens_output=result.get("tokens_output", 0),
                 )
                 logger.info(f"Message {message_id} received response")
+                
+                # 如果是任务类型消息，解析结果
+                if message.message_type == "task":
+                    try:
+                        from src.services.task_response_parser import TaskResultHandler
+                        handler = TaskResultHandler(db)
+                        task_result = handler.process_agent_response(
+                            task_id=message.related_task_id,
+                            agent_response=result.get("text"),
+                            message_id=message_id
+                        )
+                        logger.info(f"Task {message.related_task_id} result: {task_result.get('status')}")
+                    except Exception as e:
+                        logger.error(f"Failed to parse task result: {e}")
             else:
                 # 发送成功但没有回复内容
                 service.update_status(

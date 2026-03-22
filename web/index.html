@@ -2006,10 +2006,13 @@
 
         <!-- Partner Floating Chat Widget -->
         <div class="partner-widget" id="partner-widget">
-            <div class="partner-widget-header" id="partner-widget-header" onclick="togglePartnerChat()">
-                <div class="partner-widget-avatar" id="partner-widget-avatar">👑</div>
-                <div class="partner-widget-status" id="partner-widget-status">💤 点击唤醒 Partner</div>
-                <div class="partner-widget-toggle" id="partner-widget-toggle">▲</div>
+            <div class="partner-widget-header" id="partner-widget-header">
+                <div class="partner-widget-avatar" id="partner-widget-avatar" onclick="togglePartnerChat()">👑</div>
+                <div class="partner-widget-status" id="partner-widget-status" onclick="togglePartnerChat()" style="flex: 1; cursor: pointer;">💤 点击唤醒 Partner</div>
+                <div class="partner-widget-actions" style="display: flex; gap: 8px;">
+                    <button class="partner-widget-minimize" id="partner-widget-minimize" onclick="minimizeChat(event)" title="收起" style="background: none; border: none; color: #888; cursor: pointer; font-size: 16px; padding: 4px 8px;">−</button>
+                    <div class="partner-widget-toggle" id="partner-widget-toggle">▲</div>
+                </div>
             </div>
             <div class="partner-chat-container" id="partner-chat-container" style="display: none;">
                 <div class="partner-chat-messages" id="partner-chat-messages">
@@ -3260,13 +3263,14 @@
                     }
 
                     return `
-                        <div class="task-item">
+                        <div class="task-item" onclick="window.location.href='task-detail.html?task=${task.id}'" style="cursor: pointer;">
                             <div class="task-header">
                                 <div class="task-title">${task.title}</div>
                                 <div style="display: flex; align-items: center;">
                                     <span class="task-status ${statusClass}">${statusText}</span>
                                     ${executionBadge}
-                                    ${canAssign ? `<button class="assign-btn" onclick="openAssignModal('${task.id}')">分配</button>` : ''}
+                                    ${canAssign ? `<button class="assign-btn" onclick="event.stopPropagation(); openAssignModal('${task.id}')">分配</button>` : ''}
+                                    <button class="assign-btn" onclick="event.stopPropagation(); viewTaskManual('${task.id}')" style="background: #3b82f6;" title="查看任务手册">📋</button>
                                     ${resendButton}
                                     ${fetchExactButton}
                                     <button class="assign-btn" onclick="event.stopPropagation(); confirmDeleteTask('${task.id}', '${task.title.replace(/'/g, "\\'")}')" style="background: #ef4444; margin-left: 8px;" title="删除任务">🗑️</button>
@@ -3902,11 +3906,24 @@
                 container.style.display = 'flex';
                 toggle.classList.add('open');
                 partnerChatOpen = true;
+                // Reset auto-sleep timer when opening chat
+                resetAutoSleepTimer();
             } else {
                 container.style.display = 'none';
                 toggle.classList.remove('open');
                 partnerChatOpen = false;
             }
+        }
+
+        // Minimize chat without affecting Partner state
+        function minimizeChat(event) {
+            event.stopPropagation(); // Prevent triggering parent click
+            const container = document.getElementById('partner-chat-container');
+            const toggle = document.getElementById('partner-widget-toggle');
+            container.style.display = 'none';
+            toggle.classList.remove('open');
+            partnerChatOpen = false;
+            // Note: Don't change Partner state, just hide the chat
         }
 
         async function wakePartner() {
@@ -4042,23 +4059,13 @@
 
             if (!message) return;
 
-            // Check if partner is awake, if not auto-wake
-            if (partnerState !== 'awake') {
-                await wakePartner();
-                if (partnerState !== 'awake') {
-                    addSystemMessage('Partner 唤醒失败，请稍后重试');
-                    return;
-                }
-            }
-
-            // Add user message
-            addUserMessage(message);
+            // Clear input immediately for better UX
             input.value = '';
 
-            // Reset auto-sleep timer
-            resetAutoSleepTimer();
+            // Add user message immediately
+            addUserMessage(message);
 
-            // Show pending status
+            // Show pending status immediately (this gives user instant feedback)
             const container = document.getElementById('partner-chat-messages');
             const pendingId = 'pending-' + Date.now();
             const pendingDiv = document.createElement('div');
@@ -4074,6 +4081,25 @@
             `;
             container.appendChild(pendingDiv);
             container.scrollTop = container.scrollHeight;
+
+            // Check if partner is awake, wake if needed (happens in background after UI update)
+            if (partnerState !== 'awake') {
+                // Update pending message to show waking status
+                pendingDiv.querySelector('div:last-child').textContent = '⏳ 正在唤醒 Partner...';
+                
+                const wakeSuccess = await wakePartner();
+                if (!wakeSuccess) {
+                    pendingDiv.innerHTML = `
+                        <div style="color: #f87171; font-size: 14px;">❌ Partner 唤醒失败</div>
+                    `;
+                    return;
+                }
+                // Partner is now awake, continue to send
+                pendingDiv.querySelector('div:last-child').textContent = '⏳ 已发送，等待回复';
+            }
+
+            // Reset auto-sleep timer
+            resetAutoSleepTimer();
 
             // Send via async message API
             try {
@@ -4116,14 +4142,27 @@
         function handlePartnerMessageUpdate(status, msg, pendingEl, context) {
             if (status === 'responded') {
                 // Got response!
+                // Format time safely
+                let timeStr = '';
+                try {
+                    if (msg.responded_at && msg.responded_at !== 'null' && msg.responded_at !== 'undefined') {
+                        const date = new Date(msg.responded_at);
+                        if (!isNaN(date.getTime())) {
+                            timeStr = date.toLocaleString();
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Invalid responded_at:', msg.responded_at);
+                }
+                
                 if (pendingEl && pendingEl.parentNode) {
                     pendingEl.innerHTML = `
-                        <div class="partner-chat-message partner">${msg.response_content}</div>
-                        <div style="font-size: 11px; color: #666; margin-top: 4px;">${new Date(msg.responded_at).toLocaleString()}</div>
+                        <div class="partner-chat-message partner">${msg.response_content || msg.content}</div>
+                        ${timeStr ? `<div style="font-size: 11px; color: #666; margin-top: 4px;">${timeStr}</div>` : ''}
                     `;
                 } else {
                     // If element not found (user switched views), add as new
-                    addPartnerMessage(msg.response_content);
+                    addPartnerMessage(msg.response_content || msg.content);
                 }
                 
                 // Show notification if chat closed
@@ -4515,7 +4554,12 @@
 
         async function assignTaskGlobally(taskId) {
             try {
-                const response = await Auth.authFetch(`${API_BASE}/api/agents/partner/assign/${taskId}`, {
+                // Ensure PARTNER_ID is available
+                if (!PARTNER_ID) {
+                    await loadPartnerId();
+                }
+                
+                const response = await Auth.authFetch(`${API_BASE}/api/agents/partner/assign/${taskId}?partner_id=${PARTNER_ID}`, {
                     method: 'POST'
                 });
 
@@ -4886,6 +4930,12 @@
             } catch (error) {
                 console.error('Error marking all notifications read:', error);
             }
+        }
+
+        // View task manual
+        function viewTaskManual(taskId) {
+            // Open manual in new tab
+            window.open(`dashboard/manual.html?task_id=${taskId}`, '_blank');
         }
 
         // Manual assignment

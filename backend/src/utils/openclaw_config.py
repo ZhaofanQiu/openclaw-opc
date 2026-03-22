@@ -317,3 +317,94 @@ def send_message_to_agent(agent_id: str, message: str, timeout: int = 30) -> Dic
         )
         
         return {}
+
+
+def ensure_partner_agent_exists() -> Optional[Dict]:
+    """
+    Ensure Partner Agent exists in OpenClaw config.
+    
+    If no Partner Agent exists, creates a new one with default configuration.
+    
+    Returns:
+        Dict with agent info if exists or created successfully, None otherwise
+    """
+    import uuid
+    
+    agents = read_openclaw_agents()
+    
+    # Look for existing Partner agent (position_level 5 or name contains "Partner")
+    for agent in agents:
+        if "partner" in agent.get("id", "").lower() or "partner" in agent.get("name", "").lower():
+            return agent
+    
+    # If no Partner agent found, try to use default agent
+    default_agent = get_default_agent()
+    if default_agent:
+        return default_agent
+    
+    # No agents exist at all - return None (cannot auto-create without openclaw CLI)
+    return None
+
+
+def create_partner_agent(agent_name: str = "OPC Partner") -> Optional[Dict]:
+    """
+    Create a new OpenClaw Agent for OPC Partner.
+    
+    This creates a dedicated Agent with isolated workspace and memory.
+    
+    Args:
+        agent_name: Name for the Partner Agent
+    
+    Returns:
+        Dict with agent info if created successfully, None otherwise
+    """
+    import uuid
+    import os
+    
+    try:
+        # Generate unique agent ID
+        agent_id = f"opc_partner_{uuid.uuid4().hex[:8]}"
+        
+        # Agent directory
+        state_dir = os.getenv("OPENCLAW_STATE_DIR", os.path.expanduser("~/.openclaw"))
+        agent_dir = os.path.join(state_dir, "agents", agent_id, "agent")
+        
+        # Create directory structure
+        os.makedirs(os.path.join(agent_dir, "memory"), exist_ok=True)
+        os.makedirs(os.path.join(agent_dir, "workspace"), exist_ok=True)
+        
+        # Create IDENTITY.md
+        identity_content = f"""# IDENTITY.md - Who Am I?
+
+- **Name:** {agent_name}
+- **Creature:** AI Assistant
+- **Vibe:** CEO Assistant - Professional, helpful, and proactive
+
+## Role
+You are the Partner Agent for OpenClaw OPC (One-Person Company).
+You help manage AI Agents as employees, coordinate tasks, and provide insights.
+
+## Responsibilities
+1. Welcome users and provide company status
+2. Help hire new employees (Agents)
+3. Assist with task assignment and management
+4. Generate daily reports and insights
+5. Answer questions about the company
+"""
+        
+        with open(os.path.join(agent_dir, "IDENTITY.md"), "w") as f:
+            f.write(identity_content)
+        
+        # Return agent info
+        return {
+            "id": agent_id,
+            "name": agent_name,
+            "workspace": os.path.join(state_dir, "agents", agent_id, "workspace"),
+            "agent_dir": agent_dir,
+            "model": "default",
+            "is_default": False,
+        }
+        
+    except Exception as e:
+        print(f"[create_partner_agent] Failed to create agent: {e}")
+        return None

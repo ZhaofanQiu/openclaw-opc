@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from src.models import Agent, AgentStatus, Task, TaskStatus
 from src.utils.logging_config import get_logger
+from src.utils.current_user import get_user_id_safe
 
 logger = get_logger(__name__)
 
@@ -94,6 +95,66 @@ class TaskService:
         
         self.db.commit()
         self.db.refresh(task)
+        
+        # Create task step for chat-based collaboration (v0.6.3)
+        try:
+            from src.services.task_step_service import TaskStepService
+            step_service = TaskStepService(self.db)
+            
+            # Get current user ID, fallback to 'system' if not authenticated
+            assigner_id = get_user_id_safe(fallback="system")
+            
+            step = step_service.create_step(
+                task_id=task.id,
+                step_index=0,
+                step_name="执行任务",
+                step_description=task.description or "",
+                assigner_id=assigner_id,  # Use authenticated user ID
+                assigner_type="user",
+                assigner_name="用户",  # TODO: Get actual user name
+                executor_id=agent.id,
+                budget_tokens=int(task.estimated_cost * 10),  # Convert OC币 to tokens estimate
+            )
+            # Auto assign the step with task content
+            step_service.assign_step(
+                step_id=step.id,
+                assignment_content=f"📋 任务：{task.title}\n\n{task.description or ''}\n\n请开始执行此任务。",
+                sender_type="user",
+                sender_id="system",
+                sender_name="OPC系统",
+            )
+            logger.info("task_step_created", task_id=task.id, step_id=step.id)
+            
+            # Generate task manual (v0.6.3 - Manual system)
+            try:
+                from src.services.manual_service import ManualService
+                manual_service = ManualService(self.db)
+                manual = manual_service.auto_generate_for_task(task)
+                
+                # Store manual content in task's execution_context
+                task.set_execution_context({
+                    "manual": {
+                        "template_id": manual.template_id,
+                        "content": manual.content,
+                        "constraints": manual.constraints,
+                        "expected_output": manual.expected_output,
+                        "generated_at": datetime.utcnow().isoformat(),
+                    }
+                })
+                self.db.commit()
+                
+                logger.info(
+                    "task_manual_generated",
+                    task_id=task.id,
+                    template_id=manual.template_id,
+                )
+            except Exception as e:
+                logger.error("failed_to_generate_manual", task_id=task.id, error=str(e))
+                # Don't fail the assignment if manual generation fails
+                
+        except Exception as e:
+            logger.error("failed_to_create_task_step", task_id=task.id, error=str(e))
+            # Don't fail the assignment if step creation fails
         
         # Create notification
         from src.services.notification_service import NotificationService

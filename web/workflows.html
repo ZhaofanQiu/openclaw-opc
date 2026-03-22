@@ -954,6 +954,7 @@
             const title = document.getElementById('workflow-title').value;
             const description = document.getElementById('workflow-desc').value;
             const templateId = document.getElementById('workflow-template').value;
+            const totalBudget = document.getElementById('workflow-budget')?.value || 1000;
             
             if (!title) {
                 alert('请输入工作流标题');
@@ -961,12 +962,14 @@
             }
             
             try {
-                const response = await fetch('/api/workflows', {
+                const createdBy = getCurrentUserId() || 'partner';
+                const response = await Auth.authFetch(`/api/workflows?created_by=${createdBy}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         title,
                         description,
+                        total_budget: parseFloat(totalBudget) || 1000,
                         template_id: templateId || undefined
                     })
                 });
@@ -977,10 +980,12 @@
                     document.getElementById('workflow-title').value = '';
                     document.getElementById('workflow-desc').value = '';
                 } else {
-                    alert('创建工作流失败');
+                    const error = await response.json();
+                    alert('创建工作流失败: ' + (error.detail || '未知错误'));
                 }
             } catch (error) {
                 console.error('Failed to create workflow:', error);
+                alert('创建工作流失败: ' + error.message);
             }
         }
         

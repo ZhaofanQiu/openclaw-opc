@@ -173,7 +173,7 @@ class WorkflowEngineService:
     def _match_agent_for_step(self, step_plan: Dict, workflow: WorkflowInstance) -> Optional[Agent]:
         """为步骤匹配员工"""
         step_type = step_plan["step_type"]
-        candidates = self.db.query(Agent).filter(Agent.is_active == "true").all()
+        candidates = self.db.query(Agent).filter(Agent.is_bound == "true").all()
         
         if step_type == StepType.PLAN.value:
             for agent in candidates:

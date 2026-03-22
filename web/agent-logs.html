@@ -625,7 +625,7 @@
         // Load Agents for filter
         async function loadAgents() {
             try {
-                const response = await fetch('/api/agents');
+                const response = await authFetch('/api/agents');
                 allAgents = await response.json();
                 
                 const select = document.getElementById('filter-agent');
@@ -656,7 +656,7 @@
                 if (type) params.append('interaction_type', type);
                 if (direction) params.append('direction', direction);
                 
-                const response = await fetch(`/api/agent-logs?${params}`);
+                const response = await authFetch(`/api/agent-logs?${params}`);
                 const data = await response.json();
                 
                 totalLogs = data.total;
@@ -754,7 +754,7 @@
         // Load Stats
         async function loadStats() {
             try {
-                const response = await fetch('/api/agent-logs/stats');
+                const response = await authFetch('/api/agent-logs/stats');
                 const stats = await response.json();
                 
                 document.getElementById('stat-total').textContent = stats.total_logs;
@@ -783,7 +783,7 @@
             if (!confirm('确定要清空所有交互日志吗？此操作不可恢复。')) return;
             
             try {
-                const response = await fetch('/api/agent-logs', {
+                const response = await authFetch('/api/agent-logs', {
                     method: 'DELETE'
                 });
                 
@@ -802,7 +802,7 @@
         // Export Logs
         async function exportLogs() {
             try {
-                const response = await fetch('/api/agent-logs/export?format=json');
+                const response = await authFetch('/api/agent-logs/export?format=json');
                 const blob = await response.blob();
                 
                 const url = window.URL.createObjectURL(blob);

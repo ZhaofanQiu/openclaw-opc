@@ -77,6 +77,9 @@ class Task(Base):
     sent_to_agent_at = Column(DateTime, nullable=True)  # When task was sent to agent
     execution_session_id = Column(String, nullable=True)  # OpenClaw session ID
     token_used = Column(Integer, default=0)  # Actual tokens consumed (reported by agent)
+    
+    # Execution context (v0.6.3 - Manual system)
+    execution_context = Column(Text, default="")  # JSON string storing manual, skills, etc.
 
     # v0.4.0 - Sub-task support
     is_parent_task = Column(String, default="false")  # "true" if this task has sub-tasks
@@ -95,6 +98,9 @@ class Task(Base):
                                         back_populates="downstream_task")
     # v0.4.0 - Approval requests
     approval_requests = relationship("ApprovalRequest", back_populates="task", cascade="all, delete-orphan")
+    
+    # v0.5.0 - Task steps (chat-based collaboration)
+    steps = relationship("TaskStep", back_populates="task", cascade="all, delete-orphan", order_by="TaskStep.step_index")
 
     @property
     def budget_usage_percentage(self) -> float:
@@ -107,3 +113,18 @@ class Task(Base):
     def total_tokens(self) -> int:
         """Get total tokens consumed (input + output)."""
         return self.actual_tokens_input + self.actual_tokens_output
+    
+    def get_execution_context(self) -> dict:
+        """Get execution context as dict."""
+        if not self.execution_context:
+            return {}
+        try:
+            import json
+            return json.loads(self.execution_context)
+        except:
+            return {}
+    
+    def set_execution_context(self, context: dict):
+        """Set execution context from dict."""
+        import json
+        self.execution_context = json.dumps(context, ensure_ascii=False)

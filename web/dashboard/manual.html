@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>任务手册 | OpenClaw OPC</title>
+    <link rel="stylesheet" href="/dashboard/css/common.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 24px 20px;
+        }
+
+        /* 头部 */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #334155;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header h1::before {
+            content: '📋';
+            font-size: 28px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .btn-secondary {
+            background: #334155;
+            color: #e2e8f0;
+        }
+
+        .btn-secondary:hover {
+            background: #475569;
+        }
+
+        /* 元信息卡片 */
+        .meta-card {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #334155;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .meta-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .meta-label {
+            font-size: 12px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .meta-value {
+            font-size: 14px;
+            color: #e2e8f0;
+            font-weight: 500;
+        }
+
+        .meta-value.tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            background: #334155;
+            border-radius: 20px;
+            font-size: 12px;
+            width: fit-content;
+        }
+
+        .meta-value.tag.code-review { background: #1e3a5f; color: #60a5fa; }
+        .meta-value.tag.research { background: #312e81; color: #a78bfa; }
+        .meta-value.tag.writing { background: #14532d; color: #4ade80; }
+        .meta-value.tag.data-analysis { background: #7c2d12; color: #fb923c; }
+        .meta-value.tag.generic { background: #374151; color: #9ca3af; }
+
+        /* 手册内容 */
+        .manual-content {
+            background: #1e293b;
+            border-radius: 12px;
+            border: 1px solid #334155;
+            overflow: hidden;
+        }
+
+        .manual-header {
+            padding: 16px 20px;
+            background: #252f47;
+            border-bottom: 1px solid #334155;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .manual-header h2 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #f1f5f9;
+        }
+
+        .manual-body {
+            padding: 24px;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        .manual-body h1 {
+            font-size: 22px;
+            color: #f8fafc;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #3b82f6;
+        }
+
+        .manual-body h2 {
+            font-size: 18px;
+            color: #e2e8f0;
+            margin: 28px 0 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #334155;
+        }
+
+        .manual-body h3 {
+            font-size: 16px;
+            color: #cbd5e1;
+            margin: 20px 0 12px;
+        }
+
+        .manual-body p {
+            margin-bottom: 12px;
+            color: #cbd5e1;
+        }
+
+        .manual-body ul, .manual-body ol {
+            margin: 12px 0 16px 20px;
+        }
+
+        .manual-body li {
+            margin-bottom: 8px;
+            color: #cbd5e1;
+        }
+
+        .manual-body code {
+            background: #0f172a;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Fira Code', monospace;
+            font-size: 13px;
+            color: #f472b6;
+        }
+
+        .manual-body pre {
+            background: #0f172a;
+            padding: 16px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 16px 0;
+        }
+
+        .manual-body pre code {
+            background: transparent;
+            padding: 0;
+            color: #e2e8f0;
+        }
+
+        .manual-body blockquote {
+            border-left: 4px solid #3b82f6;
+            padding-left: 16px;
+            margin: 16px 0;
+            color: #94a3b8;
+            font-style: italic;
+        }
+
+        .manual-body table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+        }
+
+        .manual-body th, .manual-body td {
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 1px solid #334155;
+        }
+
+        .manual-body th {
+            background: #252f47;
+            font-weight: 600;
+            color: #f1f5f9;
+        }
+
+        .manual-body input[type="checkbox"] {
+            margin-right: 8px;
+            accent-color: #3b82f6;
+        }
+
+        /* 约束条件 */
+        .constraints-section {
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid #334155;
+        }
+
+        .constraints-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .constraint-tag {
+            padding: 6px 12px;
+            background: #334155;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #cbd5e1;
+        }
+
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #94a3b8;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .empty-state h3 {
+            font-size: 18px;
+            color: #e2e8f0;
+            margin-bottom: 8px;
+        }
+
+        /* 预览模态框 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: #1e293b;
+            border-radius: 16px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 80vh;
+            overflow: hidden;
+            border: 1px solid #334155;
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #334155;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-header h3 {
+            font-size: 18px;
+            color: #f1f5f9;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+        }
+
+        .modal-close:hover {
+            background: #334155;
+            color: #e2e8f0;
+        }
+
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            max-height: calc(80vh - 80px);
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 14px;
+            color: #cbd5e1;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            color: #e2e8f0;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        .preview-result {
+            margin-top: 20px;
+            padding: 16px;
+            background: #0f172a;
+            border-radius: 8px;
+            border: 1px solid #334155;
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 13px;
+            white-space: pre-wrap;
+        }
+
+        /* 响应式 */
+        @media (max-width: 640px) {
+            .container {
+                padding: 16px 12px;
+            }
+
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 16px;
+            }
+
+            .meta-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Loading */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #334155;
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .btn.loading {
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            background: #334155;
+            border-radius: 8px;
+            color: #e2e8f0;
+            font-size: 14px;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 1100;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast.success {
+            background: #166534;
+        }
+
+        .toast.error {
+            background: #991b1b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <h1>任务手册</h1>
+            <div class="header-actions">
+                <button class="btn btn-secondary" onclick="showPreviewModal()">
+                    <span>👁️</span> 预览
+                </button>
+                <button class="btn btn-primary" id="regenerateBtn" onclick="regenerateManual()">
+                    <span>🔄</span> 重新生成
+                </button>
+            </div>
+        </div>
+
+        <!-- 元信息 -->
+        <div class="meta-card">
+            <div class="meta-grid">
+                <div class="meta-item">
+                    <span class="meta-label">任务 ID</span>
+                    <span class="meta-value" id="taskId">-</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">模板</span>
+                    <span class="meta-value tag" id="templateTag">-</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">生成时间</span>
+                    <span class="meta-value" id="generatedAt">-</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">预期输出</span>
+                    <span class="meta-value" id="expectedOutput">-</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 手册内容 -->
+        <div class="manual-content" id="manualContent">
+            <div class="empty-state">
+                <div class="empty-state-icon">📋</div>
+                <h3>暂无手册</h3>
+                <p>该任务尚未生成手册，点击"预览"查看或等待任务分配后自动生成</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 预览模态框 -->
+    <div class="modal-overlay" id="previewModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>预览手册</h3>
+                <button class="modal-close" onclick="closePreviewModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>任务标题</label>
+                    <input type="text" id="previewTitle" placeholder="输入任务标题...">
+                </div>
+                <div class="form-group">
+                    <label>任务描述</label>
+                    <textarea id="previewDescription" placeholder="输入任务描述..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>模板（可选）</label>
+                    <select id="previewTemplate">
+                        <option value="">自动选择</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" onclick="previewManual()" id="previewBtn">
+                    <span>👁️</span> 生成预览
+                </button>
+                <div class="preview-result" id="previewResult" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script src="/dashboard/js/api.js"></script>
+    <script src="/dashboard/js/auth.js"></script>
+    <script>
+        // 全局状态
+        let currentTaskId = null;
+        let currentTaskData = null;
+
+        // 初始化
+        async function init() {
+            // 从 URL 获取任务 ID
+            const urlParams = new URLSearchParams(window.location.search);
+            currentTaskId = urlParams.get('task_id');
+
+            if (!currentTaskId) {
+                showError('缺少任务 ID 参数');
+                return;
+            }
+
+            // 加载任务信息和手册
+            await loadTaskInfo();
+            await loadManual();
+
+            // 加载模板列表到预览模态框
+            await loadTemplates();
+        }
+
+        // 加载任务信息
+        async function loadTaskInfo() {
+            try {
+                const task = await Auth.authFetch(`/api/tasks/${currentTaskId}`);
+                currentTaskData = task;
+                document.getElementById('taskId').textContent = task.id;
+
+                // 填充预览表单
+                document.getElementById('previewTitle').value = task.title || '';
+                document.getElementById('previewDescription').value = task.description || '';
+            } catch (error) {
+                console.error('Failed to load task:', error);
+            }
+        }
+
+        // 加载手册
+        async function loadManual() {
+            try {
+                const manual = await Auth.authFetch(`/api/manuals/task/${currentTaskId}`);
+
+                if (!manual.has_manual) {
+                    // 显示空状态
+                    return;
+                }
+
+                // 更新元信息
+                document.getElementById('templateTag').textContent = manual.template_name || manual.template_id || '通用';
+                document.getElementById('templateTag').className = `meta-value tag ${manual.template_id || 'generic'}`;
+                document.getElementById('generatedAt').textContent = manual.generated_at
+                    ? new Date(manual.generated_at).toLocaleString('zh-CN')
+                    : '-';
+                document.getElementById('expectedOutput').textContent = manual.expected_output || '-';
+
+                // 渲染手册内容
+                const contentDiv = document.getElementById('manualContent');
+                contentDiv.innerHTML = `
+                    <div class="manual-header">
+                        <h2>${currentTaskData?.title || '任务手册'}</h2>
+                    </div>
+                    <div class="manual-body">
+                        ${renderMarkdown(manual.content)}
+                    </div>
+                    ${manual.constraints?.length ? `
+                        <div class="constraints-section">
+                            <h3>约束条件</h3>
+                            <div class="constraints-list">
+                                ${manual.constraints.map(c => `<span class="constraint-tag">${c}</span>`).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                `;
+            } catch (error) {
+                console.error('Failed to load manual:', error);
+                showError('加载手册失败');
+            }
+        }
+
+        // 加载模板列表
+        async function loadTemplates() {
+            try {
+                const templates = await Auth.authFetch('/api/manuals/templates');
+                const select = document.getElementById('previewTemplate');
+                select.innerHTML = '<option value="">自动选择</option>' +
+                    templates.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+            } catch (error) {
+                console.error('Failed to load templates:', error);
+            }
+        }
+
+        // 重新生成手册
+        async function regenerateManual() {
+            const btn = document.getElementById('regenerateBtn');
+            btn.classList.add('loading');
+            btn.innerHTML = '<span class="loading"></span> 生成中...';
+
+            try {
+                const result = await Auth.authFetch(`/api/manuals/task/${currentTaskId}/regenerate`, {
+                    method: 'POST'
+                });
+
+                showToast('手册已重新生成', 'success');
+                await loadManual();
+            } catch (error) {
+                showToast('重新生成失败: ' + error.message, 'error');
+            } finally {
+                btn.classList.remove('loading');
+                btn.innerHTML = '<span>🔄</span> 重新生成';
+            }
+        }
+
+        // 预览手册
+        async function previewManual() {
+            const btn = document.getElementById('previewBtn');
+            const resultDiv = document.getElementById('previewResult');
+
+            const title = document.getElementById('previewTitle').value;
+            const description = document.getElementById('previewDescription').value;
+            const templateId = document.getElementById('previewTemplate').value;
+
+            if (!title) {
+                showToast('请输入任务标题', 'error');
+                return;
+            }
+
+            btn.classList.add('loading');
+
+            try {
+                const result = await Auth.authFetch('/api/manuals/preview', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        task_title: title,
+                        task_description: description,
+                        template_id: templateId || null
+                    })
+                });
+
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = `<strong>使用模板: ${result.template_name}</strong>\n\n${result.content}`;
+            } catch (error) {
+                showToast('预览失败: ' + error.message, 'error');
+            } finally {
+                btn.classList.remove('loading');
+            }
+        }
+
+        // 显示预览模态框
+        function showPreviewModal() {
+            document.getElementById('previewModal').classList.add('active');
+        }
+
+        // 关闭预览模态框
+        function closePreviewModal() {
+            document.getElementById('previewModal').classList.remove('active');
+            document.getElementById('previewResult').style.display = 'none';
+        }
+
+        // 简单的 Markdown 渲染
+        function renderMarkdown(text) {
+            if (!text) return '';
+
+            return text
+                // 代码块
+                .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
+                // 标题
+                .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+                .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+                .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+                // 粗体
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                // 列表
+                .replace(/^- \[(.?)\] (.+)$/gm, '<li><input type="checkbox" ${$1==="x"?"checked":""}> $2</li>')
+                .replace(/^- (.+)$/gm, '<li>$1</li>')
+                // 表格（简化处理）
+                .replace(/\|(.+)\|/g, (match, content) => {
+                    const cells = content.split('|').map(c => `<td>${c.trim()}</td>`).join('');
+                    return `<tr>${cells}</tr>`;
+                })
+                // 段落
+                .replace(/\n\n/g, '</p><p>')
+                // 换行
+                .replace(/\n/g, '<br>');
+        }
+
+        // 显示 Toast
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type} show`;
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // 显示错误
+        function showError(message) {
+            document.querySelector('.container').innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">❌</div>
+                    <h3>出错了</h3>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', init);
+
+        // 点击模态框外部关闭
+        document.getElementById('previewModal').addEventListener('click', (e) => {
+            if (e.target.id === 'previewModal') {
+                closePreviewModal();
+            }
+        });
+    </script>
+</body>
+</html>
