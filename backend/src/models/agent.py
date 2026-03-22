@@ -75,6 +75,8 @@ class Agent(Base):
     # Relationships
     skills = relationship("Skill", secondary="agent_skills", back_populates="agents")
     sub_tasks = relationship("SubTask", back_populates="agent")  # v0.4.0 - Sub-task support
+    approval_requests_sent = relationship("ApprovalRequest", foreign_keys="ApprovalRequest.agent_id", back_populates="agent")  # v0.4.0
+    approval_requests_handled = relationship("ApprovalRequest", foreign_keys="ApprovalRequest.approver_id", back_populates="approver")  # v0.4.0
     
     @property
     def remaining_budget(self) -> float:
