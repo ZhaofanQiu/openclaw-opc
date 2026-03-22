@@ -14,6 +14,11 @@ from src.models.skill_growth import AgentSkillGrowth, SkillGrowthHistory, SKILL_
 from src.models.sub_task import SubTask, SubTaskStatus
 from src.models.task import Task, TaskPriority, TaskStatus
 from src.models.task_dependency import TaskDependency, TaskDependencyStatus
+from src.models.workflow_engine import (
+    WorkflowTemplate, WorkflowInstance, WorkflowStep,
+    WorkflowHistory, WorkflowReworkRecord,
+    StepType, WorkflowStatus, StepStatus
+)
 
 __all__ = [
     "Agent",
@@ -52,4 +57,12 @@ __all__ = [
     "TaskStatus",
     "TaskDependency",
     "TaskDependencyStatus",
+    "WorkflowTemplate",
+    "WorkflowInstance",
+    "WorkflowStep",
+    "WorkflowHistory",
+    "WorkflowReworkRecord",
+    "StepType",
+    "WorkflowStatus",
+    "StepStatus",
 ]
