@@ -1947,6 +1947,9 @@
             <button class="refresh-btn dashboard-tab" data-tab="pixel-office" onclick="switchDashboardTab('pixel-office')">
                 🏢 <span data-i18n="nav.tabs.pixelOffice">像素办公室</span>
             </button>
+            <button class="refresh-btn dashboard-tab" data-tab="workflows" onclick="switchDashboardTab('workflows')">
+                🔄 <span data-i18n="nav.tabs.workflows">工作流</span>
+            </button>
         </div>
 
         <!-- Dashboard Tab Content -->
@@ -2259,6 +2262,14 @@
                 <div class="spinner"></div>
                 <p style="color: #888; margin-top: 16px;">加载像素办公室...</p>
             </div>
+        </div>
+    </div>
+
+    <!-- Workflows Tab Content -->
+    <div id="workflows-tab-content" class="dashboard-content" style="display: none;">
+        <!-- Workflows Container -->
+        <div id="workflows-container" style="height: calc(100vh - 200px);">
+            <iframe src="workflows.html" style="width: 100%; height: 100%; border: none; border-radius: 12px;"></iframe>
         </div>
     </div>
 
@@ -2602,6 +2613,11 @@
             if (tab === 'pixel-office') {
                 loadPixelOffice();
             }
+
+            // Load workflows if switching to that tab
+            if (tab === 'workflows') {
+                loadWorkflowsTab();
+            }
         }
 
         // Load Pixel Office via iframe or inline
@@ -2616,6 +2632,22 @@
                 <iframe src="/dashboard/pixel-office" 
                         style="width: 100%; height: calc(100vh - 250px); border: none; border-radius: 8px;"
                         id="pixel-office-iframe">
+                </iframe>
+            `;
+        }
+
+        // Load Workflows Tab
+        async function loadWorkflowsTab() {
+            const container = document.getElementById('workflows-container');
+
+            // Check if already loaded
+            if (container.querySelector('iframe')) return;
+
+            // Load workflows page in iframe
+            container.innerHTML = `
+                <iframe src="/dashboard/workflows.html" 
+                        style="width: 100%; height: calc(100vh - 250px); border: none; border-radius: 8px;"
+                        id="workflows-iframe">
                 </iframe>
             `;
         }
