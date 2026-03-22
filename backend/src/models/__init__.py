@@ -8,6 +8,7 @@ from src.models.communication import AgentMessage, MessagePriority, MessageStatu
 from src.models.config import SystemConfig
 from src.models.fuse import BudgetFuseEvent, FuseAction, FuseEventStatus
 from src.models.notification import Notification, NotificationType
+from src.models.shared_memory import MemoryAccessLog, SharedMemory, MemoryCategory, MemoryScope
 from src.models.skill import Skill, TaskSkillRequirement, agent_skills_table
 from src.models.skill_growth import AgentSkillGrowth, SkillGrowthHistory, SKILL_GROWTH_CONFIG
 from src.models.sub_task import SubTask, SubTaskStatus
@@ -29,6 +30,10 @@ __all__ = [
     "AgentMessage",
     "MessagePriority",
     "MessageStatus",
+    "MemoryAccessLog",
+    "SharedMemory",
+    "MemoryCategory",
+    "MemoryScope",
     "SkillGrowthHistory",
     "SKILL_GROWTH_CONFIG",
     "SystemConfig",
