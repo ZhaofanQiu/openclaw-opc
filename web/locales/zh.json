@@ -12,7 +12,8 @@
     "tabs": {
       "dashboard": "Dashboard",
       "pixelOffice": "像素办公室",
-      "workflows": "工作流"
+      "workflows": "工作流",
+      "skillPath": "技能路径"
     }
   },
   "header": {
