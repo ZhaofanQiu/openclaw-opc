@@ -15,7 +15,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 
 from database import init_db, check_database_connection, get_database_info
-from routers import agents, tasks, skill_api
+from routers import agents, tasks, skill_api, manuals
 from utils.logging_config import configure_logging, get_logger
 from utils.rate_limit import limiter
 from utils.api_auth import require_read_permission
@@ -64,6 +64,14 @@ async def lifespan(app: FastAPI):
             logger.info("  Run: python -m core.skill_installer")
     except Exception as e:
         logger.warning(f"Skill check failed: {e}")
+    
+    # Initialize company manual
+    try:
+        from services.company_manual_service import initialize_company_manual
+        manual_path = initialize_company_manual()
+        logger.info(f"✓ Company manual ready: {manual_path}")
+    except Exception as e:
+        logger.warning(f"Company manual init failed: {e}")
     
     yield
     logger.info("Stopping OPC Core Service")
@@ -145,6 +153,7 @@ def get_router_deps():
 routers_config = [
     (agents, "/api/agents", "Agents"),
     (tasks, "/api/tasks", "Tasks"),
+    (manuals, "/api/manuals", "Manuals"),
     (skill_api, "/api/skill", "Skill API"),
 ]
 

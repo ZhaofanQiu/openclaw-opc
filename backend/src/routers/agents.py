@@ -83,7 +83,7 @@ def create_agent(
     data: AgentCreate,
     db: Session = Depends(get_db)
 ):
-    """创建新员工"""
+    """创建新员工（自动生成员工手册）"""
     agent = Agent(
         id=f"emp_{uuid.uuid4().hex[:8]}",
         name=data.name,
@@ -98,6 +98,19 @@ def create_agent(
     db.refresh(agent)
     
     logger.info(f"Created employee: {agent.name} ({agent.id})")
+    
+    # 自动生成员工手册
+    try:
+        from services.employee_manual_service import create_employee_manual
+        manual_result = create_employee_manual(
+            employee_id=agent.id,
+            employee_name=agent.name,
+            position_level=agent.position_level,
+            description=""  # TODO: Partner 可以提供初始描述
+        )
+        logger.info(f"Employee manual created: {manual_result['relative_path']}")
+    except Exception as e:
+        logger.error(f"Failed to create employee manual: {e}")
     
     return {
         "id": agent.id,

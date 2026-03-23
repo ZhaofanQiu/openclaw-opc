@@ -182,6 +182,18 @@ async def assign_task_endpoint(
     
     logger.info(f"Manual generated: {manual_result['relative_path']} (template: {manual_result['template']})")
     
+    # 获取所有手册路径
+    manual_paths = {
+        "task": manual_result['relative_path'],
+        "company": "data/manuals/company.md",
+        "employee": f"data/manuals/employees/{data.agent_id}.md"
+    }
+    
+    # 如果任务有指定职责，添加职责手册
+    # TODO: 任务模型需要添加 role 字段
+    # 暂时默认使用 executor 职责
+    manual_paths["role"] = "data/manuals/roles/executor.md"
+    
     # 发送消息到 Agent（异步）
     try:
         import asyncio
@@ -191,7 +203,7 @@ async def assign_task_endpoint(
             task_id=task_id,
             task_title=task.title,
             task_description=task.description,
-            manual_paths={"task": manual_result['relative_path']},
+            manual_paths=manual_paths,
             async_mode=True
         )
         
@@ -201,10 +213,7 @@ async def assign_task_endpoint(
             "agent_id": data.agent_id,
             "execution_id": response.execution_id,
             "status": response.status,
-            "manual": {
-                "template": manual_result['template'],
-                "path": manual_result['relative_path']
-            }
+            "manuals": manual_paths
         }
     except Exception as e:
         logger.error(f"Failed to notify agent: {e}")
@@ -213,10 +222,7 @@ async def assign_task_endpoint(
             "task_id": task_id,
             "agent_id": data.agent_id,
             "error": str(e),
-            "manual": {
-                "template": manual_result['template'],
-                "path": manual_result['relative_path']
-            }
+            "manuals": manual_paths
         }
 
 @router.post("/{task_id}/start")

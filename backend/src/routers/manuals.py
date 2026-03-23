@@ -1,133 +1,204 @@
 """
-简化版 Manuals Router
-核心功能: 手册管理
+Manuals Router (v2.0)
+
+四种手册的统一管理：
+1. 公司手册 (company)
+2. 员工手册 (employee/{id})
+3. 职责手册 (role/{id})
+4. 任务手册 (task/{id})
 """
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import Optional
+
 from database import get_db
+from services.company_manual_service import (
+    get_company_manual,
+    update_company_manual,
+    initialize_company_manual
+)
+from services.employee_manual_service import (
+    get_employee_manual,
+    update_employee_manual,
+    add_user_requirement_to_employee
+)
+from services.role_manual_service import get_role_manual, list_roles
+from services.manual_service import get_task_manual
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 router = APIRouter(tags=["Manuals"])
 
+
 # ============ 数据模型 ============
 
-class ManualTemplate(BaseModel):
-    id: str
-    name: str
-    description: str
-    applicable_scenarios: List[str]
-
-class ManualGenerate(BaseModel):
-    task_id: str
-    template_id: Optional[str] = None  # None = 自动选择
-
-class ManualContent(BaseModel):
+class CompanyManualUpdate(BaseModel):
     content: str
-    constraints: List[str]
-    references: List[str]
 
-# ============ 预置模板 ============
 
-TEMPLATES = [
-    ManualTemplate(
-        id="code_review",
-        name="代码审查",
-        description="审查代码质量、发现潜在问题",
-        applicable_scenarios=["代码", "review", "bug", "fix"]
-    ),
-    ManualTemplate(
-        id="research",
-        name="研究调研",
-        description="研究技术、调研方案",
-        applicable_scenarios=["研究", "调研", "分析", "report"]
-    ),
-    ManualTemplate(
-        id="writing",
-        name="内容创作",
-        description="写作、文档撰写",
-        applicable_scenarios=["写作", "文档", "文章", "content"]
-    ),
-    ManualTemplate(
-        id="data_analysis",
-        name="数据分析",
-        description="数据处理、可视化",
-        applicable_scenarios=["数据", "可视化", "图表", "analysis"]
-    ),
-    ManualTemplate(
-        id="generic",
-        name="通用任务",
-        description="通用任务执行",
-        applicable_scenarios=[]
-    ),
-]
+class EmployeeManualUpdate(BaseModel):
+    content: str
 
-# ============ API ============
 
-@router.get("/templates")
-def list_templates() -> List[ManualTemplate]:
-    """获取手册模板列表"""
-    return TEMPLATES
+class UserRequirementAdd(BaseModel):
+    requirement: str
 
-@router.get("/templates/{template_id}")
-def get_template(template_id: str) -> ManualTemplate:
-    """获取模板详情"""
-    for t in TEMPLATES:
-        if t.id == template_id:
-            return t
-    raise HTTPException(status_code=404, detail="Template not found")
-
-@router.post("/generate")
-def generate_manual(data: ManualGenerate, db: Session = Depends(get_db)):
-    """
-    生成任务手册
-    
-    根据任务内容自动生成手册
-    """
-    # TODO: 实现手册生成
-    return {
-        "message": "Manual generated",
-        "task_id": data.task_id,
-        "template_id": data.template_id or "generic"
-    }
-
-@router.get("/task/{task_id}")
-def get_task_manual(task_id: str, db: Session = Depends(get_db)):
-    """获取任务的手册"""
-    return {
-        "has_manual": False,
-        "template_id": None,
-        "content": ""
-    }
-
-@router.post("/task/{task_id}/regenerate")
-def regenerate_task_manual(task_id: str, db: Session = Depends(get_db)):
-    """重新生成任务手册"""
-    return {"message": "Manual regenerated"}
-
-# ============ 岗位手册 ============
-
-@router.get("/position/{position_id}")
-def get_position_manual(position_id: str):
-    """获取岗位手册"""
-    return {"content": ""}
-
-@router.put("/position/{position_id}")
-def update_position_manual(position_id: str, content: str):
-    """更新岗位手册"""
-    return {"message": "Position manual updated"}
 
 # ============ 公司手册 ============
 
 @router.get("/company")
-def get_company_manual():
+def read_company_manual():
     """获取公司手册"""
-    return {"content": ""}
+    manual = get_company_manual()
+    if not manual:
+        raise HTTPException(status_code=404, detail="Company manual not found")
+    return manual
+
 
 @router.put("/company")
-def update_company_manual(content: str):
-    """更新公司手册"""
-    return {"message": "Company manual updated"}
+def update_company_manual_endpoint(data: CompanyManualUpdate):
+    """更新公司手册（用户修改）"""
+    try:
+        result = update_company_manual(data.content)
+        return result
+    except Exception as e:
+        logger.error(f"Failed to update company manual: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/company/init")
+def init_company_manual():
+    """初始化默认公司手册"""
+    path = initialize_company_manual()
+    return {"message": "Company manual initialized", "path": path}
+
+
+# ============ 员工手册 ============
+
+@router.get("/employee/{employee_id}")
+def read_employee_manual(employee_id: str):
+    """获取员工手册"""
+    manual = get_employee_manual(employee_id)
+    if not manual:
+        raise HTTPException(status_code=404, detail="Employee manual not found")
+    return manual
+
+
+@router.put("/employee/{employee_id}")
+def update_employee_manual_endpoint(employee_id: str, data: EmployeeManualUpdate):
+    """更新员工手册（用户通过聊天修改）"""
+    try:
+        result = update_employee_manual(employee_id, data.content)
+        return result
+    except Exception as e:
+        logger.error(f"Failed to update employee manual: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/employee/{employee_id}/requirement")
+def add_employee_requirement(employee_id: str, data: UserRequirementAdd):
+    """添加用户要求到员工手册"""
+    success = add_user_requirement_to_employee(employee_id, data.requirement)
+    if not success:
+        raise HTTPException(status_code=404, detail="Employee manual not found")
+    return {"message": "Requirement added", "employee_id": employee_id}
+
+
+# ============ 职责手册 ============
+
+@router.get("/roles")
+def list_available_roles():
+    """列出所有可用职责"""
+    return {"roles": list_roles()}
+
+
+@router.get("/role/{role_id}")
+def read_role_manual(role_id: str):
+    """获取职责手册"""
+    manual = get_role_manual(role_id)
+    if not manual:
+        raise HTTPException(status_code=404, detail=f"Role manual not found: {role_id}")
+    return manual
+
+
+# ============ 任务手册 ============
+
+@router.get("/task/{task_id}")
+def read_task_manual(task_id: str):
+    """获取任务手册"""
+    manual = get_task_manual(task_id)
+    if not manual:
+        raise HTTPException(status_code=404, detail="Task manual not found")
+    return manual
+
+
+# ============ 批量获取 ============
+
+@router.get("/employee/{employee_id}/all")
+def get_all_manuals_for_employee(
+    employee_id: str,
+    role_id: Optional[str] = None,
+    task_id: Optional[str] = None
+):
+    """
+    获取员工执行工作前需要阅读的所有手册
+    
+    Args:
+        role_id: 本次任务的职责类型（planner/executor/reviewer/tester）
+        task_id: 当前任务ID（可选，获取任务手册）
+    
+    Returns:
+        {
+            "company": {...},
+            "employee": {...},
+            "role": {...},
+            "task": {...}
+        }
+    """
+    result = {}
+    
+    # 1. 公司手册
+    company = get_company_manual()
+    if company:
+        result["company"] = {
+            "type": "company",
+            "relative_path": company["relative_path"],
+            "content": company["content"]
+        }
+    
+    # 2. 员工手册
+    employee = get_employee_manual(employee_id)
+    if employee:
+        result["employee"] = {
+            "type": "employee",
+            "employee_id": employee_id,
+            "relative_path": employee["relative_path"],
+            "content": employee["content"]
+        }
+    
+    # 3. 职责手册
+    if role_id:
+        role = get_role_manual(role_id)
+        if role:
+            result["role"] = {
+                "type": "role",
+                "role_id": role_id,
+                "role_name": role["role_name"],
+                "relative_path": role["relative_path"],
+                "content": role["content"]
+            }
+    
+    # 4. 任务手册
+    if task_id:
+        task = get_task_manual(task_id)
+        if task:
+            result["task"] = {
+                "type": "task",
+                "task_id": task_id,
+                "relative_path": task["relative_path"],
+                "content": task["content"]
+            }
+    
+    return result
