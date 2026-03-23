@@ -400,22 +400,24 @@
                     const pct = (emp.used_budget / emp.monthly_budget * 100).toFixed(1);
                     return `<tr>
                         <td>
-                            <div class="employee-name">
-                                <div class="employee-avatar">${emp.emoji}</div>
-                                <div class="employee-info">
-                                    <div class="employee-name-text">${emp.name}</div>
-                                    <div class="employee-agent">Level ${emp.position_level}</div>
+                            <a href="/dashboard/employee-detail.html?id=${emp.id}" style="text-decoration: none; color: inherit;">
+                                <div class="employee-name">
+                                    <div class="employee-avatar">${emp.emoji}</div>
+                                    <div class="employee-info">
+                                        <div class="employee-name-text">${emp.name}</div>
+                                        <div class="employee-agent">Level ${emp.position_level}</div>
+                                    </div>
                                 </div>
-                            </div>
+                            </a>
                         </td>
-                        <td>${emp.openclaw_agent_id || `<button class="btn btn-secondary" onclick="openBindModal('${emp.id}')">绑定 Agent</button>`}</td>
+                        <td>${emp.openclaw_agent_id || `<button class="btn btn-secondary" onclick="event.stopPropagation(); openBindModal('${emp.id}')">绑定 Agent</button>`}</td>
                         <td>${getBadge(emp.status)}</td>
                         <td>
                             <div>${formatCurrency(emp.used_budget)} / ${formatCurrency(emp.monthly_budget)} OC币</div>
                             <div class="budget-bar"><div class="budget-fill ${pct > 80 ? 'high' : ''}" style="width: ${Math.min(pct, 100)}%"></div></div>
                         </td>
-                        <td>${emp.current_task_id ? `<a href="/dashboard/task-detail.html?task=${emp.current_task_id}" style="color: #667eea;">查看</a>` : '-'}</td>
-                        <td><button class="btn btn-danger" onclick="deleteEmployee('${emp.id}')">删除</button></td>
+                        <td>${emp.current_task_id ? `<a href="/dashboard/task-detail.html?id=${emp.current_task_id}" style="color: #667eea;">查看</a>` : '-'}</td>
+                        <td><button class="btn btn-danger" onclick="event.stopPropagation(); deleteEmployee('${emp.id}')">删除</button></td>
                     </tr>`;
                 }).join('');
             } catch (e) {
