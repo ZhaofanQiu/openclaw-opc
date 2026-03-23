@@ -95,9 +95,18 @@ async def report_task_result(
     try:
         # 1. 通过 openclaw_agent_id 找到员工
         from models.agent_v2 import Agent
+        from models.task_v2 import Task
+        
         agent = db.query(Agent).filter(
             Agent.openclaw_agent_id == data.agent_id
         ).first()
+        
+        # 如果找不到，尝试通过 task_id 反查
+        if not agent:
+            task = db.query(Task).filter(Task.id == task_id).first()
+            if task and task.assigned_to:
+                agent = db.query(Agent).filter(Agent.id == task.assigned_to).first()
+                logger.info(f"Found agent by task assignment: {agent.name if agent else 'None'} for task {task_id}")
         
         if not agent:
             # 记录失败的回调日志

@@ -926,6 +926,9 @@
                 
             } catch (error) {
                 console.error('Failed to load data:', error);
+                // Hide loading on error too
+                document.getElementById('loading').style.display = 'none';
+                addActivity('数据加载失败: ' + error.message, '❌');
             }
         }
         

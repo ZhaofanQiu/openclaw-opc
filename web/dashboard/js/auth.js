@@ -155,6 +155,7 @@ function getAuthHeaders(additionalHeaders = {}) {
 /**
  * Authenticated fetch wrapper
  * Works in both auth and no-auth modes
+ * Returns parsed JSON response
  */
 async function authFetch(url, options = {}) {
     const authRequired = await checkAuthRequired();
@@ -187,6 +188,16 @@ async function authFetch(url, options = {}) {
         throw new Error('Session expired. Please login again.');
     }
     
+    // Parse JSON response
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    // Return JSON if content-type is JSON, otherwise return response
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+        return response.json();
+    }
     return response;
 }
 

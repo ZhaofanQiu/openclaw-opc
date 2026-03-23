@@ -87,7 +87,15 @@ class Task(Base):
             "status": self.status,
             "priority": self.priority,
             "assigned_to": self.assigned_to,
+            "assigned_agent_id": self.assigned_to,  # 前端兼容
             "estimated_cost": self.estimated_cost,
             "actual_cost": self.actual_cost,
-            "created_at": self.created_at.isoformat() if self.created_at else None
+            "tokens_input": self.tokens_input,
+            "tokens_output": self.tokens_output,
+            "result": self.result,
+            "score": self.score,
+            "rework_count": self.rework_count,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "assigned_at": self.assigned_at.isoformat() if self.assigned_at else None,
+            "completed_at": self.completed_at.isoformat() if self.completed_at else None
         }

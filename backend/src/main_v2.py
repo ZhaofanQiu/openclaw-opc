@@ -15,7 +15,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 
 from database import init_db, check_database_connection, get_database_info
-from routers import agents, tasks, skill_api, manuals, agent_logs, websocket
+from routers import agents, tasks, skill_api, manuals, agent_logs, websocket, config
 from utils.logging_config import configure_logging, get_logger
 from utils.rate_limit import limiter
 from utils.api_auth import require_read_permission
@@ -151,12 +151,13 @@ def get_router_deps():
 
 
 # Include routers (简化版 - 核心 router)
+# 需要认证的 routers
 routers_config = [
     (agents, "/api/agents", "Agents"),
     (tasks, "/api/tasks", "Tasks"),
     (manuals, "/api/manuals", "Manuals"),
     (agent_logs, "/api/agent-logs", "Agent Logs"),
-    (skill_api, "/api/skill", "Skill API"),
+    (config, "/api/config", "Config"),
 ]
 
 # WebSocket 路由单独添加（不需要前缀和依赖）
@@ -166,6 +167,7 @@ try:
 except Exception as e:
     logger.error(f"✗ Failed to register WebSocket: {e}")
 
+# 注册需要认证的 routers
 for router_module, prefix, tag in routers_config:
     try:
         app.include_router(
@@ -177,6 +179,18 @@ for router_module, prefix, tag in routers_config:
         logger.debug(f"✓ Router registered: {tag} at {prefix}")
     except Exception as e:
         logger.error(f"✗ Failed to register {tag}: {e}")
+
+# Skill API 单独注册（不需要认证，Agent 直接调用）
+try:
+    app.include_router(
+        skill_api.router,
+        prefix="/api/skill",
+        tags=["Skill API"],
+        dependencies=[]  # 无认证依赖
+    )
+    logger.debug("✓ Router registered: Skill API at /api/skill (no auth)")
+except Exception as e:
+    logger.error(f"✗ Failed to register Skill API: {e}")
 
 
 # Health check (必须在 static files 之前)
@@ -198,7 +212,7 @@ def root():
 
 # Static files
 static_dirs = [
-    ("web", "/dashboard"),
+    ("web", "/dashboard"),  # web目录挂载到/dashboard
     ("data/avatars", "/avatars"),
 ]
 
@@ -207,13 +221,35 @@ for dir_name, url_path in static_dirs:
     if os.path.exists(static_path):
         app.mount(url_path, StaticFiles(directory=static_path), name=dir_name)
 
+# 为根路径页面添加重定向或单独挂载
+# employees.html, tasks.html, employee-detail.html 等页面在web根目录
+# 但由于已挂载web到/dashboard，这些页面可通过/dashboard/employees.html访问
+# 为保持兼容性，添加根路径重定向
+from fastapi.responses import RedirectResponse
+
+@app.get("/employees.html")
+async def redirect_employees():
+    return RedirectResponse(url="/dashboard/employees.html")
+
+@app.get("/tasks.html")
+async def redirect_tasks():
+    return RedirectResponse(url="/dashboard/tasks.html")
+
+@app.get("/employee-detail.html")
+async def redirect_employee_detail():
+    return RedirectResponse(url="/dashboard/employee-detail.html")
+
+@app.get("/agent-logs.html")
+async def redirect_agent_logs():
+    return RedirectResponse(url="/dashboard/agent-logs.html")
+
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
-        "main:app",
+        "main_v2:app",
         host="0.0.0.0",
-        port=8080,
-        reload=True,
+        port=18080,
+        reload=False,
         log_level="info"
     )

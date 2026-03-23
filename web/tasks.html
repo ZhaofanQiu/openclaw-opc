@@ -61,6 +61,25 @@
             border-color: transparent;
         }
         .filter-tab:hover:not(.active) { background: #334155; }
+
+        /* API Key Input */
+        .api-key-section {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .api-key-input {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: #e2e8f0;
+            font-size: 13px;
+            width: 200px;
+        }
+        .api-key-input.saved {
+            border-color: #22c55e;
+        }
         
         /* Table */
         .table-container {
@@ -127,6 +146,13 @@
             font-size: 13px;
         }
         .btn-secondary:hover { background: #475569; }
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+            padding: 8px 16px;
+            font-size: 13px;
+        }
+        .btn-danger:hover { background: #dc2626; }
         
         /* Modal */
         .modal-overlay {
@@ -214,7 +240,10 @@
                 <a href="/dashboard/v2.html" class="back-btn">← 返回 Dashboard</a>
                 <h1>📋 任务管理</h1>
             </div>
-            <button class="btn btn-primary" onclick="openCreateModal()">+ 创建任务</button>
+            <div class="api-key-section">
+                <input type="password" class="api-key-input" id="api-key-input" placeholder="输入 API Key..." onchange="saveApiKey()">
+                <button class="btn btn-primary" onclick="openCreateModal()">+ 创建任务</button>
+            </div>
         </div>
 
         <div class="filters">
@@ -302,6 +331,21 @@
         const API_BASE = '/api';
         let currentFilter = 'all';
         
+        // API Key 管理
+        let API_KEY = localStorage.getItem('opc_api_key') || '';
+        
+        function getApiKey() {
+            return API_KEY;
+        }
+        
+        // 带认证的 fetch 封装
+        async function authFetch(url, options = {}) {
+            const key = getApiKey();
+            const separator = url.includes('?') ? '&' : '?';
+            const authUrl = key ? `${url}${separator}api_key=${key}` : url;
+            return fetch(authUrl, options);
+        }
+        
         function showToast(msg, type='success') {
             const c = document.getElementById('toast-container');
             const t = document.createElement('div');
@@ -311,6 +355,28 @@
             setTimeout(() => t.remove(), 3000);
         }
         
+        // 保存 API Key
+        function saveApiKey() {
+            const input = document.getElementById('api-key-input');
+            const key = input.value.trim();
+            if (key) {
+                setApiKey(key);
+                input.classList.add('saved');
+                showToast('API Key 已保存');
+                loadData();
+            }
+        }
+
+        // 初始化 API Key 输入框
+        function initApiKey() {
+            const savedKey = getApiKey();
+            if (savedKey) {
+                const input = document.getElementById('api-key-input');
+                input.value = savedKey;
+                input.classList.add('saved');
+            }
+        }
+
         function openModal() {
             document.getElementById('create-form').reset();
             document.getElementById('create-modal').classList.add('active');
@@ -347,6 +413,26 @@
             return badges[status] || `<span class="badge">${status}</span>`;
         }
         
+        async function deleteTask(taskId) {
+            if (!confirm('确定删除此任务？此操作不可恢复。')) return;
+            
+            try {
+                const res = await authFetch(`${API_BASE}/tasks/${taskId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (res.ok) {
+                    showToast('任务已删除');
+                    loadData();
+                } else {
+                    const err = await res.json();
+                    showToast(err.detail || '删除失败', 'error');
+                }
+            } catch (e) {
+                showToast('删除失败: ' + e.message, 'error');
+            }
+        }
+        
         function getPriorityBadge(priority) {
             const badges = {
                 'high': '<span class="badge badge-high">高</span>',
@@ -358,7 +444,7 @@
         
         async function loadEmployees() {
             try {
-                const res = await fetch(`${API_BASE}/agents`);
+                const res = await authFetch(`${API_BASE}/agents`);
                 const data = await res.json();
                 const select = document.getElementById('agent-select');
                 select.innerHTML = '<option value="">选择员工...>' +
@@ -373,7 +459,7 @@
                 let url = `${API_BASE}/tasks`;
                 if (currentFilter !== 'all') url += `?status=${currentFilter}`;
                 
-                const res = await fetch(url);
+                const res = await authFetch(url);
                 const data = await res.json();
                 const tasks = data.tasks || [];
                 
@@ -401,8 +487,10 @@
                         <td>${task.estimated_cost || 0} / ${task.actual_cost?.toFixed?.(2) || 0} tokens</td>
                         <td>
                             ${task.status === 'pending' 
-                                ? `<button class="btn btn-secondary" onclick="openAssignModal('${task.id}')">分配</button>`
-                                : `<a href="/dashboard/task-detail.html?id=${task.id}" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">查看详情</a>`
+                                ? `<button class="btn btn-secondary" onclick="openAssignModal('${task.id}')">分配</button>
+                                   <button class="btn btn-danger" onclick="deleteTask('${task.id}')" style="margin-left: 8px;">删除</button>`
+                                : `<a href="/dashboard/task-detail.html?id=${task.id}" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">查看详情</a>
+                                   <button class="btn btn-danger" onclick="deleteTask('${task.id}')" style="margin-left: 8px; padding: 6px 12px; font-size: 12px;">删除</button>`
                             }
                         </td>
                     </tr>
@@ -420,7 +508,7 @@
             data.estimated_cost = parseFloat(data.estimated_cost);
             
             try {
-                const res = await fetch(`${API_BASE}/tasks`, {
+                const res = await authFetch(`${API_BASE}/tasks`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
@@ -445,7 +533,7 @@
             const data = Object.fromEntries(formData);
             
             try {
-                const res = await fetch(`${API_BASE}/tasks/${data.task_id}/assign`, {
+                const res = await authFetch(`${API_BASE}/tasks/${data.task_id}/assign`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ agent_id: data.agent_id })
@@ -465,6 +553,7 @@
         });
         
         loadData();
+        initApiKey();  // 初始化 API Key 输入框
         setInterval(loadData, 10000);
     </script>
 </body>

@@ -3,27 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>任务详情 | OpenClaw OPC v2.0</title>
+    <title>任务详情 | OpenClaw OPC</title>
+    <link rel="stylesheet" href="/dashboard/css/common.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             background: #0f172a;
             color: #e2e8f0;
             min-height: 100vh;
         }
-        .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
-        
-        /* Header */
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px 20px;
+        }
+
+        /* 头部 */
         .header {
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            justify-content: space-between;
             margin-bottom: 24px;
             padding-bottom: 20px;
             border-bottom: 1px solid #334155;
         }
-        .header-left { display: flex; align-items: center; gap: 16px; }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
         .back-btn {
             display: flex;
             align-items: center;
@@ -33,883 +50,836 @@
             border: none;
             border-radius: 8px;
             color: #e2e8f0;
-            cursor: pointer;
-            text-decoration: none;
             font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
         }
-        .back-btn:hover { background: #475569; }
-        .header h1 { font-size: 24px; }
-        .header-actions { display: flex; gap: 12px; }
-        
-        /* Badges */
-        .badge {
-            display: inline-flex;
+
+        .back-btn:hover {
+            background: #475569;
+        }
+
+        .header h1 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
             align-items: center;
+        }
+        
+        /* API Key Input */
+        .api-key-input {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: #e2e8f0;
+            font-size: 13px;
+            width: 180px;
+        }
+        .api-key-input.saved {
+            border-color: #22c55e;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .btn-secondary {
+            background: #334155;
+            color: #e2e8f0;
+        }
+
+        .btn-secondary:hover {
+            background: #475569;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid #3b82f6;
+            color: #3b82f6;
+        }
+
+        .btn-outline:hover {
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        /* 任务信息卡片 */
+        .info-card {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #334155;
+        }
+
+        .info-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .info-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #f8fafc;
+        }
+
+        .status-badge {
             padding: 4px 12px;
             border-radius: 20px;
             font-size: 12px;
             font-weight: 500;
         }
-        .badge-pending { background: #64748b30; color: #94a3b8; }
-        .badge-assigned { background: #3b82f620; color: #60a5fa; }
-        .badge-in_progress { background: #f59e0b20; color: #f59e0b; }
-        .badge-completed { background: #22c55e20; color: #22c55e; }
-        .badge-failed { background: #ef444420; color: #ef4444; }
-        
-        .badge-high { background: #ef444420; color: #ef4444; }
-        .badge-medium { background: #f59e0b20; color: #f59e0b; }
-        .badge-low { background: #22c55e20; color: #22c55e; }
-        
-        /* Main Layout */
-        .main-grid {
-            display: grid;
-            grid-template-columns: 1fr 320px;
-            gap: 24px;
+
+        .status-pending { background: #713f12; color: #fcd34d; }
+        .status-assigned { background: #1e3a5f; color: #60a5fa; }
+        .status-in_progress { background: #312e81; color: #a78bfa; }
+        .status-completed { background: #14532d; color: #4ade80; }
+        .status-failed { background: #7f1d1d; color: #f87171; }
+
+        .info-description {
+            color: #94a3b8;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 16px;
         }
-        
-        /* Cards */
-        .card {
-            background: #1e293b;
-            border-radius: 12px;
-            padding: 24px;
-            border: 1px solid #334155;
-            margin-bottom: 24px;
-        }
-        .card-header {
+
+        .info-meta {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
+            gap: 24px;
+            flex-wrap: wrap;
         }
-        .card-title {
-            font-size: 18px;
-            font-weight: 600;
-        }
-        
-        /* Info Grid */
-        .info-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 16px;
-        }
+
         .info-item {
             display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        .info-label {
-            font-size: 12px;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
             color: #94a3b8;
         }
-        .info-value {
-            font-size: 14px;
-            font-weight: 500;
+
+        .info-item strong {
+            color: #e2e8f0;
         }
-        
-        /* Description */
-        .description-box {
-            background: #0f172a;
-            border-radius: 8px;
-            padding: 16px;
-            font-size: 14px;
-            line-height: 1.6;
-            color: #cbd5e1;
-            white-space: pre-wrap;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-        
-        /* Timeline */
-        .timeline {
-            position: relative;
-            padding-left: 24px;
-        }
-        .timeline::before {
-            content: '';
-            position: absolute;
-            left: 6px;
-            top: 0;
-            bottom: 0;
-            width: 2px;
-            background: #334155;
-        }
-        .timeline-item {
-            position: relative;
-            padding-bottom: 20px;
-        }
-        .timeline-item::before {
-            content: '';
-            position: absolute;
-            left: -22px;
-            top: 2px;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: #64748b;
-            border: 2px solid #1e293b;
-        }
-        .timeline-item.active::before {
-            background: #3b82f6;
-            box-shadow: 0 0 0 4px #3b82f620;
-        }
-        .timeline-item.completed::before {
-            background: #22c55e;
-        }
-        .timeline-time {
-            font-size: 12px;
-            color: #64748b;
-            margin-bottom: 4px;
-        }
-        .timeline-title {
-            font-size: 14px;
-            font-weight: 500;
-        }
-        .timeline-desc {
-            font-size: 12px;
-            color: #94a3b8;
-            margin-top: 4px;
-        }
-        
-        /* Manual Section */
-        .manual-content {
-            background: #0f172a;
-            border-radius: 8px;
-            padding: 20px;
-            font-size: 14px;
-            line-height: 1.8;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        .manual-content h1, .manual-content h2, .manual-content h3 {
-            color: #60a5fa;
-            margin: 16px 0 12px;
-        }
-        .manual-content h1 { font-size: 20px; border-bottom: 1px solid #334155; padding-bottom: 8px; }
-        .manual-content h2 { font-size: 16px; }
-        .manual-content p { margin: 8px 0; }
-        .manual-content ul, .manual-content ol { margin: 8px 0; padding-left: 20px; }
-        .manual-content code {
-            background: #334155;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: 'Monaco', 'Consolas', monospace;
-            font-size: 12px;
-        }
-        .manual-content pre {
-            background: #0f172a;
-            padding: 12px;
-            border-radius: 6px;
-            overflow-x: auto;
-            border: 1px solid #334155;
-        }
-        
-        /* Result Section */
-        .result-box {
-            background: #0f172a;
-            border-radius: 8px;
-            padding: 20px;
-            font-size: 14px;
-            line-height: 1.6;
-            white-space: pre-wrap;
-            max-height: 400px;
-            overflow-y: auto;
-            border-left: 3px solid #22c55e;
-        }
-        .result-box.empty {
-            border-left-color: #64748b;
-            color: #64748b;
-            text-align: center;
-            padding: 40px;
-        }
-        
-        /* Agent Card */
-        .agent-card {
+
+        /* 手册快捷入口 */
+        .manual-card {
+            background: linear-gradient(135deg, #1e293b 0%, #252f47 100%);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+            border: 1px solid #3b82f6;
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 16px;
-            background: #0f172a;
-            border-radius: 8px;
-            text-decoration: none;
-            color: inherit;
-            transition: background 0.2s;
+            justify-content: space-between;
+            gap: 16px;
         }
-        .agent-card:hover {
-            background: #1e293b;
+
+        .manual-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex: 1;
         }
-        .agent-avatar {
+
+        .manual-icon {
             width: 48px;
             height: 48px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: rgba(59, 130, 246, 0.2);
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 24px;
         }
-        .agent-info { flex: 1; }
-        .agent-name { font-weight: 500; margin-bottom: 4px; }
-        .agent-id { font-size: 12px; color: #64748b; }
-        
-        /* Buttons */
-        .btn {
-            padding: 10px 20px;
-            border-radius: 8px;
-            border: none;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: inline-flex;
+
+        .manual-details h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #f8fafc;
+            margin-bottom: 4px;
+        }
+
+        .manual-details p {
+            font-size: 13px;
+            color: #94a3b8;
+        }
+
+        .manual-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+
+        /* 聊天区域 */
+        .chat-container {
+            background: #1e293b;
+            border-radius: 12px;
+            border: 1px solid #334155;
+            height: calc(100vh - 350px);
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #334155;
+            display: flex;
             align-items: center;
-            gap: 6px;
+            justify-content: space-between;
         }
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-        .btn-primary:hover { opacity: 0.9; }
-        .btn-secondary {
-            background: #334155;
-            color: #e2e8f0;
-        }
-        .btn-secondary:hover { background: #475569; }
-        .btn-danger {
-            background: #ef444420;
-            color: #ef4444;
-        }
-        .btn-danger:hover { background: #ef444430; }
-        
-        /* Budget Bar */
-        .budget-bar {
-            height: 8px;
-            background: #334155;
-            border-radius: 4px;
-            overflow: hidden;
-            margin-top: 8px;
-        }
-        .budget-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #22c55e, #16a34a);
-            border-radius: 4px;
-            transition: width 0.3s;
-        }
-        .budget-fill.warning {
-            background: linear-gradient(90deg, #f59e0b, #d97706);
-        }
-        .budget-fill.danger {
-            background: linear-gradient(90deg, #ef4444, #dc2626);
-        }
-        
-        /* Score */
-        .score-display {
+
+        .chat-header h3 {
+            font-size: 15px;
+            font-weight: 600;
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 24px;
         }
-        .star { color: #f59e0b; }
-        .star.empty { color: #334155; }
-        
-        /* Empty State */
-        .empty-state {
-            text-align: center;
-            padding: 40px;
-            color: #64748b;
+
+        .chat-header h3::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: #22c55e;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
         }
-        .empty-state-icon {
-            font-size: 48px;
-            margin-bottom: 16px;
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
-        
-        /* Toast */
-        .toast-container {
-            position: fixed;
-            top: 24px;
-            right: 24px;
-            z-index: 2000;
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
             display: flex;
             flex-direction: column;
+            gap: 16px;
+        }
+
+        .message {
+            display: flex;
+            gap: 12px;
+            max-width: 80%;
+        }
+
+        .message.user {
+            margin-left: auto;
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #334155;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .message.user .message-avatar {
+            background: #3b82f6;
+        }
+
+        .message-content {
+            background: #252f47;
+            padding: 12px 16px;
+            border-radius: 12px;
+            border-bottom-left-radius: 4px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .message.user .message-content {
+            background: #3b82f6;
+            border-bottom-left-radius: 12px;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: #64748b;
+            margin-top: 4px;
+        }
+
+        .message.user .message-time {
+            text-align: right;
+        }
+
+        /* 输入区域 */
+        .chat-input-area {
+            padding: 16px 20px;
+            border-top: 1px solid #334155;
+            display: flex;
             gap: 12px;
         }
-        .toast {
-            padding: 16px 24px;
-            border-radius: 8px;
-            color: white;
+
+        .chat-input {
+            flex: 1;
+            padding: 12px 16px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            color: #e2e8f0;
             font-size: 14px;
-            animation: slideIn 0.3s ease;
+            resize: none;
+            font-family: inherit;
         }
-        .toast.success { background: #22c55e; }
-        .toast.error { background: #ef4444; }
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: #3b82f6;
         }
-        
-        /* Responsive */
-        @media (max-width: 900px) {
-            .main-grid { grid-template-columns: 1fr; }
+
+        .send-btn {
+            width: 44px;
+            height: 44px;
+            background: #3b82f6;
+            border: none;
+            border-radius: 10px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
         }
-        
+
+        .send-btn:hover {
+            background: #2563eb;
+        }
+
+        .send-btn:disabled {
+            background: #334155;
+            cursor: not-allowed;
+        }
+
+        /* 系统消息 */
+        .system-message {
+            text-align: center;
+            padding: 12px;
+            color: #64748b;
+            font-size: 13px;
+        }
+
+        .system-message span {
+            background: #252f47;
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 16px 12px;
+            }
+
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 16px;
+            }
+
+            .manual-card {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .manual-actions {
+                width: 100%;
+            }
+
+            .manual-actions .btn {
+                flex: 1;
+            }
+
+            .chat-container {
+                height: calc(100vh - 400px);
+            }
+
+            .message {
+                max-width: 90%;
+            }
+        }
+
         /* Loading */
-        .loading { text-align: center; padding: 40px; color: #64748b; }
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid #334155;
-            border-top-color: #3b82f6;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 16px;
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 8px 12px;
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .typing-indicator span {
+            width: 8px;
+            height: 8px;
+            background: #94a3b8;
+            border-radius: 50%;
+            animation: typing 1.4s infinite ease-in-out both;
+        }
+
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            background: #334155;
+            border-radius: 8px;
+            color: #e2e8f0;
+            font-size: 14px;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 1100;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast.success { background: #166534; }
+        .toast.error { background: #991b1b; }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
+        <!-- 头部 -->
         <div class="header">
             <div class="header-left">
-                <a href="/dashboard/tasks.html" class="back-btn">← 返回任务列表</a>
-                <h1 id="page-title">📋 任务详情</h1>
+                <button class="back-btn" onclick="goBack()">
+                    <span>←</span> 返回
+                </button>
+                <h1 id="taskTitle">任务详情</h1>
             </div>
-            <div class="header-actions" id="header-actions">
-                <!-- Dynamic buttons -->
+            <div class="header-actions">
+                <input type="password" class="api-key-input" id="api-key-input" placeholder="输入 API Key..." onchange="saveApiKey()">
+                <button class="btn btn-secondary" id="manualBtn" onclick="viewManual()">
+                    <span>📋</span> 手册
+                </button>
             </div>
         </div>
-        
-        <div class="main-grid">
-            <!-- Left Column -->
-            <div class="left-column">
-                <!-- Task Info -->
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">📋 任务信息</h2>
-                        <span id="task-status-badge"></span>
-                    </div>
-                    <div class="info-grid" style="margin-bottom: 20px;">
-                        <div class="info-item">
-                            <span class="info-label">优先级</span>
-                            <span class="info-value" id="task-priority"></span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">任务 ID</span>
-                            <span class="info-value" id="task-id" style="font-family: monospace; font-size: 12px;"></span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">预估成本</span>
-                            <span class="info-value" id="task-estimated"></span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">实际成本</span>
-                            <span class="info-value" id="task-actual"></span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Token 消耗</span>
-                            <span class="info-value" id="task-tokens"></span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">返工次数</span>
-                            <span class="info-value" id="task-rework"></span>
-                        </div>
-                    </div>
-                    
-                    <div style="margin-bottom: 20px;">
-                        <div class="info-label" style="margin-bottom: 8px;">预算使用</div>
-                        <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
-                            <span id="budget-used">0 OC币</span>
-                            <span id="budget-total">预估 0 OC币</span>
-                        </div>
-                        <div class="budget-bar">
-                            <div class="budget-fill" id="budget-fill" style="width: 0%"></div>
-                        </div>
-                    </div>
-                    
-                    <div>
-                        <div class="info-label" style="margin-bottom: 8px;">任务描述</div>
-                        <div class="description-box" id="task-description">
-                            加载中...
-                        </div>
-                    </div>
+
+        <!-- 任务信息 -->
+        <div class="info-card">
+            <div class="info-header">
+                <div class="info-title" id="infoTitle">--</div>
+                <span class="status-badge" id="statusBadge">--</span>
+            </div>
+            <p class="info-description" id="infoDescription">--</p>
+            <div class="info-meta">
+                <div class="info-item">
+                    <span>👤</span>
+                    <span>执行人: <strong id="assigneeName">--</strong></span>
                 </div>
-                
-                <!-- Manual -->
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">📖 任务手册</h2>
-                        <a href="#" id="manual-link" target="_blank" class="btn btn-secondary" style="display: none;">
-                            查看原始文件
-                        </a>
-                    </div>
-                    <div class="manual-content" id="manual-content">
-                        <div class="loading">
-                            <div class="spinner"></div>
-                            加载手册内容...
-                        </div>
-                    </div>
+                <div class="info-item">
+                    <span>💰</span>
+                    <span>预算: <strong id="budgetInfo">--</strong></span>
                 </div>
-                
-                <!-- Result -->
-                <div class="card" id="result-card" style="display: none;">
-                    <div class="card-header">
-                        <h2 class="card-title">✅ 执行结果</h2>
-                        <div class="score-display" id="task-score"></div>
-                    </div>
-                    <div class="result-box" id="result-content"></div>
-                    <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #334155;">
-                        <div class="info-label" style="margin-bottom: 8px;">反馈</div>
-                        <div id="task-feedback" style="color: #94a3b8; font-size: 14px;"></div>
-                    </div>
+                <div class="info-item">
+                    <span>📅</span>
+                    <span>创建时间: <strong id="createdAt">--</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 手册快捷入口 -->
+        <div class="manual-card" id="manualCard" style="display: none;">
+            <div class="manual-info">
+                <div class="manual-icon">📋</div>
+                <div class="manual-details">
+                    <h3>任务手册已生成</h3>
+                    <p id="manualMeta">基于任务内容自动生成的执行指南</p>
+                </div>
+            </div>
+            <div class="manual-actions">
+                <button class="btn btn-outline btn-sm" onclick="previewManual()">
+                    <span>👁️</span> 预览
+                </button>
+                <button class="btn btn-primary btn-sm" onclick="viewFullManual()">
+                    <span>📖</span> 查看完整手册
+                </button>
+            </div>
+        </div>
+
+        <!-- 聊天区域 -->
+        <div class="chat-container">
+            <div class="chat-header">
+                <h3>协作聊天</h3>
+                <span id="stepInfo">步骤 1/1</span>
+            </div>
+            
+            <div class="chat-messages" id="chatMessages">
+                <div class="system-message">
+                    <span>👋 任务已开始，可以开始沟通协作</span>
                 </div>
             </div>
             
-            <!-- Right Column -->
-            <div class="right-column">
-                <!-- Timeline -->
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">📅 时间线</h2>
-                    </div>
-                    <div class="timeline" id="timeline">
-                        <!-- Dynamic timeline items -->
-                    </div>
-                </div>
-                
-                <!-- Assigned Agent -->
-                <div class="card" id="agent-card" style="display: none;">
-                    <div class="card-header">
-                        <h2 class="card-title">👤 执行员工</h2>
-                    </div>
-                    <a href="#" id="agent-link" class="agent-card">
-                        <div class="agent-avatar" id="agent-emoji">🤖</div>
-                        <div class="agent-info">
-                            <div class="agent-name" id="agent-name">-</div>
-                            <div class="agent-id" id="agent-id">-</div>
-                        </div>
-                    </a>
-                </div>
-                
-                <!-- Actions -->
-                <div class="card" id="actions-card">
-                    <div class="card-header">
-                        <h2 class="card-title">⚡ 操作</h2>
-                    </div>
-                    <div id="action-buttons" style="display: flex; flex-direction: column; gap: 12px;">
-                        <!-- Dynamic action buttons -->
-                    </div>
-                </div>
+            <div class="chat-input-area">
+                <textarea 
+                    class="chat-input" 
+                    id="messageInput" 
+                    placeholder="输入消息..."
+                    rows="1"
+                    onkeydown="handleKeyDown(event)"
+                ></textarea>
+                <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
             </div>
         </div>
     </div>
-    
-    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
 
     <script>
-        const API_BASE = '/api';
-        const urlParams = new URLSearchParams(window.location.search);
-        const taskId = urlParams.get('id');
+        // API Key 管理（简化版，直接使用 query parameter）
+        console.log('[Page Load] localStorage check:', {
+            'opc_api_key exists': localStorage.getItem('opc_api_key') !== null,
+            'opc_api_key value': localStorage.getItem('opc_api_key')?.substring(0, 10) + '...',
+            'all keys': Object.keys(localStorage)
+        });
         
-        if (!taskId) {
-            showToast('错误：未指定任务ID', 'error');
-            setTimeout(() => window.location.href = '/dashboard/tasks.html', 2000);
+        // 不再缓存 API_KEY，每次都从 localStorage 实时读取
+        function getApiKey() {
+            const key = localStorage.getItem('opc_api_key') || '';
+            console.log('[getApiKey] read from localStorage, key exists:', !!key, 'length:', key.length);
+            return key;
         }
         
-        // WebSocket connection
-        let ws = null;
-        
-        function connectWebSocket() {
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${protocol}//${window.location.host}/ws`;
-            
-            ws = new WebSocket(wsUrl);
-            
-            ws.onopen = () => {
-                console.log('WebSocket connected');
-                // Subscribe to this task
-                ws.send(JSON.stringify({ action: 'subscribe_task', task_id: taskId }));
-            };
-            
-            ws.onmessage = (event) => {
-                try {
-                    const message = JSON.parse(event.data);
-                    handleWebSocketMessage(message);
-                } catch (error) {
-                    console.error('WebSocket message error:', error);
-                }
-            };
-            
-            ws.onclose = () => {
-                console.log('WebSocket disconnected, retrying...');
-                setTimeout(connectWebSocket, 3000);
-            };
+        function setApiKey(key) {
+            localStorage.setItem('opc_api_key', key);
+            console.log('[setApiKey] saved to localStorage, key length:', key.length);
         }
         
-        function handleWebSocketMessage(message) {
-            const { type } = message;
-            
-            if (type === 'task_update' && message.task_id === taskId) {
-                showToast('🔄 任务状态已更新');
+        // 保存 API Key
+        function saveApiKey() {
+            const input = document.getElementById('api-key-input');
+            const key = input.value.trim();
+            if (key) {
+                setApiKey(key);
+                input.classList.add('saved');
+                showToast('API Key 已保存，重新加载数据...');
+                // 重新加载所有数据
                 loadTask();
-            } else if (type === 'task_completed' && message.task_id === taskId) {
-                showToast(message.success ? '✅ 任务已完成' : '❌ 任务失败');
-                loadTask();
+                loadSteps();
+                loadManualInfo();
+                loadMessages();
             }
         }
         
-        function showToast(msg, type='success') {
-            const c = document.getElementById('toast-container');
-            const t = document.createElement('div');
-            t.className = `toast ${type}`;
-            t.textContent = msg;
-            c.appendChild(t);
-            setTimeout(() => t.remove(), 3000);
-        }
-        
-        function getStatusBadge(status) {
-            const badges = {
-                'pending': '<span class="badge badge-pending">待处理</span>',
-                'assigned': '<span class="badge badge-assigned">已分配</span>',
-                'in_progress': '<span class="badge badge-in_progress">进行中</span>',
-                'completed': '<span class="badge badge-completed">已完成</span>',
-                'failed': '<span class="badge badge-failed">失败</span>'
-            };
-            return badges[status] || `<span class="badge">${status}</span>`;
-        }
-        
-        function getPriorityBadge(priority) {
-            const labels = { 'high': '高', 'medium': '中', 'low': '低', 'urgent': '紧急' };
-            const classes = { 'high': 'badge-high', 'medium': 'badge-medium', 'low': 'badge-low', 'urgent': 'badge-high' };
-            return `<span class="badge ${classes[priority] || 'badge-medium'}">${labels[priority] || priority}</span>`;
-        }
-        
-        function formatDate(dateStr) {
-            if (!dateStr) return '-';
-            const date = new Date(dateStr);
-            return date.toLocaleString('zh-CN', { 
-                month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
-            });
-        }
-        
-        function renderStars(score) {
-            if (!score) return '';
-            let stars = '';
-            for (let i = 1; i <= 5; i++) {
-                stars += `<span class="star ${i <= score ? '' : 'empty'}">★</span>`;
+        // 初始化 API Key 输入框
+        function initApiKey() {
+            const savedKey = getApiKey();
+            console.log('[initApiKey] savedKey exists:', !!savedKey);
+            if (savedKey) {
+                const input = document.getElementById('api-key-input');
+                input.value = savedKey;
+                input.classList.add('saved');
+            } else {
+                // 显示提示让用户输入 API Key
+                showToast('请在右上角输入 API Key', 'error');
             }
-            return stars;
         }
         
+        // 带认证的 fetch 封装
+        async function authFetch(url, options = {}) {
+            const key = getApiKey();
+            
+            // 在页面上显示调试信息
+            const debugDiv = document.getElementById('debug-info') || document.createElement('div');
+            debugDiv.id = 'debug-info';
+            debugDiv.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#f59e0b;color:#000;padding:8px;z-index:99999;font-size:12px;';
+            debugDiv.textContent = `[Debug] getApiKey returned: ${key ? 'Key exists (length:' + key.length + ')' : 'EMPTY - API Key not found in localStorage'}`;
+            if (!document.getElementById('debug-info')) {
+                document.body.appendChild(debugDiv);
+            }
+            
+            if (!key) {
+                throw new Error('API Key required - please enter API Key in the top right input box');
+            }
+            
+            const separator = url.includes('?') ? '&' : '?';
+            const authUrl = `${url}${separator}api_key=${key}`;
+            
+            // 更新调试信息
+            debugDiv.textContent += ` | Requesting: ${authUrl.substring(0, 80)}...`;
+            
+            const response = await fetch(authUrl, options);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+        }
+        
+        // 全局状态
+        let currentTaskId = null;
+        let currentTask = null;
+        let currentStepId = null;
+        let hasManual = false;
+
+        // 初始化
+        async function init() {
+            const urlParams = new URLSearchParams(window.location.search);
+            currentTaskId = urlParams.get('id');
+
+            if (!currentTaskId) {
+                showToast('缺少任务 ID', 'error');
+                return;
+            }
+
+            initApiKey();  // 初始化 API Key 输入框
+            
+            await loadTask();
+            await loadSteps();
+            await loadManualInfo();
+            await loadMessages();
+
+            // 启动轮询
+            setInterval(pollMessages, 5000);
+        }
+
+        // 加载任务信息
         async function loadTask() {
             try {
-                const [taskRes, manualRes] = await Promise.all([
-                    fetch(`${API_BASE}/tasks/${taskId}`),
-                    fetch(`${API_BASE}/tasks/${taskId}/manual`).catch(() => null)
-                ]);
+                const task = await authFetch(`/api/tasks/${currentTaskId}`);
+                currentTask = task;
+
+                document.getElementById('taskTitle').textContent = task.title;
+                document.getElementById('infoTitle').textContent = task.title;
+                document.getElementById('infoDescription').textContent = task.description || '暂无描述';
                 
-                if (!taskRes.ok) {
-                    throw new Error('Task not found');
-                }
-                
-                const task = await taskRes.json();
-                
-                // Update page title
-                document.title = `${task.title} | OpenClaw OPC`;
-                document.getElementById('page-title').textContent = `📋 ${task.title}`;
-                
-                // Basic info
-                document.getElementById('task-id').textContent = task.id;
-                document.getElementById('task-status-badge').innerHTML = getStatusBadge(task.status);
-                document.getElementById('task-priority').innerHTML = getPriorityBadge(task.priority);
-                document.getElementById('task-estimated').textContent = `${task.estimated_cost?.toFixed?.(2) || 0} OC币`;
-                document.getElementById('task-actual').textContent = `${task.actual_cost?.toFixed?.(2) || 0} OC币`;
-                document.getElementById('task-tokens').textContent = `${task.tokens_input || 0} / ${task.tokens_output || 0}`;
-                document.getElementById('task-rework').textContent = `${task.rework_count || 0} / ${task.max_rework || 3}`;
-                document.getElementById('task-description').textContent = task.description || '无描述';
-                
-                // Budget bar
-                const used = task.actual_cost || 0;
-                const total = task.estimated_cost || 1;
-                const percent = Math.min((used / total) * 100, 100);
-                document.getElementById('budget-used').textContent = `${used.toFixed(2)} OC币`;
-                document.getElementById('budget-total').textContent = `预估 ${total.toFixed(2)} OC币`;
-                const fill = document.getElementById('budget-fill');
-                fill.style.width = `${percent}%`;
-                fill.className = 'budget-fill' + (percent > 90 ? ' danger' : percent > 70 ? ' warning' : '');
-                
-                // Timeline
-                renderTimeline(task);
-                
-                // Assigned agent
-                if (task.assigned_to) {
-                    loadAgent(task.assigned_to);
-                }
-                
-                // Manual
-                if (manualRes && manualRes.ok) {
-                    const manual = await manualRes.json();
-                    document.getElementById('manual-content').innerHTML = markdownToHtml(manual.content);
-                    document.getElementById('manual-link').href = manual.path;
-                    document.getElementById('manual-link').style.display = 'inline-flex';
-                } else {
-                    document.getElementById('manual-content').innerHTML = '<div class="empty-state">手册尚未生成</div>';
-                }
-                
-                // Result (if completed)
-                if (task.status === 'completed' || task.status === 'failed') {
-                    document.getElementById('result-card').style.display = 'block';
-                    document.getElementById('result-content').textContent = task.result || '无结果';
-                    document.getElementById('result-content').className = 'result-box' + (task.result ? '' : ' empty');
-                    document.getElementById('task-score').innerHTML = renderStars(task.score);
-                    document.getElementById('task-feedback').textContent = task.feedback || '无反馈';
-                }
-                
-                // Action buttons
-                renderActions(task);
-                
+                const statusBadge = document.getElementById('statusBadge');
+                statusBadge.textContent = getStatusText(task.status);
+                statusBadge.className = `status-badge status-${task.status}`;
+
+                document.getElementById('assigneeName').textContent = task.agent?.name || '未分配';
+                document.getElementById('budgetInfo').textContent = `${task.estimated_cost || 0} OC币`;
+                document.getElementById('createdAt').textContent = new Date(task.created_at).toLocaleString('zh-CN');
             } catch (error) {
                 console.error('Failed to load task:', error);
                 showToast('加载任务失败', 'error');
             }
         }
-        
-        function renderTimeline(task) {
-            const timeline = document.getElementById('timeline');
-            const items = [];
-            
-            // Created
-            items.push({
-                time: task.created_at,
-                title: '任务创建',
-                desc: '任务已创建，等待分配',
-                completed: true
-            });
-            
-            // Assigned
-            if (task.assigned_at) {
-                items.push({
-                    time: task.assigned_at,
-                    title: '任务分配',
-                    desc: `分配给员工`,
-                    completed: true
-                });
-            } else if (task.status !== 'pending') {
-                items.push({
-                    time: null,
-                    title: '任务分配',
-                    desc: '等待分配',
-                    completed: false
-                });
+
+        // 加载步骤信息
+        async function loadSteps() {
+            try {
+                const steps = await authFetch(`/api/tasks/${currentTaskId}/steps`);
+                if (steps.length > 0) {
+                    currentStepId = steps[0].id;
+                    document.getElementById('stepInfo').textContent = `步骤 1/${steps.length}`;
+                }
+            } catch (error) {
+                console.error('Failed to load steps:', error);
             }
-            
-            // Started
-            if (task.started_at) {
-                items.push({
-                    time: task.started_at,
-                    title: '开始执行',
-                    desc: 'Agent 开始处理任务',
-                    completed: true
-                });
-            } else if (task.status === 'assigned' || task.status === 'in_progress') {
-                items.push({
-                    time: null,
-                    title: '开始执行',
-                    desc: '等待开始',
-                    completed: false,
-                    active: task.status === 'in_progress'
-                });
+        }
+
+        // 加载手册信息
+        async function loadManualInfo() {
+            try {
+                const manual = await authFetch(`/api/manuals/task/${currentTaskId}`);
+                hasManual = manual.has_manual;
+
+                if (hasManual) {
+                    document.getElementById('manualCard').style.display = 'flex';
+                    document.getElementById('manualMeta').textContent = 
+                        `模板: ${manual.template_name} | 生成于 ${new Date(manual.generated_at).toLocaleString('zh-CN')}`;
+                }
+            } catch (error) {
+                console.error('Failed to load manual:', error);
             }
-            
-            // Completed
-            if (task.completed_at) {
-                items.push({
-                    time: task.completed_at,
-                    title: task.status === 'completed' ? '任务完成' : '任务失败',
-                    desc: task.result ? '已提交结果' : '无结果',
-                    completed: true
-                });
-            } else if (task.status !== 'pending' && task.status !== 'assigned') {
-                items.push({
-                    time: null,
-                    title: '任务完成',
-                    desc: '等待完成',
-                    completed: false
-                });
+        }
+
+        // 加载消息
+        async function loadMessages() {
+            if (!currentStepId) return;
+
+            try {
+                const messages = await authFetch(`/api/tasks/steps/${currentStepId}/messages`);
+                renderMessages(messages);
+            } catch (error) {
+                console.error('Failed to load messages:', error);
             }
+        }
+
+        // 渲染消息
+        function renderMessages(messages) {
+            const container = document.getElementById('chatMessages');
             
-            timeline.innerHTML = items.map(item => `
-                <div class="timeline-item ${item.completed ? 'completed' : ''} ${item.active ? 'active' : ''}">
-                    <div class="timeline-time">${formatDate(item.time)}</div>
-                    <div class="timeline-title">${item.title}</div>
-                    <div class="timeline-desc">${item.desc}</div>
+            if (messages.length === 0) {
+                container.innerHTML = `
+                    <div class="system-message">
+                        <span>👋 任务已开始，可以开始沟通协作</span>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = messages.map(msg => `
+                <div class="message ${msg.sender_type}">
+                    <div class="message-avatar">
+                        ${msg.sender_type === 'user' ? '👤' : msg.sender_name?.[0]?.toUpperCase() || '🤖'}
+                    </div>
+                    <div>
+                        <div class="message-content">${escapeHtml(msg.content)}</div>
+                        <div class="message-time">${new Date(msg.created_at).toLocaleString('zh-CN')}</div>
+                    </div>
                 </div>
             `).join('');
+
+            // 滚动到底部
+            container.scrollTop = container.scrollHeight;
         }
-        
-        async function loadAgent(agentId) {
+
+        // 发送消息
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const content = input.value.trim();
+
+            if (!content || !currentStepId) return;
+
+            const btn = document.getElementById('sendBtn');
+            btn.disabled = true;
+
             try {
-                const res = await fetch(`${API_BASE}/agents/${agentId}`);
-                if (!res.ok) return;
-                
-                const agent = await res.json();
-                document.getElementById('agent-card').style.display = 'block';
-                document.getElementById('agent-emoji').textContent = agent.emoji || '🤖';
-                document.getElementById('agent-name').textContent = agent.name;
-                document.getElementById('agent-id').textContent = agent.id;
-                document.getElementById('agent-link').href = `/dashboard/employees.html?id=${agent.id}`;
-            } catch (error) {
-                console.error('Failed to load agent:', error);
-            }
-        }
-        
-        function renderActions(task) {
-            const container = document.getElementById('action-buttons');
-            const headerActions = document.getElementById('header-actions');
-            let buttons = '';
-            let headerButtons = '';
-            
-            if (task.status === 'pending') {
-                buttons += `<button class="btn btn-primary" onclick="assignTask()">👤 分配任务</button>`;
-                buttons += `<button class="btn btn-secondary" onclick="editTask()">✏️ 编辑任务</button>`;
-                buttons += `<button class="btn btn-danger" onclick="deleteTask()">🗑️ 删除任务</button>`;
-            } else if (task.status === 'assigned') {
-                buttons += `<button class="btn btn-primary" onclick="startTask()">▶️ 开始执行</button>`;
-                headerButtons += `<button class="btn btn-secondary" onclick="reassignTask()">重新分配</button>`;
-            } else if (task.status === 'in_progress') {
-                buttons += `<button class="btn btn-primary" onclick="completeTask()">✅ 标记完成</button>`;
-                buttons += `<button class="btn btn-secondary" onclick="requestRework()">🔄 请求返工</button>`;
-            } else if (task.status === 'completed' || task.status === 'failed') {
-                buttons += `<button class="btn btn-primary" onclick="rateTask()">⭐ 评分</button>`;
-                if (task.rework_count < task.max_rework) {
-                    buttons += `<button class="btn btn-secondary" onclick="requestRework()">🔄 重新打开</button>`;
-                }
-            }
-            
-            container.innerHTML = buttons || '<div style="color: #64748b; text-align: center;">暂无可用操作</div>';
-            headerActions.innerHTML = headerButtons;
-        }
-        
-        // Action handlers
-        async function assignTask() {
-            window.location.href = `/dashboard/tasks.html?assign=${taskId}`;
-        }
-        
-        async function startTask() {
-            try {
-                const res = await fetch(`${API_BASE}/tasks/${taskId}/start`, { method: 'POST' });
-                if (res.ok) {
-                    showToast('任务开始执行');
-                    loadTask();
-                } else {
-                    showToast('操作失败', 'error');
-                }
-            } catch (error) {
-                showToast('操作失败', 'error');
-            }
-        }
-        
-        async function completeTask() {
-            const result = prompt('请输入执行结果：');
-            if (result === null) return;
-            
-            try {
-                const res = await fetch(`${API_BASE}/tasks/${taskId}/complete`, {
+                await authFetch(`/api/tasks/steps/${currentStepId}/messages`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ output: result, score: 5 })
+                    body: JSON.stringify({ content })
                 });
-                if (res.ok) {
-                    showToast('任务已标记完成');
-                    loadTask();
-                } else {
-                    showToast('操作失败', 'error');
-                }
+
+                input.value = '';
+                await loadMessages();
             } catch (error) {
-                showToast('操作失败', 'error');
+                showToast('发送失败: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
             }
         }
-        
-        async function requestRework() {
-            if (!confirm('确定要请求返工吗？')) return;
-            
+
+        // 轮询消息
+        async function pollMessages() {
+            if (!currentStepId) return;
+            await loadMessages();
+        }
+
+        // 查看手册
+        function viewManual() {
+            if (hasManual) {
+                viewFullManual();
+            } else {
+                previewManual();
+            }
+        }
+
+        // 查看完整手册
+        function viewFullManual() {
+            window.open(`/dashboard/manual.html?task_id=${currentTaskId}`, '_blank');
+        }
+
+        // 预览手册
+        async function previewManual() {
             try {
-                const res = await fetch(`${API_BASE}/tasks/${taskId}/rework`, { method: 'POST' });
-                if (res.ok) {
-                    showToast('已请求返工');
-                    loadTask();
+                const manual = await authFetch(`/api/manuals/task/${currentTaskId}`);
+                if (manual.has_manual) {
+                    // 显示手册弹窗或侧边栏
+                    alert(`📋 ${manual.template_name}\n\n${manual.content.substring(0, 500)}...`);
                 } else {
-                    showToast('操作失败', 'error');
+                    showToast('暂无手册，请在任务分配后查看', 'info');
                 }
             } catch (error) {
-                showToast('操作失败', 'error');
+                showToast('加载手册失败', 'error');
             }
         }
-        
-        async function rateTask() {
-            const score = prompt('请输入评分 (1-5)：', '5');
-            if (score === null) return;
-            
-            const feedback = prompt('请输入反馈：') || '';
-            
-            try {
-                const res = await fetch(`${API_BASE}/tasks/${taskId}/rate`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ score: parseInt(score), feedback })
-                });
-                if (res.ok) {
-                    showToast('评分已提交');
-                    loadTask();
-                } else {
-                    showToast('操作失败', 'error');
-                }
-            } catch (error) {
-                showToast('操作失败', 'error');
+
+        // 返回
+        function goBack() {
+            window.history.back();
+        }
+
+        // 键盘事件
+        function handleKeyDown(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
             }
         }
-        
-        async function deleteTask() {
-            if (!confirm('确定要删除此任务吗？此操作不可恢复。')) return;
-            
-            try {
-                const res = await fetch(`${API_BASE}/tasks/${taskId}`, { method: 'DELETE' });
-                if (res.ok) {
-                    showToast('任务已删除');
-                    setTimeout(() => window.location.href = '/dashboard/tasks.html', 1500);
-                } else {
-                    showToast('删除失败', 'error');
-                }
-            } catch (error) {
-                showToast('删除失败', 'error');
-            }
+
+        // 获取状态文本
+        function getStatusText(status) {
+            const map = {
+                'pending': '待分配',
+                'assigned': '已分配',
+                'in_progress': '进行中',
+                'completed': '已完成',
+                'failed': '失败',
+                'fused': '已熔断'
+            };
+            return map[status] || status;
         }
-        
-        function editTask() {
-            showToast('编辑功能开发中...');
+
+        // HTML 转义
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
-        
-        function reassignTask() {
-            window.location.href = `/dashboard/tasks.html?assign=${taskId}`;
+
+        // 显示 Toast
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type} show`;
+            setTimeout(() => toast.classList.remove('show'), 3000);
         }
-        
-        // Simple markdown to HTML converter
-        function markdownToHtml(md) {
-            if (!md) return '';
-            return md
-                .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-                .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-                .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-                .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
-                .replace(/\*(.*)\*/gim, '<em>$1</em>')
-                .replace(/`([^`]+)`/gim, '<code>$1</code>')
-                .replace(/```[\s\S]*?```/gim, match => `<pre>${match.slice(3, -3)}</pre>`)
-                .replace(/^\- (.*$)/gim, '<li>$1</li>')
-                .replace(/<li>(.*)<\/li>/gim, '<ul><li>$1</li></ul>')
-                .replace(/\n/gim, '<br>');
-        }
-        
-        // Initialize
-        loadTask();
-        connectWebSocket();
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
 </html>

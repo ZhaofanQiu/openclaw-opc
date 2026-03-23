@@ -55,6 +55,26 @@
             margin-top: 4px;
         }
         
+        /* API Key Input */
+        .api-key-section {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+        }
+        .api-key-input {
+            background: #1a1a2e;
+            border: 1px solid #2a2a4a;
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: #e0e0e0;
+            font-size: 13px;
+            width: 180px;
+        }
+        .api-key-input.saved {
+            border-color: #22c55e;
+        }
+        
         /* Stats Bar */
         .stats-bar {
             display: grid;
@@ -488,11 +508,16 @@
         <!-- Header -->
         <div class="header">
             <a href="/dashboard/v2.html" class="back-btn">← 返回Dashboard</a>
-            <div class="header-title">
-                📋 Agent交互日志
-                <span style="font-size: 14px; color: #888; font-weight: normal;">实时调试</span>
+            <div>
+                <div class="header-title">
+                    📋 Agent交互日志
+                    <span style="font-size: 14px; color: #888; font-weight: normal;">实时调试</span>
+                </div>
+                <div class="header-subtitle">记录所有与OpenClaw Agent的交互，包括CLI调用、API请求和响应</div>
             </div>
-            <div class="header-subtitle">记录所有与OpenClaw Agent的交互，包括CLI调用、API请求和响应</div>
+            <div class="api-key-section">
+                <input type="password" class="api-key-input" id="api-key-input" placeholder="输入 API Key..." onchange="saveApiKey()">
+            </div>
         </div>
         
         <!-- Stats -->
@@ -606,6 +631,70 @@
     </div>
 
     <script>
+        // API Key 管理
+        let API_KEY = localStorage.getItem('opc_api_key') || '';
+        
+        function getApiKey() {
+            return API_KEY;
+        }
+        
+        function setApiKey(key) {
+            API_KEY = key;
+            localStorage.setItem('opc_api_key', key);
+        }
+        
+        // 带认证的 fetch 封装
+        async function authFetch(url, options = {}) {
+            const key = getApiKey();
+            const separator = url.includes('?') ? '&' : '?';
+            const authUrl = key ? `${url}${separator}api_key=${key}` : url;
+            return fetch(authUrl, options);
+        }
+        
+        // 保存 API Key
+        function saveApiKey() {
+            const input = document.getElementById('api-key-input');
+            const key = input.value.trim();
+            if (key) {
+                setApiKey(key);
+                input.classList.add('saved');
+                showToast('API Key 已保存');
+                // 重新加载数据
+                loadAgents();
+                loadLogs();
+                loadStats();
+            }
+        }
+        
+        // 初始化 API Key 输入框
+        function initApiKey() {
+            const savedKey = getApiKey();
+            if (savedKey) {
+                const input = document.getElementById('api-key-input');
+                input.value = savedKey;
+                input.classList.add('saved');
+            }
+        }
+        
+        // 显示提示
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'error' ? '#ef4444' : '#22c55e'};
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                z-index: 10000;
+                font-size: 14px;
+            `;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+        
         // State
         let currentPage = 1;
         let pageSize = 50;
@@ -616,6 +705,7 @@
         
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
+            initApiKey();  // 初始化 API Key
             loadAgents();
             loadLogs();
             loadStats();

@@ -5,6 +5,8 @@ Agents Router (重构后)
 核心原则: 简化接口，保留必要功能
 """
 
+import os
+import json
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -198,7 +200,57 @@ def remove_skill(agent_id: str, skill_id: str, db: Session = Depends(get_db)):
     """移除员工技能"""
     return {"message": "Skill removed"}
 
-# ============ OpenClaw 绑定 ============
+# ============ OpenClaw 集成 ============
+
+def get_openclaw_agents() -> list:
+    """从 OpenClaw 配置文件获取可用 Agent 列表"""
+    config_path = os.path.expanduser("~/.openclaw/openclaw.json")
+    try:
+        with open(config_path, 'r') as f:
+            config = json.load(f)
+        agents = config.get('agents', {}).get('list', [])
+        return [
+            {
+                "id": a.get('id'),
+                "name": a.get('name', a.get('id')),
+                "description": a.get('description', '')
+            }
+            for a in agents
+        ]
+    except Exception as e:
+        logger.error(f"Failed to read OpenClaw config: {e}")
+        return []
+
+
+@router.get("/openclaw/available", response_model=dict)
+@limiter.limit("100/minute")
+def list_openclaw_agents(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """
+    获取 OpenClaw 中可用的 Agent 列表（未绑定的候选 Agent）
+    
+    返回所有在 OpenClaw 中配置但尚未绑定到 OPC 员工的 Agent。
+    """
+    # 获取所有 OpenClaw agents
+    openclaw_agents = get_openclaw_agents()
+    
+    # 获取已绑定的 agent IDs
+    bound_agents = db.query(Agent).filter(Agent.is_bound == "true").all()
+    bound_ids = {a.openclaw_agent_id for a in bound_agents if a.openclaw_agent_id}
+    
+    # 过滤出未绑定的 agents
+    available = [
+        a for a in openclaw_agents
+        if a['id'] not in bound_ids
+    ]
+    
+    return {
+        "agents": available,
+        "total": len(available),
+        "bound_count": len(bound_ids)
+    }
 
 @router.post("/{agent_id}/bind")
 def bind_openclaw_agent(

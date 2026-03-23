@@ -85,7 +85,24 @@
         .badge-idle { background: #22c55e20; color: #22c55e; }
         .badge-working { background: #f59e0b20; color: #f59e0b; }
         
-        /* Employee */
+        /* API Key Input */
+        .api-key-section {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .api-key-input {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: #e2e8f0;
+            font-size: 13px;
+            width: 200px;
+        }
+        .api-key-input.saved {
+            border-color: #22c55e;
+        }
         .employee-name {
             display: flex;
             align-items: center;
@@ -228,6 +245,7 @@
             color: #64748b;
         }
     </style>
+    <script src="auth.js"></script>
 </head>
 <body>
     <div class="container">
@@ -236,7 +254,10 @@
                 <a href="/dashboard/v2.html" class="back-btn">← 返回 Dashboard</a>
                 <h1>👥 员工管理</h1>
             </div>
-            <button class="btn btn-primary" onclick="openCreateModal()">+ 创建员工</button>
+            <div class="api-key-section">
+                <input type="password" class="api-key-input" id="api-key-input" placeholder="输入 API Key..." onchange="saveApiKey()">
+                <button class="btn btn-primary" onclick="openCreateModal()">+ 创建员工</button>
+            </div>
         </div>
 
         <div class="stats">
@@ -318,14 +339,62 @@
 
     <!-- Bind Modal -->
     <div class="modal-overlay" id="bind-modal">
-        <div class="modal">
+        <div class="modal" style="max-width: 500px;">
             <div class="modal-header">绑定 OpenClaw Agent</div>
             <form id="bind-form">
                 <input type="hidden" name="agent_id">
+                
+                <!-- 绑定方式选择 -->
                 <div class="form-group">
-                    <label class="form-label">Agent ID</label>
-                    <input type="text" class="form-input" name="openclaw_agent_id" required placeholder="如: opc_partner">
+                    <label class="form-label">绑定方式</label>
+                    <div class="bind-options">
+                        <label class="bind-option active" data-value="existing">
+                            <input type="radio" name="bind_type" value="existing" checked>
+                            <span class="bind-option-icon">📋</span>
+                            <span class="bind-option-text">选择现有 Agent</span>
+                        </label>
+                        <label class="bind-option" data-value="new">
+                            <input type="radio" name="bind_type" value="new">
+                            <span class="bind-option-icon">✨</span>
+                            <span class="bind-option-text">新建 Agent</span>
+                        </label>
+                    </div>
                 </div>
+                
+                <!-- 现有 Agent 选择 -->
+                <div id="existing-agent-section">
+                    <div class="form-group">
+                        <label class="form-label">选择 Agent</label>
+                        <select class="form-select" id="existing-agent-select" name="existing_agent_id">
+                            <option value="">加载中...</option>
+                        </select>
+                        <div class="form-hint">从 OpenClaw 配置中读取的可用 Agent</div>
+                    </div>
+                </div>
+                
+                <!-- 新建 Agent -->
+                <div id="new-agent-section" style="display: none;">
+                    <div class="form-group">
+                        <label class="form-label">新 Agent ID *</label>
+                        <input type="text" class="form-input" id="new-agent-id" placeholder="如: my_new_agent">
+                        <div class="form-hint">输入新的 Agent 标识符（小写字母、数字、下划线）</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Agent 名称</label>
+                        <input type="text" class="form-input" id="new-agent-name" placeholder="如: 我的新助手">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">模型</label>
+                        <select class="form-select" id="new-agent-model">
+                            <option value="">加载中...</option>
+                        </select>
+                        <div class="form-hint">从 OpenClaw 配置中读取的可用模型</div>
+                    </div>
+                </div>
+                
+                <!-- 隐藏的 openclaw_agent_id 字段 -->
+                <input type="hidden" name="openclaw_agent_id" id="final-agent-id">
+                
                 <div class="modal-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeBindModal()">取消</button>
                     <button type="submit" class="btn btn-primary">绑定</button>
@@ -333,11 +402,74 @@
             </form>
         </div>
     </div>
+    
+    <style>
+        .bind-options {
+            display: flex;
+            gap: 12px;
+            margin-top: 8px;
+        }
+        .bind-option {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 16px;
+            background: #252542;
+            border: 2px solid #2a2a4a;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .bind-option:hover {
+            border-color: #667eea;
+        }
+        .bind-option.active {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+        .bind-option input {
+            display: none;
+        }
+        .bind-option-icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+        .bind-option-text {
+            font-size: 14px;
+            color: #e2e8f0;
+        }
+        .form-hint {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+    </style>
 
     <div class="toast-container" id="toast-container"></div>
 
     <script>
         const API_BASE = '/api';
+        
+        // API Key 管理
+        let API_KEY = localStorage.getItem('opc_api_key') || '';
+        
+        function getApiKey() {
+            return API_KEY;
+        }
+        
+        function setApiKey(key) {
+            API_KEY = key;
+            localStorage.setItem('opc_api_key', key);
+        }
+        
+        // 带认证的 fetch 封装
+        async function authFetch(url, options = {}) {
+            const key = getApiKey();
+            const separator = url.includes('?') ? '&' : '?';
+            const authUrl = key ? `${url}${separator}api_key=${key}` : url;
+            return fetch(authUrl, options);
+        }
         
         function formatCurrency(v) { return v?.toLocaleString('zh-CN', {maximumFractionDigits: 2}) || '0'; }
         
@@ -350,6 +482,28 @@
             setTimeout(() => t.remove(), 3000);
         }
         
+        // 保存 API Key
+        function saveApiKey() {
+            const input = document.getElementById('api-key-input');
+            const key = input.value.trim();
+            if (key) {
+                setApiKey(key);
+                input.classList.add('saved');
+                showToast('API Key 已保存');
+                loadData();
+            }
+        }
+
+        // 初始化 API Key 输入框
+        function initApiKey() {
+            const savedKey = getApiKey();
+            if (savedKey) {
+                const input = document.getElementById('api-key-input');
+                input.value = savedKey;
+                input.classList.add('saved');
+            }
+        }
+
         function openModal() {
             document.getElementById('create-form').reset();
             document.getElementById('create-modal').classList.add('active');
@@ -362,11 +516,81 @@
         function openBindModal(agentId) {
             document.getElementById('bind-form').reset();
             document.querySelector('#bind-form [name="agent_id"]').value = agentId;
+            
+            // 重置选项
+            document.querySelectorAll('.bind-option').forEach(o => o.classList.remove('active'));
+            document.querySelector('[data-value="existing"]').classList.add('active');
+            document.getElementById('existing-agent-section').style.display = 'block';
+            document.getElementById('new-agent-section').style.display = 'none';
+            
+            // 加载 Agent 列表
+            loadOpenClawAgents();
+            setupBindOptions();
+            
             document.getElementById('bind-modal').classList.add('active');
         }
         
         function closeBindModal() {
             document.getElementById('bind-modal').classList.remove('active');
+        }
+        
+        // 加载 OpenClaw Agent 列表
+        async function loadOpenClawAgents() {
+            try {
+                const res = await authFetch('/api/config/openclaw-agents');
+                const data = await res.json();
+                
+                // 填充现有 Agent 选择
+                const select = document.getElementById('existing-agent-select');
+                if (data.agents && data.agents.length > 0) {
+                    select.innerHTML = data.agents.map(agent => 
+                        `<option value="${agent.id}">${agent.name} (${agent.id})</option>`
+                    ).join('');
+                } else {
+                    select.innerHTML = '<option value="">暂无可用 Agent</option>';
+                }
+                
+                // 填充模型选择
+                const modelSelect = document.getElementById('new-agent-model');
+                if (data.models && data.models.length > 0) {
+                    modelSelect.innerHTML = data.models.map(model => 
+                        `<option value="${model.id}" ${model.primary ? 'selected' : ''}>${model.name}</option>`
+                    ).join('');
+                } else {
+                    modelSelect.innerHTML = '<option value="kimi-coding/k2p5">Kimi K2.5</option>';
+                }
+            } catch (e) {
+                console.error('加载 Agent 列表失败:', e);
+                document.getElementById('existing-agent-select').innerHTML = 
+                    '<option value="">加载失败</option>';
+                document.getElementById('new-agent-model').innerHTML = 
+                    '<option value="kimi-coding/k2p5">Kimi K2.5</option>';
+            }
+        }
+        
+        // 绑定方式切换
+        function setupBindOptions() {
+            const options = document.querySelectorAll('.bind-option');
+            const existingSection = document.getElementById('existing-agent-section');
+            const newSection = document.getElementById('new-agent-section');
+            
+            options.forEach(option => {
+                option.addEventListener('click', () => {
+                    // 更新选中状态
+                    options.forEach(o => o.classList.remove('active'));
+                    option.classList.add('active');
+                    
+                    // 切换显示区域
+                    const value = option.dataset.value;
+                    if (value === 'existing') {
+                        existingSection.style.display = 'block';
+                        newSection.style.display = 'none';
+                    } else {
+                        existingSection.style.display = 'none';
+                        newSection.style.display = 'block';
+                    }
+                });
+            });
         }
         
         function getBadge(status) {
@@ -377,7 +601,7 @@
         
         async function loadData() {
             try {
-                const res = await fetch(`${API_BASE}/agents`);
+                const res = await authFetch(`${API_BASE}/agents`);
                 const data = await res.json();
                 const employees = data.agents || [];
                 
@@ -429,7 +653,7 @@
         async function deleteEmployee(id) {
             if (!confirm('确定删除此员工？')) return;
             try {
-                const res = await fetch(`${API_BASE}/agents/${id}`, { method: 'DELETE' });
+                const res = await authFetch(`${API_BASE}/agents/${id}`, { method: 'DELETE' });
                 if (res.ok) {
                     showToast('删除成功');
                     loadData();
@@ -449,7 +673,7 @@
             data.position_level = parseInt(data.position_level);
             
             try {
-                const res = await fetch(`${API_BASE}/agents`, {
+                const res = await authFetch(`${API_BASE}/agents`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
@@ -461,7 +685,7 @@
                     closeModal();
                     
                     if (data.openclaw_agent_id) {
-                        await fetch(`${API_BASE}/agents/${result.id}/bind`, {
+                        await authFetch(`${API_BASE}/agents/${result.id}/bind`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ openclaw_agent_id: data.openclaw_agent_id })
@@ -482,12 +706,80 @@
             e.preventDefault();
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData);
+            const bindType = formData.get('bind_type');
             
+            let openclawAgentId;
+            
+            if (bindType === 'existing') {
+                // 使用现有 Agent
+                openclawAgentId = document.getElementById('existing-agent-select').value;
+                if (!openclawAgentId) {
+                    showToast('请选择一个 Agent', 'error');
+                    return;
+                }
+            } else {
+                // 新建 Agent
+                const newAgentId = document.getElementById('new-agent-id').value.trim();
+                const newAgentName = document.getElementById('new-agent-name').value.trim();
+                const newAgentModel = document.getElementById('new-agent-model').value;
+                
+                if (!newAgentId) {
+                    showToast('请输入新 Agent ID', 'error');
+                    return;
+                }
+                
+                // 验证 ID 格式
+                if (!/^[a-z0-9_]+$/.test(newAgentId)) {
+                    showToast('Agent ID 只能包含小写字母、数字和下划线', 'error');
+                    return;
+                }
+                
+                // 调用创建 Agent API
+                try {
+                    const createRes = await authFetch('/api/config/agents', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            id: newAgentId,
+                            name: newAgentName || newAgentId,
+                            model: newAgentModel
+                        })
+                    });
+                    
+                    if (!createRes.ok) {
+                        const err = await createRes.json();
+                        showToast(err.detail || '创建 Agent 失败', 'error');
+                        return;
+                    }
+                    
+                    const createResult = await createRes.json();
+                    openclawAgentId = newAgentId;
+                    showToast('Agent 创建成功！');
+                    
+                    // 询问是否重启 Gateway
+                    if (createResult.restart_required) {
+                        const shouldRestart = confirm(
+                            `Agent "${newAgentId}" 已创建成功！\n\n` +
+                            `需要重启 OpenClaw Gateway 才能激活新 Agent。\n\n` +
+                            `是否立即重启？（重启过程约需 10-30 秒）`
+                        );
+                        
+                        if (shouldRestart) {
+                            await restartGateway();
+                        }
+                    }
+                } catch (e) {
+                    showToast('创建 Agent 失败: ' + e.message, 'error');
+                    return;
+                }
+            }
+            
+            // 绑定 Agent
             try {
-                const res = await fetch(`${API_BASE}/agents/${data.agent_id}/bind`, {
+                const res = await authFetch(`${API_BASE}/agents/${data.agent_id}/bind`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ openclaw_agent_id: data.openclaw_agent_id })
+                    body: JSON.stringify({ openclaw_agent_id: openclawAgentId })
                 });
                 
                 if (res.ok) {
@@ -503,7 +795,144 @@
             }
         });
         
+        // 重启 Gateway 并显示读条
+        async function restartGateway() {
+            showLoadingOverlay('正在重启 OpenClaw Gateway...', '这可能需要 10-30 秒，请稍候');
+            
+            try {
+                // 发送重启信号
+                const restartRes = await authFetch('/api/config/gateway/restart', {
+                    method: 'POST'
+                });
+                
+                if (!restartRes.ok) {
+                    const err = await restartRes.json();
+                    hideLoadingOverlay();
+                    showToast('重启失败: ' + (err.detail || '未知错误'), 'error');
+                    return;
+                }
+                
+                // 等待 Gateway 重启完成
+                let attempts = 0;
+                const maxAttempts = 30; // 最多等待 30 秒
+                
+                while (attempts < maxAttempts) {
+                    await new Promise(r => setTimeout(r, 1000));
+                    attempts++;
+                    
+                    // 更新读条进度
+                    const progress = Math.min((attempts / maxAttempts) * 100, 95);
+                    updateLoadingProgress(progress, `重启中... ${attempts}秒`);
+                    
+                    // 检查 Gateway 状态
+                    try {
+                        const statusRes = await authFetch('/api/config/gateway/status');
+                        const status = await statusRes.json();
+                        
+                        if (status.running && status.health === 'healthy') {
+                            updateLoadingProgress(100, '重启完成！');
+                            await new Promise(r => setTimeout(r, 500));
+                            hideLoadingOverlay();
+                            showToast('Gateway 重启成功！新 Agent 已激活');
+                            return;
+                        }
+                    } catch (e) {
+                        // Gateway 还在重启中，继续等待
+                    }
+                }
+                
+                // 超时
+                hideLoadingOverlay();
+                showToast('Gateway 重启超时，请手动检查状态', 'warning');
+                
+            } catch (e) {
+                hideLoadingOverlay();
+                showToast('重启失败: ' + e.message, 'error');
+            }
+        }
+        
+        // 显示加载遮罩
+        function showLoadingOverlay(title, subtitle) {
+            let overlay = document.getElementById('loading-overlay');
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.id = 'loading-overlay';
+                overlay.innerHTML = `
+                    <div class="loading-content">
+                        <div class="spinner"></div>
+                        <h3 id="loading-title">${title}</h3>
+                        <p id="loading-subtitle">${subtitle}</p>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="loading-progress" style="width: 0%"></div>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(overlay);
+                
+                // Add styles
+                const style = document.createElement('style');
+                style.textContent = `
+                    #loading-overlay {
+                        position: fixed;
+                        top: 0; left: 0; right: 0; bottom: 0;
+                        background: rgba(15, 23, 42, 0.95);
+                        z-index: 10000;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    }
+                    .loading-content {
+                        text-align: center;
+                        color: #e2e8f0;
+                    }
+                    .loading-content .spinner {
+                        width: 50px;
+                        height: 50px;
+                        border: 3px solid #334155;
+                        border-top-color: #667eea;
+                        border-radius: 50%;
+                        animation: spin 1s linear infinite;
+                        margin: 0 auto 20px;
+                    }
+                    @keyframes spin { to { transform: rotate(360deg); } }
+                    .loading-content h3 { margin-bottom: 8px; }
+                    .loading-content p { color: #94a3b8; margin-bottom: 20px; }
+                    .progress-bar {
+                        width: 300px;
+                        height: 6px;
+                        background: #334155;
+                        border-radius: 3px;
+                        overflow: hidden;
+                        margin: 0 auto;
+                    }
+                    .progress-fill {
+                        height: 100%;
+                        background: linear-gradient(90deg, #667eea, #764ba2);
+                        transition: width 0.3s;
+                    }
+                `;
+                document.head.appendChild(style);
+            } else {
+                document.getElementById('loading-title').textContent = title;
+                document.getElementById('loading-subtitle').textContent = subtitle;
+                overlay.style.display = 'flex';
+            }
+        }
+        
+        function updateLoadingProgress(percent, text) {
+            const fill = document.getElementById('loading-progress');
+            const subtitle = document.getElementById('loading-subtitle');
+            if (fill) fill.style.width = percent + '%';
+            if (subtitle && text) subtitle.textContent = text;
+        }
+        
+        function hideLoadingOverlay() {
+            const overlay = document.getElementById('loading-overlay');
+            if (overlay) overlay.style.display = 'none';
+        }
+        
         loadData();
+        initApiKey();  // 初始化 API Key 输入框
         setInterval(loadData, 10000);
     </script>
 </body>

@@ -94,5 +94,6 @@ class Agent(Base):
             "used_budget": self.used_budget,
             "remaining_budget": self.remaining_budget,
             "mood": self.mood_emoji,
-            "current_task_id": self.current_task_id
+            "current_task_id": self.current_task_id,
+            "openclaw_agent_id": self.openclaw_agent_id
         }

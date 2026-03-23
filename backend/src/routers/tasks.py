@@ -293,7 +293,7 @@ def rework_task(
         raise HTTPException(status_code=404, detail="Task not found")
     
     task.rework_count += 1
-    task.status = TaskStatus.ASSIGNED.value
+    task.status = "rework"  # 修复：改为 rework 状态
     db.commit()
     
     return {"message": "Task sent for rework", "reason": reason}

@@ -39,7 +39,21 @@
         }
         .back-btn:hover { background: #475569; }
         .header h1 { font-size: 24px; }
-        .header-actions { display: flex; gap: 12px; }
+        .header-actions { display: flex; gap: 12px; align-items: center; }
+        
+        /* API Key Input */
+        .api-key-input {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: #e2e8f0;
+            font-size: 13px;
+            width: 180px;
+        }
+        .api-key-input.saved {
+            border-color: #22c55e;
+        }
         
         /* Main Grid */
         .main-grid {
@@ -428,6 +442,7 @@
                 <h1 id="page-title">👤 员工详情</h1>
             </div>
             <div class="header-actions" id="header-actions">
+                <input type="password" class="api-key-input" id="api-key-input" placeholder="输入 API Key..." onchange="saveApiKey()">
                 <button class="btn btn-secondary" onclick="openEditModal()">✏️ 编辑</button>
                 <button class="btn btn-danger" onclick="deleteAgent()">🗑️ 删除</button>
             </div>
@@ -610,6 +625,49 @@
 
     <script>
         const API_BASE = '/api';
+        
+        // API Key 管理
+        let API_KEY = localStorage.getItem('opc_api_key') || '';
+        
+        function getApiKey() {
+            return API_KEY;
+        }
+        
+        function setApiKey(key) {
+            API_KEY = key;
+            localStorage.setItem('opc_api_key', key);
+        }
+        
+        // 保存 API Key
+        function saveApiKey() {
+            const input = document.getElementById('api-key-input');
+            const key = input.value.trim();
+            if (key) {
+                setApiKey(key);
+                input.classList.add('saved');
+                showToast('API Key 已保存，重新加载数据...');
+                loadAgentData();
+            }
+        }
+        
+        // 初始化 API Key 输入框
+        function initApiKey() {
+            const savedKey = getApiKey();
+            if (savedKey) {
+                const input = document.getElementById('api-key-input');
+                input.value = savedKey;
+                input.classList.add('saved');
+            }
+        }
+        
+        // 带认证的 fetch 封装
+        async function authFetch(url, options = {}) {
+            const key = getApiKey();
+            const separator = url.includes('?') ? '&' : '?';
+            const authUrl = key ? `${url}${separator}api_key=${key}` : url;
+            return fetch(authUrl, options);
+        }
+        
         const urlParams = new URLSearchParams(window.location.search);
         const agentId = urlParams.get('id');
         
@@ -668,7 +726,7 @@
         
         async function loadAgent() {
             try {
-                const res = await fetch(`${API_BASE}/agents/${agentId}`);
+                const res = await authFetch(`${API_BASE}/agents/${agentId}`);
                 if (!res.ok) throw new Error('Agent not found');
                 
                 agentData = await res.json();
@@ -733,7 +791,7 @@
         
         async function loadCurrentTask(taskId) {
             try {
-                const res = await fetch(`${API_BASE}/tasks/${taskId}`);
+                const res = await authFetch(`${API_BASE}/tasks/${taskId}`);
                 if (!res.ok) return;
                 
                 const task = await res.json();
@@ -749,7 +807,7 @@
         async function loadTaskHistory() {
             try {
                 // Get all tasks and filter by assigned_to
-                const res = await fetch(`${API_BASE}/tasks`);
+                const res = await authFetch(`${API_BASE}/tasks`);
                 if (!res.ok) return;
                 
                 const data = await res.json();
@@ -790,7 +848,7 @@
         
         async function loadManual() {
             try {
-                const res = await fetch(`${API_BASE}/manuals/employee/${agentId}`);
+                const res = await authFetch(`${API_BASE}/manuals/employee/${agentId}`);
                 if (!res.ok) throw new Error('Manual not found');
                 
                 const manual = await res.json();
@@ -835,7 +893,7 @@
             data.monthly_budget = parseFloat(data.monthly_budget);
             
             try {
-                const res = await fetch(`${API_BASE}/agents/${agentId}`, {
+                const res = await authFetch(`${API_BASE}/agents/${agentId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
@@ -860,7 +918,7 @@
             const data = Object.fromEntries(formData);
             
             try {
-                const res = await fetch(`${API_BASE}/agents/${agentId}/bind`, {
+                const res = await authFetch(`${API_BASE}/agents/${agentId}/bind`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
@@ -893,7 +951,7 @@
             if (!confirm('确定要删除此员工吗？此操作不可恢复。')) return;
             
             try {
-                const res = await fetch(`${API_BASE}/agents/${agentId}`, { method: 'DELETE' });
+                const res = await authFetch(`${API_BASE}/agents/${agentId}`, { method: 'DELETE' });
                 if (res.ok) {
                     showToast('员工已删除');
                     setTimeout(() => window.location.href = '/dashboard/employees.html', 1500);
@@ -921,6 +979,7 @@
         }
         
         // Initialize
+        initApiKey();  // 初始化 API Key
         loadAgent();
     </script>
 </body>

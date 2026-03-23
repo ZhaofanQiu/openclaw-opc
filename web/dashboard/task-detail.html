@@ -67,6 +67,21 @@
         .header-actions {
             display: flex;
             gap: 12px;
+            align-items: center;
+        }
+        
+        /* API Key Input */
+        .api-key-input {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: #e2e8f0;
+            font-size: 13px;
+            width: 180px;
+        }
+        .api-key-input.saved {
+            border-color: #22c55e;
         }
 
         .btn {
@@ -480,6 +495,7 @@
                 <h1 id="taskTitle">任务详情</h1>
             </div>
             <div class="header-actions">
+                <input type="password" class="api-key-input" id="api-key-input" placeholder="输入 API Key..." onchange="saveApiKey()">
                 <button class="btn btn-secondary" id="manualBtn" onclick="viewManual()">
                     <span>📋</span> 手册
                 </button>
@@ -562,9 +578,84 @@
     <!-- Toast -->
     <div class="toast" id="toast"></div>
 
-    <script src="/dashboard/js/api.js"></script>
-    <script src="/dashboard/js/auth.js"></script>
     <script>
+        // API Key 管理（简化版，直接使用 query parameter）
+        console.log('[Page Load] localStorage check:', {
+            'opc_api_key exists': localStorage.getItem('opc_api_key') !== null,
+            'opc_api_key value': localStorage.getItem('opc_api_key')?.substring(0, 10) + '...',
+            'all keys': Object.keys(localStorage)
+        });
+        
+        // 不再缓存 API_KEY，每次都从 localStorage 实时读取
+        function getApiKey() {
+            const key = localStorage.getItem('opc_api_key') || '';
+            console.log('[getApiKey] read from localStorage, key exists:', !!key, 'length:', key.length);
+            return key;
+        }
+        
+        function setApiKey(key) {
+            localStorage.setItem('opc_api_key', key);
+            console.log('[setApiKey] saved to localStorage, key length:', key.length);
+        }
+        
+        // 保存 API Key
+        function saveApiKey() {
+            const input = document.getElementById('api-key-input');
+            const key = input.value.trim();
+            if (key) {
+                setApiKey(key);
+                input.classList.add('saved');
+                showToast('API Key 已保存，重新加载数据...');
+                // 重新加载所有数据
+                loadTask();
+                loadSteps();
+                loadManualInfo();
+                loadMessages();
+            }
+        }
+        
+        // 初始化 API Key 输入框
+        function initApiKey() {
+            const savedKey = getApiKey();
+            console.log('[initApiKey] savedKey exists:', !!savedKey);
+            if (savedKey) {
+                const input = document.getElementById('api-key-input');
+                input.value = savedKey;
+                input.classList.add('saved');
+            } else {
+                // 显示提示让用户输入 API Key
+                showToast('请在右上角输入 API Key', 'error');
+            }
+        }
+        
+        // 带认证的 fetch 封装
+        async function authFetch(url, options = {}) {
+            const key = getApiKey();
+            
+            // 在页面上显示调试信息
+            const debugDiv = document.getElementById('debug-info') || document.createElement('div');
+            debugDiv.id = 'debug-info';
+            debugDiv.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#f59e0b;color:#000;padding:8px;z-index:99999;font-size:12px;';
+            debugDiv.textContent = `[Debug] getApiKey returned: ${key ? 'Key exists (length:' + key.length + ')' : 'EMPTY - API Key not found in localStorage'}`;
+            if (!document.getElementById('debug-info')) {
+                document.body.appendChild(debugDiv);
+            }
+            
+            if (!key) {
+                throw new Error('API Key required - please enter API Key in the top right input box');
+            }
+            
+            const separator = url.includes('?') ? '&' : '?';
+            const authUrl = `${url}${separator}api_key=${key}`;
+            
+            // 更新调试信息
+            debugDiv.textContent += ` | Requesting: ${authUrl.substring(0, 80)}...`;
+            
+            const response = await fetch(authUrl, options);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+        }
+        
         // 全局状态
         let currentTaskId = null;
         let currentTask = null;
@@ -581,6 +672,8 @@
                 return;
             }
 
+            initApiKey();  // 初始化 API Key 输入框
+            
             await loadTask();
             await loadSteps();
             await loadManualInfo();
@@ -593,7 +686,7 @@
         // 加载任务信息
         async function loadTask() {
             try {
-                const task = await Auth.authFetch(`/api/tasks/${currentTaskId}`);
+                const task = await authFetch(`/api/tasks/${currentTaskId}`);
                 currentTask = task;
 
                 document.getElementById('taskTitle').textContent = task.title;
@@ -616,7 +709,7 @@
         // 加载步骤信息
         async function loadSteps() {
             try {
-                const steps = await Auth.authFetch(`/api/tasks/${currentTaskId}/steps`);
+                const steps = await authFetch(`/api/tasks/${currentTaskId}/steps`);
                 if (steps.length > 0) {
                     currentStepId = steps[0].id;
                     document.getElementById('stepInfo').textContent = `步骤 1/${steps.length}`;
@@ -629,7 +722,7 @@
         // 加载手册信息
         async function loadManualInfo() {
             try {
-                const manual = await Auth.authFetch(`/api/manuals/task/${currentTaskId}`);
+                const manual = await authFetch(`/api/manuals/task/${currentTaskId}`);
                 hasManual = manual.has_manual;
 
                 if (hasManual) {
@@ -647,7 +740,7 @@
             if (!currentStepId) return;
 
             try {
-                const messages = await Auth.authFetch(`/api/tasks/steps/${currentStepId}/messages`);
+                const messages = await authFetch(`/api/tasks/steps/${currentStepId}/messages`);
                 renderMessages(messages);
             } catch (error) {
                 console.error('Failed to load messages:', error);
@@ -694,7 +787,7 @@
             btn.disabled = true;
 
             try {
-                await Auth.authFetch(`/api/tasks/steps/${currentStepId}/messages`, {
+                await authFetch(`/api/tasks/steps/${currentStepId}/messages`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ content })
@@ -732,7 +825,7 @@
         // 预览手册
         async function previewManual() {
             try {
-                const manual = await Auth.authFetch(`/api/manuals/task/${currentTaskId}`);
+                const manual = await authFetch(`/api/manuals/task/${currentTaskId}`);
                 if (manual.has_manual) {
                     // 显示手册弹窗或侧边栏
                     alert(`📋 ${manual.template_name}\n\n${manual.content.substring(0, 500)}...`);
