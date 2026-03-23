@@ -101,6 +101,19 @@ class AgentInteractionLogService:
         if len(cls._logs) > cls._max_logs:
             cls._logs = cls._logs[:cls._max_logs]
         
+        # WebSocket 推送
+        try:
+            import asyncio
+            from core.websocket_manager import notify_log_created
+            # 尝试获取事件循环，如果失败则忽略
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(notify_log_created(log.to_dict()))
+            except RuntimeError:
+                pass  # 没有运行的事件循环，跳过
+        except Exception:
+            pass  # WebSocket 失败不影响主流程
+        
         # 记录到系统日志
         logger.info(
             f"Agent交互: {agent_name} ({agent_id}) - {interaction_type} {direction} - "

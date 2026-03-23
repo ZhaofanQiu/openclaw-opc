@@ -82,7 +82,7 @@ def get_current_task(openclaw_agent_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/tasks/{task_id}/report")
-def report_task_result(
+async def report_task_result(
     task_id: str,
     data: TaskReportRequest,
     db: Session = Depends(get_db)
@@ -138,6 +138,23 @@ def report_task_result(
             },
             success=result.get("success", False)
         )
+        
+        # 4. WebSocket 推送通知
+        try:
+            from core.websocket_manager import notify_task_completed, notify_budget_update
+            await notify_task_completed(
+                task_id=task_id,
+                agent_id=agent.id,
+                success=result.get("success", False),
+                cost=result.get("cost", 0)
+            )
+            await notify_budget_update(
+                agent_id=agent.id,
+                used_budget=agent.used_budget,
+                monthly_budget=agent.monthly_budget
+            )
+        except Exception as ws_error:
+            logger.warning(f"WebSocket notification failed: {ws_error}")
         
         return result
         

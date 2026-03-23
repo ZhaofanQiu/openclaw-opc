@@ -207,6 +207,23 @@ async def assign_task_endpoint(
             async_mode=True
         )
         
+        # WebSocket 推送通知
+        try:
+            from core.websocket_manager import notify_task_assigned, notify_agent_status_change
+            await notify_task_assigned(
+                task_id=task_id,
+                agent_id=data.agent_id,
+                agent_name=agent.name,
+                task_title=task.title
+            )
+            await notify_agent_status_change(
+                agent_id=data.agent_id,
+                status="working",
+                current_task_id=task_id
+            )
+        except Exception as ws_error:
+            logger.warning(f"WebSocket notification failed: {ws_error}")
+        
         return {
             "message": "Task assigned and agent notified",
             "task_id": task_id,

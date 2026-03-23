@@ -868,8 +868,90 @@
         // Initialize
         loadData();
 
-        // Auto-refresh every 10 seconds
+        // Auto-refresh every 10 seconds as fallback
         setInterval(loadData, 10000);
+
+        // ============ WebSocket Real-time Updates ============
+        let ws = null;
+        let wsReconnectAttempts = 0;
+        const MAX_RECONNECT_ATTEMPTS = 5;
+
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws`;
+            
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = () => {
+                console.log('WebSocket connected');
+                wsReconnectAttempts = 0;
+                showToast('🟢 实时连接已建立', 'success');
+            };
+            
+            ws.onmessage = (event) => {
+                try {
+                    const message = JSON.parse(event.data);
+                    handleWebSocketMessage(message);
+                } catch (error) {
+                    console.error('WebSocket message error:', error);
+                }
+            };
+            
+            ws.onclose = () => {
+                console.log('WebSocket disconnected');
+                if (wsReconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+                    wsReconnectAttempts++;
+                    setTimeout(connectWebSocket, 3000 * wsReconnectAttempts);
+                }
+            };
+            
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+        }
+
+        function handleWebSocketMessage(message) {
+            const { type } = message;
+            
+            switch (type) {
+                case 'task_assigned':
+                    showToast(`📋 任务 "${message.task_title}" 已分配给 ${message.agent_name}`);
+                    loadData();
+                    break;
+                    
+                case 'task_started':
+                    showToast('▶️ 任务开始执行');
+                    loadData();
+                    break;
+                    
+                case 'task_completed':
+                    showToast(message.success ? '✅ 任务已完成' : '❌ 任务失败');
+                    loadData();
+                    break;
+                    
+                case 'agent_status_change':
+                    loadData();
+                    break;
+                    
+                case 'budget_update':
+                    loadData();
+                    break;
+                    
+                case 'log_created':
+                    // 如果当前在日志页面，可能需要刷新
+                    break;
+                    
+                case 'connected':
+                    console.log('WebSocket:', message.message);
+                    break;
+                    
+                default:
+                    console.log('WebSocket message:', message);
+            }
+        }
+
+        // 启动 WebSocket 连接
+        connectWebSocket();
     </script>
 </body>
 </html>

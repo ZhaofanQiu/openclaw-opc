@@ -15,7 +15,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 
 from database import init_db, check_database_connection, get_database_info
-from routers import agents, tasks, skill_api, manuals, agent_logs
+from routers import agents, tasks, skill_api, manuals, agent_logs, websocket
 from utils.logging_config import configure_logging, get_logger
 from utils.rate_limit import limiter
 from utils.api_auth import require_read_permission
@@ -158,6 +158,13 @@ routers_config = [
     (agent_logs, "/api/agent-logs", "Agent Logs"),
     (skill_api, "/api/skill", "Skill API"),
 ]
+
+# WebSocket 路由单独添加（不需要前缀和依赖）
+try:
+    app.include_router(websocket.router, tags=["WebSocket"])
+    logger.debug("✓ Router registered: WebSocket at /ws")
+except Exception as e:
+    logger.error(f"✗ Failed to register WebSocket: {e}")
 
 for router_module, prefix, tag in routers_config:
     try:
