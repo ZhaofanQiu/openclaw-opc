@@ -15,7 +15,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 
 from database import init_db, check_database_connection, get_database_info
-from routers import agents, tasks, skill_api, manuals
+from routers import agents, tasks, skill_api, manuals, agent_logs
 from utils.logging_config import configure_logging, get_logger
 from utils.rate_limit import limiter
 from utils.api_auth import require_read_permission
@@ -35,6 +35,7 @@ OPENAPI_TAGS = [
     {"name": "Agents", "description": "员工管理 - 创建、查询、绑定 OpenClaw Agent"},
     {"name": "Tasks", "description": "任务管理 - 创建、分配、执行"},
     {"name": "Manuals", "description": "手册管理 - 任务/岗位/公司手册"},
+    {"name": "Agent Logs", "description": "Agent交互日志 - 记录所有与OpenClaw的交互"},
     {"name": "Budget", "description": "预算管理 - OC币分配和统计"},
     {"name": "Skill API", "description": "Skill 接口 - opc-bridge skill 调用"},
 ]
@@ -154,6 +155,7 @@ routers_config = [
     (agents, "/api/agents", "Agents"),
     (tasks, "/api/tasks", "Tasks"),
     (manuals, "/api/manuals", "Manuals"),
+    (agent_logs, "/api/agent-logs", "Agent Logs"),
     (skill_api, "/api/skill", "Skill API"),
 ]
 

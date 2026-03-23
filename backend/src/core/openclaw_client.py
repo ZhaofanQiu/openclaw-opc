@@ -82,7 +82,9 @@ class OpenClawClient:
                           agent_id: str,
                           message: str,
                           mode: ExecutionMode = ExecutionMode.SYNC,
-                          timeout: int = 300) -> AgentResponse:
+                          timeout: int = 300,
+                          agent_name: str = None,
+                          task_id: str = None) -> AgentResponse:
         """
         发送消息给 Agent
         
@@ -91,14 +93,35 @@ class OpenClawClient:
             message: 消息文本（包含三维度控制描述）
             mode: 执行模式（同步/异步）
             timeout: 超时时间（秒）
+            agent_name: Agent名称（用于日志记录）
+            task_id: 任务ID（用于日志记录）
         
         Returns:
             AgentResponse: 同步模式直接返回结果，异步模式返回 execution_id
         """
+        import time
+        start_time = time.time()
+        
         if mode == ExecutionMode.SYNC:
-            return await self._send_sync(agent_id, message, timeout)
+            response = await self._send_sync(agent_id, message, timeout)
         else:
-            return await self._send_async(agent_id, message, timeout)
+            response = await self._send_async(agent_id, message, timeout)
+        
+        # 记录交互日志
+        duration_ms = int((time.time() - start_time) * 1000)
+        self._log_interaction(
+            agent_id=agent_id,
+            agent_name=agent_name or agent_id,
+            direction="outgoing",
+            content=message,
+            response=response.text if response.success else None,
+            duration_ms=duration_ms,
+            success=response.success,
+            error_message=response.error,
+            metadata={"mode": mode.value, "task_id": task_id, "execution_id": response.execution_id}
+        )
+        
+        return response
     
     async def _send_sync(self, 
                         agent_id: str, 
@@ -313,6 +336,40 @@ class OpenClawClient:
                 )
             
             time.sleep(poll_interval)
+    
+    def _log_interaction(self,
+                         agent_id: str,
+                         agent_name: str,
+                         direction: str,
+                         content: str,
+                         response: str = None,
+                         duration_ms: int = None,
+                         success: bool = True,
+                         error_message: str = None,
+                         metadata: Dict = None):
+        """
+        记录Agent交互日志
+        
+        调用日志服务记录交互详情
+        """
+        try:
+            from services.agent_interaction_log_service_v2 import AgentInteractionLogService
+            
+            AgentInteractionLogService.log(
+                agent_id=agent_id,
+                agent_name=agent_name,
+                interaction_type="message",
+                direction=direction,
+                content=content,
+                response=response,
+                metadata=metadata,
+                duration_ms=duration_ms,
+                success=success,
+                error_message=error_message
+            )
+        except Exception as e:
+            # 日志记录失败不应影响主流程
+            logger.warning(f"Failed to log interaction: {e}")
 
 
 # ============ 便捷函数 ============

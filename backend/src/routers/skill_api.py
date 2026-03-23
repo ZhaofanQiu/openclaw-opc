@@ -100,6 +100,17 @@ def report_task_result(
         ).first()
         
         if not agent:
+            # 记录失败的回调日志
+            from services.agent_interaction_log_service_v2 import AgentInteractionLogService
+            AgentInteractionLogService.log(
+                agent_id=data.agent_id,
+                agent_name=data.agent_id,
+                interaction_type="callback",
+                direction="incoming",
+                content=f"Report task {task_id}: {data.result[:100]}...",
+                success=False,
+                error_message=f"Agent not found for openclaw_agent_id: {data.agent_id}"
+            )
             return {"success": False, "error": f"Agent not found for openclaw_agent_id: {data.agent_id}"}
         
         # 2. 使用员工内部 ID 报告任务
@@ -111,10 +122,38 @@ def report_task_result(
             tokens_used=data.tokens_used
         )
         
+        # 3. 记录回调日志
+        from services.agent_interaction_log_service_v2 import AgentInteractionLogService
+        AgentInteractionLogService.log(
+            agent_id=data.agent_id,
+            agent_name=agent.name,
+            interaction_type="callback",
+            direction="incoming",
+            content=f"Report task {task_id}: {data.result[:200]}...",
+            metadata={
+                "task_id": task_id,
+                "tokens_used": data.tokens_used,
+                "cost": result.get("cost", 0),
+                "internal_agent_id": agent.id
+            },
+            success=result.get("success", False)
+        )
+        
         return result
         
     except Exception as e:
         logger.error(f"Failed to report task: {e}")
+        # 记录异常日志
+        from services.agent_interaction_log_service_v2 import AgentInteractionLogService
+        AgentInteractionLogService.log(
+            agent_id=data.agent_id,
+            agent_name=data.agent_id,
+            interaction_type="callback",
+            direction="incoming",
+            content=f"Report task {task_id}",
+            success=False,
+            error_message=str(e)
+        )
         return {"success": False, "error": str(e)}
 
 
