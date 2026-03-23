@@ -744,8 +744,8 @@
                             ${task.status === 'pending' 
                                 ? `<button class="btn btn-primary" onclick="openAssignTaskModal('${task.id}')">分配</button>` 
                                 : task.status === 'completed'
-                                    ? `<a href="/dashboard/task-detail.html?task=${task.id}" class="link">查看结果</a>`
-                                    : `<a href="/dashboard/task-detail.html?task=${task.id}" class="link">查看详情</a>`
+                                    ? `<a href="/dashboard/task-detail.html?id=${task.id}" class="link">查看结果</a>`
+                                    : `<a href="/dashboard/task-detail.html?id=${task.id}" class="link">查看详情</a>`
                             }
                         </td>
                     </tr>

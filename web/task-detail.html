@@ -3,1144 +3,913 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>任务详情 - OpenClaw OPC</title>
-    <script src="auth.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>任务详情 | OpenClaw OPC v2.0</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f5f7fa;
-            color: #1f2937;
-            line-height: 1.6;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
         }
-
+        .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+        
         /* Header */
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 1rem 2rem;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-
-        .header-content {
-            max-width: 1400px;
-            margin: 0 auto;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #334155;
         }
-
-        .header h1 {
-            font-size: 1.5rem;
+        .header-left { display: flex; align-items: center; gap: 16px; }
+        .back-btn {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-        }
-
-        .header-actions {
-            display: flex;
-            gap: 1rem;
-        }
-
-        .btn {
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
+            gap: 6px;
+            padding: 8px 12px;
+            background: #334155;
             border: none;
+            border-radius: 8px;
+            color: #e2e8f0;
             cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.2s;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .back-btn:hover { background: #475569; }
+        .header h1 { font-size: 24px; }
+        .header-actions { display: flex; gap: 12px; }
+        
+        /* Badges */
+        .badge {
             display: inline-flex;
             align-items: center;
-            gap: 0.5rem;
-        }
-
-        .btn-secondary {
-            background: rgba(255,255,255,0.2);
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            background: rgba(255,255,255,0.3);
-        }
-
-        /* Main Layout */
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 2rem;
-            display: grid;
-            grid-template-columns: 300px 1fr 350px;
-            gap: 1.5rem;
-        }
-
-        /* Card Style */
-        .card {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-
-        .card-header {
-            padding: 1rem 1.25rem;
-            border-bottom: 1px solid #e5e7eb;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .card-body {
-            padding: 1.25rem;
-        }
-
-        /* Left Sidebar - Task Info */
-        .task-info .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.25rem;
-            padding: 0.375rem 0.75rem;
-            border-radius: 9999px;
-            font-size: 0.875rem;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
             font-weight: 500;
-            margin-bottom: 1rem;
         }
-
-        .status-pending { background: #fef3c7; color: #92400e; }
-        .status-assigned { background: #dbeafe; color: #1e40af; }
-        .status-in_progress { background: #fef3c7; color: #92400e; }
-        .status-completed { background: #d1fae5; color: #065f46; }
-        .status-failed { background: #fee2e2; color: #991b1b; }
-        .status-rework { background: #fce7f3; color: #9d174d; }
-
-        .info-row {
+        .badge-pending { background: #64748b30; color: #94a3b8; }
+        .badge-assigned { background: #3b82f620; color: #60a5fa; }
+        .badge-in_progress { background: #f59e0b20; color: #f59e0b; }
+        .badge-completed { background: #22c55e20; color: #22c55e; }
+        .badge-failed { background: #ef444420; color: #ef4444; }
+        
+        .badge-high { background: #ef444420; color: #ef4444; }
+        .badge-medium { background: #f59e0b20; color: #f59e0b; }
+        .badge-low { background: #22c55e20; color: #22c55e; }
+        
+        /* Main Layout */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 24px;
+        }
+        
+        /* Cards */
+        .card {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid #334155;
+            margin-bottom: 24px;
+        }
+        .card-header {
             display: flex;
             justify-content: space-between;
-            padding: 0.75rem 0;
-            border-bottom: 1px solid #f3f4f6;
-        }
-
-        .info-row:last-child {
-            border-bottom: none;
-        }
-
-        .info-label {
-            color: #6b7280;
-            font-size: 0.875rem;
-        }
-
-        .info-value {
-            font-weight: 500;
-            font-size: 0.875rem;
-        }
-
-        /* Steps Timeline */
-        .steps-timeline {
-            position: relative;
-        }
-
-        .step-item {
-            display: flex;
-            gap: 1rem;
-            padding: 1rem 0;
-            position: relative;
-        }
-
-        .step-item:not(:last-child)::after {
-            content: '';
-            position: absolute;
-            left: 15px;
-            top: 40px;
-            bottom: 0;
-            width: 2px;
-            background: #e5e7eb;
-        }
-
-        .step-indicator {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            display: flex;
             align-items: center;
-            justify-content: center;
-            font-size: 0.75rem;
+            margin-bottom: 20px;
+        }
+        .card-title {
+            font-size: 18px;
             font-weight: 600;
-            flex-shrink: 0;
-            z-index: 1;
         }
-
-        .step-pending { background: #f3f4f6; color: #9ca3af; }
-        .step-active { background: #3b82f6; color: white; }
-        .step-completed { background: #10b981; color: white; }
-        .step-failed { background: #ef4444; color: white; }
-        .step-rework { background: #ec4899; color: white; }
-
-        .step-content {
-            flex: 1;
+        
+        /* Info Grid */
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
         }
-
-        .step-title {
-            font-weight: 600;
-            margin-bottom: 0.25rem;
-        }
-
-        .step-meta {
-            font-size: 0.75rem;
-            color: #6b7280;
-        }
-
-        /* Chat Area */
-        .chat-container {
+        .info-item {
             display: flex;
             flex-direction: column;
-            height: calc(100vh - 200px);
+            gap: 4px;
         }
-
-        .chat-header {
-            padding: 1rem 1.25rem;
-            border-bottom: 1px solid #e5e7eb;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .info-label {
+            font-size: 12px;
+            color: #94a3b8;
         }
-
-        .chat-header h2 {
-            font-size: 1.125rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .step-status-badge {
-            padding: 0.25rem 0.75rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
+        .info-value {
+            font-size: 14px;
             font-weight: 500;
         }
-
-        .chat-messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 1.5rem;
-            background: #f9fafb;
-        }
-
-        .message {
-            margin-bottom: 1.5rem;
-            max-width: 80%;
-        }
-
-        .message-own {
-            margin-left: auto;
-        }
-
-        .message-header {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .message-avatar {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 0.875rem;
-            font-weight: 600;
-        }
-
-        .message-sender {
-            font-weight: 600;
-            font-size: 0.875rem;
-        }
-
-        .message-time {
-            font-size: 0.75rem;
-            color: #9ca3af;
-        }
-
-        .message-body {
-            padding: 1rem;
-            border-radius: 12px;
-            font-size: 0.9375rem;
+        
+        /* Description */
+        .description-box {
+            background: #0f172a;
+            border-radius: 8px;
+            padding: 16px;
+            font-size: 14px;
             line-height: 1.6;
+            color: #cbd5e1;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
         }
-
-        .message-other .message-body {
-            background: white;
-            border: 1px solid #e5e7eb;
-            border-bottom-left-radius: 4px;
+        
+        /* Timeline */
+        .timeline {
+            position: relative;
+            padding-left: 24px;
         }
-
-        .message-own .message-body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-bottom-right-radius: 4px;
-        }
-
-        .message-type-assignment {
-            border-left: 4px solid #3b82f6;
-        }
-
-        .message-type-completion {
-            border-left: 4px solid #10b981;
-        }
-
-        .message-type-rework_notice {
-            border-left: 4px solid #ec4899;
-            background: #fdf2f8 !important;
-        }
-
-        .message-type-failure {
-            border-left: 4px solid #ef4444;
-            background: #fef2f2 !important;
-        }
-
-        .chat-input-area {
-            padding: 1rem 1.25rem;
-            border-top: 1px solid #e5e7eb;
-            background: white;
-        }
-
-        .chat-input-wrapper {
-            display: flex;
-            gap: 0.75rem;
-            align-items: flex-end;
-        }
-
-        .chat-input {
-            flex: 1;
-            padding: 0.75rem 1rem;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            resize: none;
-            font-family: inherit;
-            font-size: 0.9375rem;
-            min-height: 44px;
-            max-height: 120px;
-        }
-
-        .chat-input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .btn-send {
-            padding: 0.75rem 1.25rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: opacity 0.2s;
-        }
-
-        .btn-send:hover {
-            opacity: 0.9;
-        }
-
-        .btn-send:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        /* Action Buttons */
-        .actions-panel {
-            padding: 1.25rem;
-        }
-
-        .actions-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .actions-group-title {
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: #6b7280;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 0.75rem;
-        }
-
-        .action-btn {
-            width: 100%;
-            padding: 0.75rem;
-            margin-bottom: 0.5rem;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            background: white;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            transition: all 0.2s;
-            font-size: 0.9375rem;
-        }
-
-        .action-btn:hover {
-            background: #f9fafb;
-            border-color: #d1d5db;
-        }
-
-        .action-btn.primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-        }
-
-        .action-btn.primary:hover {
-            opacity: 0.9;
-        }
-
-        .action-btn.success {
-            background: #10b981;
-            color: white;
-            border: none;
-        }
-
-        .action-btn.danger {
-            background: #ef4444;
-            color: white;
-            border: none;
-        }
-
-        .action-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .action-icon {
-            width: 24px;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 6px;
-            background: rgba(0,0,0,0.1);
-        }
-
-        /* Rating */
-        .rating-stars {
-            display: flex;
-            gap: 0.5rem;
-            margin: 1rem 0;
-        }
-
-        .star {
-            font-size: 1.5rem;
-            color: #d1d5db;
-            cursor: pointer;
-            transition: color 0.2s;
-        }
-
-        .star:hover,
-        .star.active {
-            color: #fbbf24;
-        }
-
-        /* Loading */
-        .loading {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 2rem;
-            color: #6b7280;
-        }
-
-        .loading::after {
+        .timeline::before {
             content: '';
-            width: 20px;
-            height: 20px;
-            border: 2px solid #e5e7eb;
-            border-top-color: #667eea;
+            position: absolute;
+            left: 6px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #334155;
+        }
+        .timeline-item {
+            position: relative;
+            padding-bottom: 20px;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -22px;
+            top: 2px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-left: 0.5rem;
+            background: #64748b;
+            border: 2px solid #1e293b;
         }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        .timeline-item.active::before {
+            background: #3b82f6;
+            box-shadow: 0 0 0 4px #3b82f620;
         }
-
+        .timeline-item.completed::before {
+            background: #22c55e;
+        }
+        .timeline-time {
+            font-size: 12px;
+            color: #64748b;
+            margin-bottom: 4px;
+        }
+        .timeline-title {
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .timeline-desc {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+        
+        /* Manual Section */
+        .manual-content {
+            background: #0f172a;
+            border-radius: 8px;
+            padding: 20px;
+            font-size: 14px;
+            line-height: 1.8;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .manual-content h1, .manual-content h2, .manual-content h3 {
+            color: #60a5fa;
+            margin: 16px 0 12px;
+        }
+        .manual-content h1 { font-size: 20px; border-bottom: 1px solid #334155; padding-bottom: 8px; }
+        .manual-content h2 { font-size: 16px; }
+        .manual-content p { margin: 8px 0; }
+        .manual-content ul, .manual-content ol { margin: 8px 0; padding-left: 20px; }
+        .manual-content code {
+            background: #334155;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 12px;
+        }
+        .manual-content pre {
+            background: #0f172a;
+            padding: 12px;
+            border-radius: 6px;
+            overflow-x: auto;
+            border: 1px solid #334155;
+        }
+        
+        /* Result Section */
+        .result-box {
+            background: #0f172a;
+            border-radius: 8px;
+            padding: 20px;
+            font-size: 14px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+            border-left: 3px solid #22c55e;
+        }
+        .result-box.empty {
+            border-left-color: #64748b;
+            color: #64748b;
+            text-align: center;
+            padding: 40px;
+        }
+        
+        /* Agent Card */
+        .agent-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            background: #0f172a;
+            border-radius: 8px;
+            text-decoration: none;
+            color: inherit;
+            transition: background 0.2s;
+        }
+        .agent-card:hover {
+            background: #1e293b;
+        }
+        .agent-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        .agent-info { flex: 1; }
+        .agent-name { font-weight: 500; margin-bottom: 4px; }
+        .agent-id { font-size: 12px; color: #64748b; }
+        
+        /* Buttons */
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-primary:hover { opacity: 0.9; }
+        .btn-secondary {
+            background: #334155;
+            color: #e2e8f0;
+        }
+        .btn-secondary:hover { background: #475569; }
+        .btn-danger {
+            background: #ef444420;
+            color: #ef4444;
+        }
+        .btn-danger:hover { background: #ef444430; }
+        
+        /* Budget Bar */
+        .budget-bar {
+            height: 8px;
+            background: #334155;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        .budget-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #22c55e, #16a34a);
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+        .budget-fill.warning {
+            background: linear-gradient(90deg, #f59e0b, #d97706);
+        }
+        .budget-fill.danger {
+            background: linear-gradient(90deg, #ef4444, #dc2626);
+        }
+        
+        /* Score */
+        .score-display {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 24px;
+        }
+        .star { color: #f59e0b; }
+        .star.empty { color: #334155; }
+        
         /* Empty State */
         .empty-state {
             text-align: center;
-            padding: 3rem 1.5rem;
-            color: #6b7280;
+            padding: 40px;
+            color: #64748b;
         }
-
-        .empty-state i {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            opacity: 0.3;
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
         }
-
+        
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .toast {
+            padding: 16px 24px;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            animation: slideIn 0.3s ease;
+        }
+        .toast.success { background: #22c55e; }
+        .toast.error { background: #ef4444; }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
         /* Responsive */
-        @media (max-width: 1200px) {
-            .container {
-                grid-template-columns: 250px 1fr 300px;
-            }
-        }
-
         @media (max-width: 900px) {
-            .container {
-                grid-template-columns: 1fr;
-            }
-            .sidebar {
-                display: none;
-            }
+            .main-grid { grid-template-columns: 1fr; }
         }
+        
+        /* Loading */
+        .loading { text-align: center; padding: 40px; color: #64748b; }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #334155;
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-    <header class="header">
-        <div class="header-content">
-            <h1><i class="fas fa-tasks"></i> 任务详情</h1>
-            <div class="header-actions">
-                <button class="btn btn-secondary" onclick="window.location.href='/dashboard/'">
-                    <i class="fas fa-arrow-left"></i> 返回
-                </button>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-left">
+                <a href="/dashboard/tasks.html" class="back-btn">← 返回任务列表</a>
+                <h1 id="page-title">📋 任务详情</h1>
+            </div>
+            <div class="header-actions" id="header-actions">
+                <!-- Dynamic buttons -->
             </div>
         </div>
-    </header>
-
-    <div class="container">
-        <!-- Left Sidebar: Task Info -->
-        <aside class="sidebar">
-            <div class="card task-info">
-                <div class="card-header">
-                    <i class="fas fa-info-circle"></i> 任务信息
+        
+        <div class="main-grid">
+            <!-- Left Column -->
+            <div class="left-column">
+                <!-- Task Info -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">📋 任务信息</h2>
+                        <span id="task-status-badge"></span>
+                    </div>
+                    <div class="info-grid" style="margin-bottom: 20px;">
+                        <div class="info-item">
+                            <span class="info-label">优先级</span>
+                            <span class="info-value" id="task-priority"></span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">任务 ID</span>
+                            <span class="info-value" id="task-id" style="font-family: monospace; font-size: 12px;"></span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">预估成本</span>
+                            <span class="info-value" id="task-estimated"></span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">实际成本</span>
+                            <span class="info-value" id="task-actual"></span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Token 消耗</span>
+                            <span class="info-value" id="task-tokens"></span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">返工次数</span>
+                            <span class="info-value" id="task-rework"></span>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <div class="info-label" style="margin-bottom: 8px;">预算使用</div>
+                        <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+                            <span id="budget-used">0 OC币</span>
+                            <span id="budget-total">预估 0 OC币</span>
+                        </div>
+                        <div class="budget-bar">
+                            <div class="budget-fill" id="budget-fill" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="info-label" style="margin-bottom: 8px;">任务描述</div>
+                        <div class="description-box" id="task-description">
+                            加载中...
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body" id="task-info-content">
-                    <div class="loading">加载中...</div>
+                
+                <!-- Manual -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">📖 任务手册</h2>
+                        <a href="#" id="manual-link" target="_blank" class="btn btn-secondary" style="display: none;">
+                            查看原始文件
+                        </a>
+                    </div>
+                    <div class="manual-content" id="manual-content">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            加载手册内容...
+                        </div>
+                    </div>
                 </div>
-            </div>
-
-            <div class="card" style="margin-top: 1rem;">
-                <div class="card-header">
-                    <i class="fas fa-stream"></i> 执行步骤
-                </div>
-                <div class="card-body">
-                    <div class="steps-timeline" id="steps-timeline">
-                        <div class="loading">加载中...</div>
+                
+                <!-- Result -->
+                <div class="card" id="result-card" style="display: none;">
+                    <div class="card-header">
+                        <h2 class="card-title">✅ 执行结果</h2>
+                        <div class="score-display" id="task-score"></div>
+                    </div>
+                    <div class="result-box" id="result-content"></div>
+                    <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #334155;">
+                        <div class="info-label" style="margin-bottom: 8px;">反馈</div>
+                        <div id="task-feedback" style="color: #94a3b8; font-size: 14px;"></div>
                     </div>
                 </div>
             </div>
-        </aside>
-
-        <!-- Main: Chat Area -->
-        <main class="card chat-container">
-            <div class="chat-header">
-                <h2>
-                    <i class="fas fa-comments"></i>
-                    <span id="current-step-name">加载中...</span>
-                </h2>
-                <span class="step-status-badge" id="current-step-status">-</span>
-            </div>
             
-            <div class="chat-messages" id="chat-messages">
-                <div class="loading">加载聊天记录...</div>
-            </div>
-
-            <div class="chat-input-area" id="chat-input-area">
-                <div class="chat-input-wrapper">
-                    <textarea class="chat-input" id="message-input" placeholder="输入消息..." rows="1"></textarea>
-                    <button class="btn-send" id="btn-send" onclick="sendMessage()">
-                        <i class="fas fa-paper-plane"></i>
-                    </button>
+            <!-- Right Column -->
+            <div class="right-column">
+                <!-- Timeline -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">📅 时间线</h2>
+                    </div>
+                    <div class="timeline" id="timeline">
+                        <!-- Dynamic timeline items -->
+                    </div>
+                </div>
+                
+                <!-- Assigned Agent -->
+                <div class="card" id="agent-card" style="display: none;">
+                    <div class="card-header">
+                        <h2 class="card-title">👤 执行员工</h2>
+                    </div>
+                    <a href="#" id="agent-link" class="agent-card">
+                        <div class="agent-avatar" id="agent-emoji">🤖</div>
+                        <div class="agent-info">
+                            <div class="agent-name" id="agent-name">-</div>
+                            <div class="agent-id" id="agent-id">-</div>
+                        </div>
+                    </a>
+                </div>
+                
+                <!-- Actions -->
+                <div class="card" id="actions-card">
+                    <div class="card-header">
+                        <h2 class="card-title">⚡ 操作</h2>
+                    </div>
+                    <div id="action-buttons" style="display: flex; flex-direction: column; gap: 12px;">
+                        <!-- Dynamic action buttons -->
+                    </div>
                 </div>
             </div>
-        </main>
-
-        <!-- Right Sidebar: Actions -->
-        <aside class="sidebar">
-            <div class="card">
-                <div class="card-header">
-                    <i class="fas fa-bolt"></i> 操作面板
-                </div>
-                <div class="actions-panel" id="actions-panel">
-                    <div class="loading">加载中...</div>
-                </div>
-            </div>
-        </aside>
+        </div>
     </div>
+    
+    <div class="toast-container" id="toast-container"></div>
 
     <script>
-        // Global state
-        const API_BASE = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') 
-            ? 'http://localhost:8080' 
-            : window.location.origin;
-        
+        const API_BASE = '/api';
         const urlParams = new URLSearchParams(window.location.search);
-        const taskId = urlParams.get('task');
-        let currentStepId = null;
-        let currentStep = null;
-        let taskData = null;
-        let stepsData = [];
-        let currentUserId = 'user_current'; // TODO: Get from auth
-        let currentUserType = 'user';
-
-        // Initialize
-        document.addEventListener('DOMContentLoaded', async () => {
-            if (!taskId) {
-                alert('缺少任务ID');
-                window.location.href = '/dashboard/';
-                return;
-            }
-
-            await loadTaskData();
-            await loadSteps();
-            
-            // Setup chat input
-            const input = document.getElementById('message-input');
-            input.addEventListener('input', function() {
-                this.style.height = 'auto';
-                this.style.height = Math.min(this.scrollHeight, 120) + 'px';
-            });
-            input.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage();
-                }
-            });
-
-            // Auto refresh messages every 10 seconds
-            setInterval(loadMessages, 10000);
-        });
-
-        // Load task data
-        async function loadTaskData() {
-            try {
-                const response = await Auth.authFetch(`${API_BASE}/api/tasks/${taskId}`);
-                if (!response.ok) throw new Error('Failed to load task');
-                taskData = await response.json();
-                renderTaskInfo();
-            } catch (error) {
-                console.error('Error loading task:', error);
-                document.getElementById('task-info-content').innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-exclamation-circle"></i>
-                        <p>加载任务信息失败</p>
-                    </div>
-                `;
-            }
+        const taskId = urlParams.get('id');
+        
+        if (!taskId) {
+            showToast('错误：未指定任务ID', 'error');
+            setTimeout(() => window.location.href = '/dashboard/tasks.html', 2000);
         }
-
-        // Render task info
-        function renderTaskInfo() {
-            const statusMap = {
-                'pending': { text: '待分配', class: 'status-pending' },
-                'assigned': { text: '已分配', class: 'status-assigned' },
-                'in_progress': { text: '进行中', class: 'status-in_progress' },
-                'completed': { text: '已完成', class: 'status-completed' },
-                'failed': { text: '失败', class: 'status-failed' },
+        
+        // WebSocket connection
+        let ws = null;
+        
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws`;
+            
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = () => {
+                console.log('WebSocket connected');
+                // Subscribe to this task
+                ws.send(JSON.stringify({ action: 'subscribe_task', task_id: taskId }));
             };
-            const status = statusMap[taskData.status] || { text: taskData.status, class: '' };
-
-            document.getElementById('task-info-content').innerHTML = `
-                <div class="status-badge ${status.class}">
-                    <i class="fas fa-circle" style="font-size: 0.5rem;"></i>
-                    ${status.text}
-                </div>
-                <div class="info-row">
-                    <span class="info-label">任务标题</span>
-                    <span class="info-value">${taskData.title}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">描述</span>
-                    <span class="info-value">${taskData.description || '-'}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">优先级</span>
-                    <span class="info-value">${taskData.priority || 'normal'}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">预算</span>
-                    <span class="info-value">${taskData.estimated_cost || 0} OC币</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">实际消耗</span>
-                    <span class="info-value">${taskData.actual_cost || 0} OC币</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">创建时间</span>
-                    <span class="info-value">${formatDate(taskData.created_at)}</span>
-                </div>
-            `;
-        }
-
-        // Load steps
-        async function loadSteps() {
-            try {
-                const response = await Auth.authFetch(`${API_BASE}/api/task-steps/task/${taskId}`);
-                if (!response.ok) throw new Error('Failed to load steps');
-                const data = await response.json();
-                stepsData = data.steps || [];
-                renderSteps();
-                
-                // Select first active or pending step
-                const activeStep = stepsData.find(s => s.status === 'in_progress') ||
-                                  stepsData.find(s => s.status === 'assigned') ||
-                                  stepsData[0];
-                if (activeStep && !currentStepId) {
-                    selectStep(activeStep.id);
+            
+            ws.onmessage = (event) => {
+                try {
+                    const message = JSON.parse(event.data);
+                    handleWebSocketMessage(message);
+                } catch (error) {
+                    console.error('WebSocket message error:', error);
                 }
-            } catch (error) {
-                console.error('Error loading steps:', error);
-                document.getElementById('steps-timeline').innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-exclamation-circle"></i>
-                        <p>加载步骤失败</p>
-                    </div>
-                `;
-            }
-        }
-
-        // Render steps timeline
-        function renderSteps() {
-            if (stepsData.length === 0) {
-                document.getElementById('steps-timeline').innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-inbox"></i>
-                        <p>暂无执行步骤</p>
-                    </div>
-                `;
-                return;
-            }
-
-            const statusClassMap = {
-                'pending': 'step-pending',
-                'assigned': 'step-active',
-                'in_progress': 'step-active',
-                'completed': 'step-completed',
-                'failed': 'step-failed',
-                'rework': 'step-rework',
-                'waiting_rework': 'step-rework',
             };
-
-            const statusIconMap = {
-                'pending': '<i class="fas fa-clock"></i>',
-                'assigned': '<i class="fas fa-user"></i>',
-                'in_progress': '<i class="fas fa-spinner fa-spin"></i>',
-                'completed': '<i class="fas fa-check"></i>',
-                'failed': '<i class="fas fa-times"></i>',
-                'rework': '<i class="fas fa-undo"></i>',
-                'waiting_rework': '<i class="fas fa-hourglass"></i>',
+            
+            ws.onclose = () => {
+                console.log('WebSocket disconnected, retrying...');
+                setTimeout(connectWebSocket, 3000);
             };
-
-            document.getElementById('steps-timeline').innerHTML = stepsData.map((step, index) => {
-                const isActive = step.id === currentStepId;
-                const statusClass = statusClassMap[step.status] || 'step-pending';
-                const icon = statusIconMap[step.status] || (index + 1);
-                
-                return `
-                    <div class="step-item ${isActive ? 'active' : ''}" onclick="selectStep('${step.id}')" style="cursor: pointer;">
-                        <div class="step-indicator ${statusClass}">
-                            ${icon}
-                        </div>
-                        <div class="step-content">
-                            <div class="step-title">${step.step_name}</div>
-                            <div class="step-meta">
-                                ${step.executor_id ? '执行者: ' + step.executor_id.substring(0, 8) : '待分配'}
-                                ${step.rework_count > 0 ? ` · 返工${step.rework_count}次` : ''}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
         }
-
-        // Select step
-        async function selectStep(stepId) {
-            currentStepId = stepId;
-            currentStep = stepsData.find(s => s.id === stepId);
+        
+        function handleWebSocketMessage(message) {
+            const { type } = message;
             
-            // Update UI
-            renderSteps();
-            
-            if (currentStep) {
-                document.getElementById('current-step-name').textContent = currentStep.step_name;
-                
-                const statusMap = {
-                    'pending': '待分配',
-                    'assigned': '已分配',
-                    'in_progress': '进行中',
-                    'completed': '已完成',
-                    'failed': '失败',
-                    'rework': '返工中',
-                    'waiting_rework': '等待返工',
-                };
-                document.getElementById('current-step-status').textContent = statusMap[currentStep.status] || currentStep.status;
-                document.getElementById('current-step-status').className = 'step-status-badge status-' + currentStep.status;
-                
-                renderActions();
-                await loadMessages();
+            if (type === 'task_update' && message.task_id === taskId) {
+                showToast('🔄 任务状态已更新');
+                loadTask();
+            } else if (type === 'task_completed' && message.task_id === taskId) {
+                showToast(message.success ? '✅ 任务已完成' : '❌ 任务失败');
+                loadTask();
             }
         }
-
-        // Load messages
-        async function loadMessages() {
-            if (!currentStepId) return;
-            
-            try {
-                const response = await Auth.authFetch(`${API_BASE}/api/task-steps/${currentStepId}?reader_id=${currentUserId}`);
-                if (!response.ok) throw new Error('Failed to load messages');
-                const data = await response.json();
-                renderMessages(data.messages || []);
-            } catch (error) {
-                console.error('Error loading messages:', error);
-            }
+        
+        function showToast(msg, type='success') {
+            const c = document.getElementById('toast-container');
+            const t = document.createElement('div');
+            t.className = `toast ${type}`;
+            t.textContent = msg;
+            c.appendChild(t);
+            setTimeout(() => t.remove(), 3000);
         }
-
-        // Render messages
-        function renderMessages(messages) {
-            const container = document.getElementById('chat-messages');
-            
-            if (messages.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-comments"></i>
-                        <p>暂无消息</p>
-                        <p style="font-size: 0.875rem; margin-top: 0.5rem;">任务分配后将显示在这里</p>
-                    </div>
-                `;
-                return;
-            }
-
-            container.innerHTML = messages.map(msg => {
-                const isOwn = msg.sender_id === currentUserId;
-                const typeClass = `message-type-${msg.message_type}`;
-                
-                return `
-                    <div class="message ${isOwn ? 'message-own' : 'message-other'} ${typeClass}">
-                        <div class="message-header">
-                            <div class="message-avatar">${msg.sender_name[0]?.toUpperCase() || '?'}</div>
-                            <span class="message-sender">${msg.sender_name}</span>
-                            <span class="message-time">${formatDateTime(msg.created_at)}</span>
-                        </div>
-                        <div class="message-body">${escapeHtml(msg.content)}</div>
-                    </div>
-                `;
-            }).join('');
-            
-            // Scroll to bottom
-            container.scrollTop = container.scrollHeight;
+        
+        function getStatusBadge(status) {
+            const badges = {
+                'pending': '<span class="badge badge-pending">待处理</span>',
+                'assigned': '<span class="badge badge-assigned">已分配</span>',
+                'in_progress': '<span class="badge badge-in_progress">进行中</span>',
+                'completed': '<span class="badge badge-completed">已完成</span>',
+                'failed': '<span class="badge badge-failed">失败</span>'
+            };
+            return badges[status] || `<span class="badge">${status}</span>`;
         }
-
-        // Send message
-        async function sendMessage() {
-            const input = document.getElementById('message-input');
-            const content = input.value.trim();
-            
-            if (!content || !currentStepId) return;
-            
-            const btn = document.getElementById('btn-send');
-            btn.disabled = true;
-            
-            try {
-                const response = await Auth.authFetch(`${API_BASE}/api/task-steps/${currentStepId}/messages`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        sender_id: currentUserId,
-                        sender_type: currentUserType,
-                        sender_name: '我',
-                        content: content,
-                        message_type: 'reply'
-                    })
-                });
-                
-                if (response.ok) {
-                    input.value = '';
-                    input.style.height = 'auto';
-                    await loadMessages();
-                } else {
-                    const error = await response.json();
-                    alert('发送失败: ' + (error.detail || '未知错误'));
-                }
-            } catch (error) {
-                console.error('Error sending message:', error);
-                alert('发送失败: ' + error.message);
-            } finally {
-                btn.disabled = false;
-            }
+        
+        function getPriorityBadge(priority) {
+            const labels = { 'high': '高', 'medium': '中', 'low': '低', 'urgent': '紧急' };
+            const classes = { 'high': 'badge-high', 'medium': 'badge-medium', 'low': 'badge-low', 'urgent': 'badge-high' };
+            return `<span class="badge ${classes[priority] || 'badge-medium'}">${labels[priority] || priority}</span>`;
         }
-
-        // Render action buttons
-        function renderActions() {
-            if (!currentStep) return;
-            
-            const container = document.getElementById('actions-panel');
-            const isExecutor = currentUserId === currentStep.executor_id;
-            const isAssigner = currentUserId === currentStep.assigner_id;
-            
-            let html = '';
-            
-            // 执行者操作
-            if (isExecutor || currentUserType === 'user') {
-                html += '<div class="actions-group">';
-                html += '<div class="actions-group-title">执行操作</div>';
-                
-                if (currentStep.status === 'assigned') {
-                    html += `
-                        <button class="action-btn primary" onclick="startExecution()">
-                            <span class="action-icon"><i class="fas fa-play"></i></span>
-                            开始执行
-                        </button>
-                    `;
-                }
-                
-                if (currentStep.status === 'in_progress') {
-                    html += `
-                        <button class="action-btn success" onclick="completeStep()">
-                            <span class="action-icon"><i class="fas fa-check"></i></span>
-                            完成任务
-                        </button>
-                        <button class="action-btn" onclick="requestRework()" ${!currentStep.prev_step_id ? 'disabled' : ''}>
-                            <span class="action-icon"><i class="fas fa-undo"></i></span>
-                            请求返工
-                        </button>
-                        <button class="action-btn danger" onclick="failStep()">
-                            <span class="action-icon"><i class="fas fa-times"></i></span>
-                            报告失败
-                        </button>
-                    `;
-                }
-                
-                html += '</div>';
-            }
-            
-            // 发布者操作
-            if ((isAssigner || currentUserType === 'user') && currentStep.status === 'completed' && !currentStep.settled) {
-                html += '<div class="actions-group">';
-                html += '<div class="actions-group-title">评价结算</div>';
-                html += `
-                    <div style="padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 0.75rem;">
-                        <div style="font-size: 0.875rem; margin-bottom: 0.5rem;">评分</div>
-                        <div class="rating-stars" id="rating-stars">
-                            ${[1,2,3,4,5].map(i => `<span class="star" onclick="setRating(${i})">★</span>`).join('')}
-                        </div>
-                        <textarea id="feedback-text" placeholder="输入反馈（可选）..." style="width: 100%; padding: 0.5rem; border: 1px solid #e5e7eb; border-radius: 6px; resize: vertical; margin-top: 0.5rem; font-family: inherit;"></textarea>
-                    </div>
-                    <button class="action-btn success" onclick="settleStep()">
-                        <span class="action-icon"><i class="fas fa-check-double"></i></span>
-                        确认结算
-                    </button>
-                `;
-                html += '</div>';
-            }
-            
-            // 任务信息
-            html += '<div class="actions-group">';
-            html += '<div class="actions-group-title">步骤信息</div>';
-            html += `
-                <div style="font-size: 0.875rem; color: #6b7280; padding: 0.5rem 0;">
-                    <div style="margin-bottom: 0.5rem;"><strong>状态:</strong> ${currentStep.status}</div>
-                    <div style="margin-bottom: 0.5rem;"><strong>预算:</strong> ${currentStep.budget_tokens} tokens</div>
-                    <div style="margin-bottom: 0.5rem;"><strong>消耗:</strong> ${currentStep.actual_tokens} tokens</div>
-                    ${currentStep.rework_count > 0 ? `<div style="margin-bottom: 0.5rem;"><strong>返工次数:</strong> ${currentStep.rework_count}/${currentStep.max_rework}</div>` : ''}
-                    ${currentStep.settled ? `<div style="margin-bottom: 0.5rem;"><strong>评分:</strong> ${currentStep.score}/5</div>` : ''}
-                </div>
-            `;
-            html += '</div>';
-            
-            container.innerHTML = html || '<p style="color: #6b7280; text-align: center;">暂无可用操作</p>';
-        }
-
-        // Action handlers
-        async function startExecution() {
-            if (!confirm('确认开始执行此任务？')) return;
-            
-            try {
-                const response = await Auth.authFetch(`${API_BASE}/api/task-steps/${currentStepId}/start`, {
-                    method: 'POST'
-                });
-                
-                if (response.ok) {
-                    await loadSteps();
-                    await selectStep(currentStepId);
-                } else {
-                    const error = await response.json();
-                    alert('操作失败: ' + (error.detail || '未知错误'));
-                }
-            } catch (error) {
-                alert('操作失败: ' + error.message);
-            }
-        }
-
-        async function completeStep() {
-            const result = prompt('请输入完成结果摘要：');
-            if (!result) return;
-            
-            try {
-                const response = await Auth.authFetch(`${API_BASE}/api/task-steps/${currentStepId}/complete`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        result_summary: result,
-                        output_result: {}
-                    })
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    await loadSteps();
-                    
-                    if (data.is_final) {
-                        alert('🎉 任务全部完成！请等待发布者评价。');
-                    } else {
-                        alert('✅ 步骤完成，已推进到下一步。');
-                    }
-                    await selectStep(currentStepId);
-                } else {
-                    const error = await response.json();
-                    alert('操作失败: ' + (error.detail || '未知错误'));
-                }
-            } catch (error) {
-                alert('操作失败: ' + error.message);
-            }
-        }
-
-        async function requestRework() {
-            const reason = prompt('请输入返工原因：');
-            if (!reason) return;
-            
-            const suggestions = prompt('请输入改进建议（可选）：') || '';
-            
-            try {
-                const response = await Auth.authFetch(`${API_BASE}/api/task-steps/${currentStepId}/rework`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        rework_reason: reason,
-                        suggestions: suggestions,
-                        requester_id: currentUserId,
-                        requester_type: currentUserType
-                    })
-                });
-                
-                if (response.ok) {
-                    alert('✅ 返工请求已发送');
-                    await loadSteps();
-                    await selectStep(currentStepId);
-                } else {
-                    const error = await response.json();
-                    alert('操作失败: ' + (error.detail || '未知错误'));
-                }
-            } catch (error) {
-                alert('操作失败: ' + error.message);
-            }
-        }
-
-        async function failStep() {
-            const reason = prompt('请输入失败原因：');
-            if (!reason) return;
-            
-            if (!confirm('确认报告任务失败？这将暂停整个任务流。')) return;
-            
-            try {
-                const response = await Auth.authFetch(`${API_BASE}/api/task-steps/${currentStepId}/fail`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        fail_reason: reason
-                    })
-                });
-                
-                if (response.ok) {
-                    alert('⚠️ 任务已标记为失败');
-                    await loadSteps();
-                    await selectStep(currentStepId);
-                } else {
-                    const error = await response.json();
-                    alert('操作失败: ' + (error.detail || '未知错误'));
-                }
-            } catch (error) {
-                alert('操作失败: ' + error.message);
-            }
-        }
-
-        let currentRating = 0;
-
-        function setRating(rating) {
-            currentRating = rating;
-            const stars = document.querySelectorAll('#rating-stars .star');
-            stars.forEach((star, index) => {
-                star.classList.toggle('active', index < rating);
-            });
-        }
-
-        async function settleStep() {
-            if (currentRating === 0) {
-                alert('请先选择评分');
-                return;
-            }
-            
-            const feedback = document.getElementById('feedback-text')?.value || '';
-            
-            try {
-                const response = await Auth.authFetch(`${API_BASE}/api/task-steps/${currentStepId}/settle`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        score: currentRating,
-                        feedback: feedback,
-                        settled_by: currentUserId
-                    })
-                });
-                
-                if (response.ok) {
-                    alert('✅ 评价已提交，任务结算完成！');
-                    await loadSteps();
-                    await selectStep(currentStepId);
-                } else {
-                    const error = await response.json();
-                    alert('操作失败: ' + (error.detail || '未知错误'));
-                }
-            } catch (error) {
-                alert('操作失败: ' + error.message);
-            }
-        }
-
-        // Utilities
+        
         function formatDate(dateStr) {
             if (!dateStr) return '-';
             const date = new Date(dateStr);
-            return date.toLocaleDateString('zh-CN');
-        }
-
-        function formatDateTime(dateStr) {
-            if (!dateStr) return '-';
-            const date = new Date(dateStr);
             return date.toLocaleString('zh-CN', { 
-                month: 'short', 
-                day: 'numeric', 
-                hour: '2-digit', 
-                minute: '2-digit' 
+                month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
             });
         }
-
-        function escapeHtml(text) {
-            if (!text) return '';
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
+        
+        function renderStars(score) {
+            if (!score) return '';
+            let stars = '';
+            for (let i = 1; i <= 5; i++) {
+                stars += `<span class="star ${i <= score ? '' : 'empty'}">★</span>`;
+            }
+            return stars;
         }
+        
+        async function loadTask() {
+            try {
+                const [taskRes, manualRes] = await Promise.all([
+                    fetch(`${API_BASE}/tasks/${taskId}`),
+                    fetch(`${API_BASE}/tasks/${taskId}/manual`).catch(() => null)
+                ]);
+                
+                if (!taskRes.ok) {
+                    throw new Error('Task not found');
+                }
+                
+                const task = await taskRes.json();
+                
+                // Update page title
+                document.title = `${task.title} | OpenClaw OPC`;
+                document.getElementById('page-title').textContent = `📋 ${task.title}`;
+                
+                // Basic info
+                document.getElementById('task-id').textContent = task.id;
+                document.getElementById('task-status-badge').innerHTML = getStatusBadge(task.status);
+                document.getElementById('task-priority').innerHTML = getPriorityBadge(task.priority);
+                document.getElementById('task-estimated').textContent = `${task.estimated_cost?.toFixed?.(2) || 0} OC币`;
+                document.getElementById('task-actual').textContent = `${task.actual_cost?.toFixed?.(2) || 0} OC币`;
+                document.getElementById('task-tokens').textContent = `${task.tokens_input || 0} / ${task.tokens_output || 0}`;
+                document.getElementById('task-rework').textContent = `${task.rework_count || 0} / ${task.max_rework || 3}`;
+                document.getElementById('task-description').textContent = task.description || '无描述';
+                
+                // Budget bar
+                const used = task.actual_cost || 0;
+                const total = task.estimated_cost || 1;
+                const percent = Math.min((used / total) * 100, 100);
+                document.getElementById('budget-used').textContent = `${used.toFixed(2)} OC币`;
+                document.getElementById('budget-total').textContent = `预估 ${total.toFixed(2)} OC币`;
+                const fill = document.getElementById('budget-fill');
+                fill.style.width = `${percent}%`;
+                fill.className = 'budget-fill' + (percent > 90 ? ' danger' : percent > 70 ? ' warning' : '');
+                
+                // Timeline
+                renderTimeline(task);
+                
+                // Assigned agent
+                if (task.assigned_to) {
+                    loadAgent(task.assigned_to);
+                }
+                
+                // Manual
+                if (manualRes && manualRes.ok) {
+                    const manual = await manualRes.json();
+                    document.getElementById('manual-content').innerHTML = markdownToHtml(manual.content);
+                    document.getElementById('manual-link').href = manual.path;
+                    document.getElementById('manual-link').style.display = 'inline-flex';
+                } else {
+                    document.getElementById('manual-content').innerHTML = '<div class="empty-state">手册尚未生成</div>';
+                }
+                
+                // Result (if completed)
+                if (task.status === 'completed' || task.status === 'failed') {
+                    document.getElementById('result-card').style.display = 'block';
+                    document.getElementById('result-content').textContent = task.result || '无结果';
+                    document.getElementById('result-content').className = 'result-box' + (task.result ? '' : ' empty');
+                    document.getElementById('task-score').innerHTML = renderStars(task.score);
+                    document.getElementById('task-feedback').textContent = task.feedback || '无反馈';
+                }
+                
+                // Action buttons
+                renderActions(task);
+                
+            } catch (error) {
+                console.error('Failed to load task:', error);
+                showToast('加载任务失败', 'error');
+            }
+        }
+        
+        function renderTimeline(task) {
+            const timeline = document.getElementById('timeline');
+            const items = [];
+            
+            // Created
+            items.push({
+                time: task.created_at,
+                title: '任务创建',
+                desc: '任务已创建，等待分配',
+                completed: true
+            });
+            
+            // Assigned
+            if (task.assigned_at) {
+                items.push({
+                    time: task.assigned_at,
+                    title: '任务分配',
+                    desc: `分配给员工`,
+                    completed: true
+                });
+            } else if (task.status !== 'pending') {
+                items.push({
+                    time: null,
+                    title: '任务分配',
+                    desc: '等待分配',
+                    completed: false
+                });
+            }
+            
+            // Started
+            if (task.started_at) {
+                items.push({
+                    time: task.started_at,
+                    title: '开始执行',
+                    desc: 'Agent 开始处理任务',
+                    completed: true
+                });
+            } else if (task.status === 'assigned' || task.status === 'in_progress') {
+                items.push({
+                    time: null,
+                    title: '开始执行',
+                    desc: '等待开始',
+                    completed: false,
+                    active: task.status === 'in_progress'
+                });
+            }
+            
+            // Completed
+            if (task.completed_at) {
+                items.push({
+                    time: task.completed_at,
+                    title: task.status === 'completed' ? '任务完成' : '任务失败',
+                    desc: task.result ? '已提交结果' : '无结果',
+                    completed: true
+                });
+            } else if (task.status !== 'pending' && task.status !== 'assigned') {
+                items.push({
+                    time: null,
+                    title: '任务完成',
+                    desc: '等待完成',
+                    completed: false
+                });
+            }
+            
+            timeline.innerHTML = items.map(item => `
+                <div class="timeline-item ${item.completed ? 'completed' : ''} ${item.active ? 'active' : ''}">
+                    <div class="timeline-time">${formatDate(item.time)}</div>
+                    <div class="timeline-title">${item.title}</div>
+                    <div class="timeline-desc">${item.desc}</div>
+                </div>
+            `).join('');
+        }
+        
+        async function loadAgent(agentId) {
+            try {
+                const res = await fetch(`${API_BASE}/agents/${agentId}`);
+                if (!res.ok) return;
+                
+                const agent = await res.json();
+                document.getElementById('agent-card').style.display = 'block';
+                document.getElementById('agent-emoji').textContent = agent.emoji || '🤖';
+                document.getElementById('agent-name').textContent = agent.name;
+                document.getElementById('agent-id').textContent = agent.id;
+                document.getElementById('agent-link').href = `/dashboard/employees.html?id=${agent.id}`;
+            } catch (error) {
+                console.error('Failed to load agent:', error);
+            }
+        }
+        
+        function renderActions(task) {
+            const container = document.getElementById('action-buttons');
+            const headerActions = document.getElementById('header-actions');
+            let buttons = '';
+            let headerButtons = '';
+            
+            if (task.status === 'pending') {
+                buttons += `<button class="btn btn-primary" onclick="assignTask()">👤 分配任务</button>`;
+                buttons += `<button class="btn btn-secondary" onclick="editTask()">✏️ 编辑任务</button>`;
+                buttons += `<button class="btn btn-danger" onclick="deleteTask()">🗑️ 删除任务</button>`;
+            } else if (task.status === 'assigned') {
+                buttons += `<button class="btn btn-primary" onclick="startTask()">▶️ 开始执行</button>`;
+                headerButtons += `<button class="btn btn-secondary" onclick="reassignTask()">重新分配</button>`;
+            } else if (task.status === 'in_progress') {
+                buttons += `<button class="btn btn-primary" onclick="completeTask()">✅ 标记完成</button>`;
+                buttons += `<button class="btn btn-secondary" onclick="requestRework()">🔄 请求返工</button>`;
+            } else if (task.status === 'completed' || task.status === 'failed') {
+                buttons += `<button class="btn btn-primary" onclick="rateTask()">⭐ 评分</button>`;
+                if (task.rework_count < task.max_rework) {
+                    buttons += `<button class="btn btn-secondary" onclick="requestRework()">🔄 重新打开</button>`;
+                }
+            }
+            
+            container.innerHTML = buttons || '<div style="color: #64748b; text-align: center;">暂无可用操作</div>';
+            headerActions.innerHTML = headerButtons;
+        }
+        
+        // Action handlers
+        async function assignTask() {
+            window.location.href = `/dashboard/tasks.html?assign=${taskId}`;
+        }
+        
+        async function startTask() {
+            try {
+                const res = await fetch(`${API_BASE}/tasks/${taskId}/start`, { method: 'POST' });
+                if (res.ok) {
+                    showToast('任务开始执行');
+                    loadTask();
+                } else {
+                    showToast('操作失败', 'error');
+                }
+            } catch (error) {
+                showToast('操作失败', 'error');
+            }
+        }
+        
+        async function completeTask() {
+            const result = prompt('请输入执行结果：');
+            if (result === null) return;
+            
+            try {
+                const res = await fetch(`${API_BASE}/tasks/${taskId}/complete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ output: result, score: 5 })
+                });
+                if (res.ok) {
+                    showToast('任务已标记完成');
+                    loadTask();
+                } else {
+                    showToast('操作失败', 'error');
+                }
+            } catch (error) {
+                showToast('操作失败', 'error');
+            }
+        }
+        
+        async function requestRework() {
+            if (!confirm('确定要请求返工吗？')) return;
+            
+            try {
+                const res = await fetch(`${API_BASE}/tasks/${taskId}/rework`, { method: 'POST' });
+                if (res.ok) {
+                    showToast('已请求返工');
+                    loadTask();
+                } else {
+                    showToast('操作失败', 'error');
+                }
+            } catch (error) {
+                showToast('操作失败', 'error');
+            }
+        }
+        
+        async function rateTask() {
+            const score = prompt('请输入评分 (1-5)：', '5');
+            if (score === null) return;
+            
+            const feedback = prompt('请输入反馈：') || '';
+            
+            try {
+                const res = await fetch(`${API_BASE}/tasks/${taskId}/rate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ score: parseInt(score), feedback })
+                });
+                if (res.ok) {
+                    showToast('评分已提交');
+                    loadTask();
+                } else {
+                    showToast('操作失败', 'error');
+                }
+            } catch (error) {
+                showToast('操作失败', 'error');
+            }
+        }
+        
+        async function deleteTask() {
+            if (!confirm('确定要删除此任务吗？此操作不可恢复。')) return;
+            
+            try {
+                const res = await fetch(`${API_BASE}/tasks/${taskId}`, { method: 'DELETE' });
+                if (res.ok) {
+                    showToast('任务已删除');
+                    setTimeout(() => window.location.href = '/dashboard/tasks.html', 1500);
+                } else {
+                    showToast('删除失败', 'error');
+                }
+            } catch (error) {
+                showToast('删除失败', 'error');
+            }
+        }
+        
+        function editTask() {
+            showToast('编辑功能开发中...');
+        }
+        
+        function reassignTask() {
+            window.location.href = `/dashboard/tasks.html?assign=${taskId}`;
+        }
+        
+        // Simple markdown to HTML converter
+        function markdownToHtml(md) {
+            if (!md) return '';
+            return md
+                .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
+                .replace(/\*(.*)\*/gim, '<em>$1</em>')
+                .replace(/`([^`]+)`/gim, '<code>$1</code>')
+                .replace(/```[\s\S]*?```/gim, match => `<pre>${match.slice(3, -3)}</pre>`)
+                .replace(/^\- (.*$)/gim, '<li>$1</li>')
+                .replace(/<li>(.*)<\/li>/gim, '<ul><li>$1</li></ul>')
+                .replace(/\n/gim, '<br>');
+        }
+        
+        // Initialize
+        loadTask();
+        connectWebSocket();
     </script>
 </body>
 </html>

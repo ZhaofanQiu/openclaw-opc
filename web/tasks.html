@@ -402,10 +402,7 @@
                         <td>
                             ${task.status === 'pending' 
                                 ? `<button class="btn btn-secondary" onclick="openAssignModal('${task.id}')">分配</button>`
-                                : `<div style="display: flex; gap: 8px; align-items: center;">
-                                    <a href="/dashboard/task-detail.html?task=${task.id}" style="color: #667eea;">详情</a>
-                                    <a href="/dashboard/manual.html?task=${task.id}" style="color: #a78bfa;">📖手册</a>
-                                   </div>`
+                                : `<a href="/dashboard/task-detail.html?id=${task.id}" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">查看详情</a>`
                             }
                         </td>
                     </tr>
