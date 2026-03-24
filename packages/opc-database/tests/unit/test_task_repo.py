@@ -7,7 +7,12 @@ TaskRepository 测试
 """
 
 import pytest
+import sys
+from pathlib import Path
 from sqlalchemy.ext.asyncio import AsyncSession
+
+# Add tests directory to path for utils import
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from opc_database.models import Task, TaskStatus, TaskPriority
 from opc_database.repositories import TaskRepository

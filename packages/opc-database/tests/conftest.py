@@ -11,6 +11,8 @@ from pathlib import Path
 
 # 添加src到路径
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+# 添加tests目录到路径（用于导入utils）
+sys.path.insert(0, str(Path(__file__).parent))
 
 import pytest
 import pytest_asyncio
