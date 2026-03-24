@@ -8,7 +8,7 @@ version = "0.4.0"
 description = "OpenClaw OPC - Core Business Logic Module"
 readme = "README.md"
 license = {text = "MIT"}
-requires-python = ">=3.12"
+requires-python = ">=3.10"
 authors = [
     {name = "OpenClaw OPC Team"}
 ]
