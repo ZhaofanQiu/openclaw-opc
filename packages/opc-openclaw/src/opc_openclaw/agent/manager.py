@@ -5,14 +5,13 @@ opc-openclaw: Agent管理器
 
 作者: OpenClaw OPC Team
 创建日期: 2026-03-24
-版本: 0.4.0
+版本: 0.4.1
 
 API文档: API.md#AgentManager
 """
 
 from typing import List, Optional
 
-from ..client import AgentClient
 from .lifecycle import AgentInfo, AgentLifecycle
 
 
@@ -23,20 +22,24 @@ class AgentManager:
     提供高层的 Agent 管理能力
     """
 
-    def __init__(self, client: Optional[AgentClient] = None, **kwargs):
+    def __init__(self, agent_client=None, openclaw_bin: Optional[str] = None):
         """
         初始化管理器
 
         Args:
-            client: AgentClient 实例（可选）
-            **kwargs: 传递给 AgentClient 的参数
+            agent_client: AgentClient 实例（可选）
+            openclaw_bin: OpenClaw CLI 路径（可选）
         """
-        self.client = client or AgentClient(**kwargs)
-        self.lifecycle = AgentLifecycle(self.client)
+        self.lifecycle = AgentLifecycle(
+            agent_client=agent_client,
+            openclaw_bin=openclaw_bin,
+        )
 
     async def list_agents(self) -> List[AgentInfo]:
         """
         列出所有 Agent
+
+        只返回符合命名规范的 Agent（opc_ 开头，排除 main/default）
 
         Returns:
             Agent 列表
@@ -67,14 +70,4 @@ class AgentManager:
         """
         return await self.lifecycle.is_agent_available(agent_id)
 
-    async def close(self):
-        """关闭连接"""
-        await self.client.close()
-
-    async def __aenter__(self):
-        """异步上下文管理器入口"""
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """异步上下文管理器出口"""
-        await self.close()
+__all__ = ["AgentManager"]

@@ -1,11 +1,7 @@
 """
-opc-openclaw: Skill包
+opc-openclaw: Skill 包 (v0.4.1)
 
-Skill 定义和管理
-
-作者: OpenClaw OPC Team
-创建日期: 2026-03-24
-版本: 0.4.0
+OPC Bridge Skill 定义、安装器和响应解析器
 """
 
 from .definition import (
@@ -14,10 +10,27 @@ from .definition import (
     get_skill_definition,
     get_skill_yaml,
 )
+from .installer import SkillInstaller
+from .parser import (
+    ResponseParser,
+    ParsedReport,
+    REPORT_START_MARKER,
+    REPORT_END_MARKER,
+    VALID_STATUSES,
+)
 
 __all__ = [
+    # 定义
     "SKILL_DEFINITION",
     "SKILL_METADATA",
     "get_skill_definition",
     "get_skill_yaml",
+    # 安装器
+    "SkillInstaller",
+    # 解析器
+    "ResponseParser",
+    "ParsedReport",
+    "REPORT_START_MARKER",
+    "REPORT_END_MARKER",
+    "VALID_STATUSES",
 ]

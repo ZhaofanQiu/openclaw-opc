@@ -10,7 +10,7 @@ Employee API 测试
 
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from opc_core import create_app
 from opc_database.models import Employee, AgentStatus, PositionLevel
@@ -163,13 +163,20 @@ class TestEmployeeAPI:
         mock_emp = MagicMock()
         mock_employee_repo.get_by_id.return_value = mock_emp
         
-        response = client.post(f"{self.API_PREFIX}/employees/emp_123/bind", json={
-            "openclaw_agent_id": "agent_new"
-        })
+        # Mock AgentManager 支持异步上下文管理器
+        from unittest.mock import AsyncMock
+        mock_manager = AsyncMock()
+        mock_manager.is_available = AsyncMock(return_value=True)
+        mock_manager.__aenter__ = AsyncMock(return_value=mock_manager)
+        mock_manager.__aexit__ = AsyncMock(return_value=None)
         
-        # 注意：这个测试可能需要 mock AgentManager
-        # 这里简化处理，实际可能需要更复杂的 mock
-        assert response.status_code in [200, 400]  # 200成功或400 Agent不可用
+        with patch('opc_core.api.employees.AgentManager', return_value=mock_manager):
+            response = client.post(f"{self.API_PREFIX}/employees/emp_123/bind", json={
+                "openclaw_agent_id": "agent_new"
+            })
+        
+        assert response.status_code == 200
+        assert response.json()["message"] == "Agent bound"
     
     def test_unbind_agent(self, client, mock_employee_repo):
         """测试解绑 Agent"""

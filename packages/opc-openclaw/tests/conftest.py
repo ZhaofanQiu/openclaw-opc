@@ -1,85 +1,64 @@
 """
 opc-openclaw: 测试配置
 
-作者: OpenClaw OPC Team
-创建日期: 2026-03-24
-版本: 0.4.0
+Pytest 配置和共享 fixtures
 """
 
-import sys
+import os
+import tempfile
 from pathlib import Path
 
-# 添加src到路径
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-
 import pytest
-import pytest_asyncio
-
-from opc_openclaw.client import BaseClient
-
-
-class MockClient(BaseClient):
-    """Mock 客户端，用于测试"""
-    
-    def __init__(self, responses=None, **kwargs):
-        super().__init__(**kwargs)
-        self.responses = responses or {}
-        self.call_history = []
-    
-    async def request(self, method: str, path: str, **kwargs):
-        """Mock 请求方法"""
-        self.call_history.append({
-            "method": method,
-            "path": path,
-            "kwargs": kwargs
-        })
-        
-        # 返回预设响应
-        key = f"{method}:{path}"
-        if key in self.responses:
-            return self.responses[key]
-        
-        # 默认响应
-        return {"status": "ok", "mock": True}
-    
-    async def close(self):
-        """Mock 关闭"""
-        pass
 
 
 @pytest.fixture
-def mock_client():
-    """提供 Mock 客户端"""
-    return MockClient()
+def temp_config_dir():
+    """创建临时配置目录"""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config_dir = Path(tmpdir) / ".openclaw"
+        config_dir.mkdir(parents=True, exist_ok=True)
+        yield config_dir
 
 
 @pytest.fixture
-def mock_agent_list():
-    """Mock Agent 列表响应"""
+def sample_config():
+    """示例 OpenClaw 配置"""
     return {
-        "agents": [
-            {"id": "agent_1", "name": "Agent 1", "model": "kimi-coding", "status": "online"},
-            {"id": "agent_2", "name": "Agent 2", "model": "kimi-coding", "status": "offline"},
-        ]
-    }
-
-
-@pytest.fixture
-def mock_session_response():
-    """Mock 会话创建响应"""
-    return {
-        "session_key": "sess_test123",
-        "status": "ok",
-        "response": {
-            "text": "收到任务，开始执行...",
-            "payloads": [{"text": "收到任务，开始执行..."}]
-        },
-        "meta": {
-            "agentMeta": {
-                "usage": {
-                    "input": 100,
-                    "output": 50
-                }
-            }
+        "agents": {
+            "opc-worker-1": {
+                "name": "Worker One",
+                "model": "kimi-coding/k2p5",
+                "description": "Test worker",
+            },
+            "opc-worker-2": {
+                "name": "Worker Two",
+                "model": "kimi-coding/k2p5",
+            },
+            "main": {  # 应该被过滤
+                "name": "Main",
+                "model": "kimi-coding/k2p5",
+            },
+            "default": {  # 应该被过滤
+                "name": "Default",
+                "model": "kimi-coding/k2p5",
+            },
+            "other_agent": {  # 不以 opc- 开头，应该被过滤
+                "name": "Other",
+                "model": "kimi-coding/k2p5",
+            },
         }
     }
+
+
+@pytest.fixture
+def mock_openclaw_bin():
+    """Mock OpenClaw CLI 路径"""
+    return "/usr/local/bin/openclaw"
+
+
+@pytest.fixture
+def temp_skill_dir():
+    """创建临时 Skill 目录"""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        skill_dir = Path(tmpdir) / "skills" / "opc-bridge"
+        yield skill_dir

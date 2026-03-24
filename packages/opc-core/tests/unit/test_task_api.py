@@ -1,16 +1,18 @@
 """
-Task API 测试
+Task API 测试 (v0.4.1)
 
 使用 FastAPI TestClient + 依赖覆盖进行测试
+适配新架构: 同步任务分配
 
 作者: OpenClaw OPC Team
 创建日期: 2026-03-24
-版本: 0.4.0
+更新日期: 2026-03-25
+版本: 0.4.1
 """
 
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from opc_core import create_app
 from opc_database.models import Task, TaskStatus
@@ -47,13 +49,24 @@ def mock_employee_repo():
 
 
 @pytest.fixture
-def test_app(mock_task_repo, mock_employee_repo):
+def mock_task_service():
+    """创建 Mock TaskService"""
+    service = MagicMock()
+    service.assign_task = AsyncMock()
+    service.retry_task = AsyncMock()
+    return service
+
+
+@pytest.fixture
+def test_app(mock_task_repo, mock_employee_repo, mock_task_service):
     """创建带依赖覆盖的测试应用"""
     from opc_core.api.dependencies import get_task_repo, get_employee_repo
+    from opc_core.api.tasks import get_task_service
     
     app = create_app()
     app.dependency_overrides[get_task_repo] = lambda: mock_task_repo
     app.dependency_overrides[get_employee_repo] = lambda: mock_employee_repo
+    app.dependency_overrides[get_task_service] = lambda: mock_task_service
     return app
 
 
@@ -91,6 +104,7 @@ class TestTaskAPI:
         response = client.get(f"{self.API_PREFIX}/tasks?status=pending")
         
         assert response.status_code == 200
+        mock_task_repo.get_by_status.assert_called_once()
     
     def test_list_tasks_by_employee(self, client, mock_task_repo):
         """测试按员工获取任务列表"""
@@ -162,79 +176,106 @@ class TestTaskAPI:
         
         assert response.status_code == 200
         mock_task_repo.delete.assert_called_once()
+
+
+class TestTaskAssignNewArchitecture:
+    """新架构任务分配测试"""
     
-    def test_assign_task(self, client, mock_task_repo, mock_employee_repo):
-        """测试分配任务"""
+    API_PREFIX = "/api/v1"
+    
+    def test_assign_task_success(self, client, mock_task_service):
+        """测试成功分配任务 (新架构 - 同步返回)"""
         mock_task = MagicMock()
-        mock_task.status = "pending"
-        mock_task_repo.get_by_id.return_value = mock_task
-        
-        mock_emp = MagicMock()
-        mock_emp.status = "idle"
-        mock_emp.openclaw_agent_id = "agent_1"
-        mock_employee_repo.get_by_id.return_value = mock_emp
+        mock_task.to_dict.return_value = {
+            "id": "task_123",
+            "title": "测试任务",
+            "status": "completed",
+            "actual_cost": 0.5
+        }
+        mock_task_service.assign_task.return_value = mock_task
         
         response = client.post(f"{self.API_PREFIX}/tasks/task_123/assign", json={
             "employee_id": "emp_123"
         })
         
         assert response.status_code == 200
-        assert response.json()["message"] == "Task assigned"
-        mock_task_repo.assign_task.assert_called_once()
+        data = response.json()
+        assert data["message"] == "Task assigned and completed"
+        assert "task" in data
+        mock_task_service.assign_task.assert_called_once_with("task_123", "emp_123")
     
-    def test_assign_task_employee_not_available(self, client, mock_task_repo, mock_employee_repo):
-        """测试分配任务给不可用的员工"""
-        mock_task = MagicMock()
-        mock_task_repo.get_by_id.return_value = mock_task
+    def test_assign_task_not_found(self, client, mock_task_service):
+        """测试任务不存在"""
+        from opc_core.services import TaskNotFoundError
+        mock_task_service.assign_task.side_effect = TaskNotFoundError("Task not found")
         
-        mock_emp = MagicMock()
-        mock_emp.status = "working"  # 不空闲
-        mock_employee_repo.get_by_id.return_value = mock_emp
+        response = client.post(f"{self.API_PREFIX}/tasks/task_999/assign", json={
+            "employee_id": "emp_123"
+        })
+        
+        assert response.status_code == 404
+        assert "Task not found" in response.json()["detail"]
+    
+    def test_assign_agent_not_bound(self, client, mock_task_service):
+        """测试员工未绑定 Agent"""
+        from opc_core.services import AgentNotBoundError
+        mock_task_service.assign_task.side_effect = AgentNotBoundError("No agent bound")
         
         response = client.post(f"{self.API_PREFIX}/tasks/task_123/assign", json={
             "employee_id": "emp_123"
         })
         
         assert response.status_code == 400
-        assert "not available" in response.json()["detail"].lower()
+        assert "no OpenClaw agent bound" in response.json()["detail"]
     
-    def test_complete_task(self, client, mock_task_repo, mock_employee_repo):
-        """测试完成任务"""
+    def test_retry_task_success(self, client, mock_task_service):
+        """测试重试任务"""
         mock_task = MagicMock()
-        mock_task.assigned_to = "emp_123"
-        mock_task_repo.get_by_id.return_value = mock_task
+        mock_task.to_dict.return_value = {
+            "id": "task_123",
+            "status": "completed",
+            "rework_count": 1
+        }
+        mock_task_service.retry_task.return_value = mock_task
         
-        mock_emp = MagicMock()
-        mock_employee_repo.get_by_id.return_value = mock_emp
+        response = client.post(f"{self.API_PREFIX}/tasks/task_123/retry")
         
+        assert response.status_code == 200
+        data = response.json()
+        assert data["message"] == "Task retried successfully"
+        mock_task_service.retry_task.assert_called_once_with("task_123")
+    
+    def test_retry_task_not_found(self, client, mock_task_service):
+        """测试重试不存在的任务"""
+        from opc_core.services import TaskNotFoundError
+        mock_task_service.retry_task.side_effect = TaskNotFoundError("Task not found")
+        
+        response = client.post(f"{self.API_PREFIX}/tasks/task_999/retry")
+        
+        assert response.status_code == 404
+
+
+class TestDeprecatedRoutes:
+    """已废弃路由测试"""
+    
+    API_PREFIX = "/api/v1"
+    
+    def test_complete_task_route_removed(self, client):
+        """测试 complete 路由已移除"""
         response = client.post(f"{self.API_PREFIX}/tasks/task_123/complete", json={
-            "result": "任务完成",
-            "actual_cost": 300.0
+            "result": "任务完成"
         })
         
-        assert response.status_code == 200
-        mock_task_repo.complete_task.assert_called_once()
-        mock_employee_repo.increment_completed_tasks.assert_called_once()
+        assert response.status_code == 404
     
-    def test_fail_task(self, client, mock_task_repo, mock_employee_repo):
-        """测试标记任务失败"""
-        mock_task = MagicMock()
-        mock_task.assigned_to = "emp_123"
-        mock_task_repo.get_by_id.return_value = mock_task
+    def test_fail_task_route_removed(self, client):
+        """测试 fail 路由已移除"""
+        response = client.post(f"{self.API_PREFIX}/tasks/task_123/fail?reason=超时")
         
-        response = client.post(f"{self.API_PREFIX}/tasks/task_123/fail?reason=执行超时")
-        
-        assert response.status_code == 200
-        mock_task_repo.fail_task.assert_called_once()
+        assert response.status_code == 404
     
-    def test_rework_task(self, client, mock_task_repo):
-        """测试请求返工"""
-        mock_task = MagicMock()
-        mock_task.can_rework = True
-        mock_task.rework_count = 0
-        mock_task_repo.get_by_id.return_value = mock_task
+    def test_rework_task_route_removed(self, client):
+        """测试 rework 路由已移除"""
+        response = client.post(f"{self.API_PREFIX}/tasks/task_123/rework?feedback=修改")
         
-        response = client.post(f"{self.API_PREFIX}/tasks/task_123/rework?feedback=需要修改")
-        
-        assert response.status_code == 200
-        mock_task_repo.request_rework.assert_called_once()
+        assert response.status_code == 404

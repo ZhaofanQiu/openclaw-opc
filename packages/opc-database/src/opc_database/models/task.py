@@ -31,6 +31,8 @@ class TaskStatus(str, PyEnum):
     IN_PROGRESS = "in_progress"  # 执行中
     COMPLETED = "completed"  # 已完成
     FAILED = "failed"  # 失败
+    NEEDS_REVISION = "needs_revision"  # 需要返工
+    NEEDS_REVIEW = "needs_review"  # 需要人工检查 (解析失败)
 
 
 class TaskPriority(str, PyEnum):

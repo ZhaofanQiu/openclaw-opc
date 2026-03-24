@@ -1,11 +1,7 @@
 """
-opc-openclaw: Agent包
+opc-openclaw: Agent 管理包
 
-Agent 生命周期管理
-
-作者: OpenClaw OPC Team
-创建日期: 2026-03-24
-版本: 0.4.0
+Agent 生命周期和状态管理
 """
 
 from .binding import AgentBinding, BindingResult
@@ -16,7 +12,7 @@ __all__ = [
     "AgentManager",
     "AgentLifecycle",
     "AgentBinding",
-    "BindingResult",
-    "AgentInfo",
     "AgentState",
+    "AgentInfo",
+    "BindingResult",
 ]

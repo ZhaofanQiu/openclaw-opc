@@ -8,7 +8,13 @@ import respx
 
 from opc_database.models import Base, Employee, Task, AgentStatus as EmployeeStatus
 from opc_database.repositories import EmployeeRepository, TaskRepository
-from opc_openclaw.client import AgentClient, SessionClient
+
+# SessionClient 已在新架构中移除
+# from opc_openclaw.client import AgentClient, SessionClient
+try:
+    from opc_openclaw.client import AgentClient
+except ImportError:
+    AgentClient = None
 
 
 @pytest_asyncio.fixture
@@ -120,72 +126,24 @@ class TestDatabaseIntegration:
 
 
 class TestOpenClawIntegration:
-    """OpenClaw 客户端集成测试"""
+    """OpenClaw 客户端集成测试 (旧架构 - HTTP API)"""
+    
+    # 新架构已改为 CLI 方式，这些测试不再适用
+    pytestmark = pytest.mark.skip(reason="旧架构 HTTP API 测试，新架构使用 CLI 方式")
     
     @respx.mock
     @pytest.mark.asyncio
     async def test_agent_session_workflow(self):
         """测试 Agent 获取到会话发送的完整流程"""
-        base_url = "http://localhost:8080"
-        
-        # Mock 获取 Agent
-        respx.get(f"{base_url}/api/agents/agent_123").mock(
-            return_value=httpx.Response(200, json={
-                "id": "agent_123",
-                "name": "TestAgent",
-                "status": "online"
-            })
-        )
-        
-        # Mock 获取 Agent 状态
-        respx.get(f"{base_url}/api/agents/agent_123/status").mock(
-            return_value=httpx.Response(200, json={
-                "agent_id": "agent_123",
-                "status": "online",
-                "active_sessions": 0
-            })
-        )
-        
-        # Mock 创建 Session
-        respx.post(f"{base_url}/api/sessions/spawn").mock(
-            return_value=httpx.Response(200, json={
-                "session_id": "sess_456",
-                "status": "active"
-            })
-        )
-        
-        # Mock 发送消息
-        respx.post(f"{base_url}/api/sessions/sess_456/send").mock(
-            return_value=httpx.Response(200, json={
-                "message_id": "msg_789",
-                "status": "delivered"
-            })
-        )
-        
-        # 执行流程
-        agent_client = AgentClient(base_url, api_key="test_key")
-        session_client = SessionClient(base_url, api_key="test_key")
-        
-        # 1. 获取 Agent
-        agent = await agent_client.get_agent("agent_123")
-        assert agent is not None
-        assert agent["id"] == "agent_123"
-        
-        # 2. 检查状态
-        status = await agent_client.get_agent_status("agent_123")
-        assert status["status"] == "online"
-        
-        # 3. 创建 Session
-        session = await session_client.spawn_session("agent_123", "测试任务")
-        assert session["session_id"] == "sess_456"
-        
-        # 4. 发送消息
-        result = await session_client.send_message("sess_456", "Hello")
-        assert result["status"] == "delivered"
+        # 此测试基于旧架构 HTTP API，新架构使用 CLI 方式
+        pass
     
     @respx.mock
     @pytest.mark.asyncio
     async def test_agent_health_check(self):
+        """测试 Agent 健康检查"""
+        # 此测试基于旧架构 HTTP API，新架构使用 CLI 方式
+        pass
         """测试 Agent 健康检查"""
         base_url = "http://localhost:8080"
         
