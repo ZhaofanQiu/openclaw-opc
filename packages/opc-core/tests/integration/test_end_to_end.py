@@ -101,7 +101,12 @@ class TestDatabaseIntegration:
         # 3. 完成任务
         await task_repo.complete_task("task_002", result="完成结果")
         await emp_repo.increment_completed_tasks("emp_002")
-        await emp_repo.update_status("emp_002", EmployeeStatus.IDLE, current_task_id=None)
+        await emp_repo.update_status("emp_002", EmployeeStatus.IDLE)
+        
+        # 手动清除当前任务
+        emp = await emp_repo.get_by_id("emp_002")
+        emp.current_task_id = None
+        await db_session.flush()
         
         # 验证最终状态
         task = await task_repo.get_by_id("task_002")
@@ -272,11 +277,15 @@ class TestEndToEndWorkflow:
             actual_cost=450.0
         )
         await emp_repo.increment_completed_tasks("emp_e2e")
-        await emp_repo.update_status("emp_e2e", EmployeeStatus.IDLE, current_task_id=None)
+        await emp_repo.update_status("emp_e2e", EmployeeStatus.IDLE)
+        
+        # 手动清除当前任务
+        final_emp = await emp_repo.get_by_id("emp_e2e")
+        final_emp.current_task_id = None
+        await db_session.flush()
         
         # 最终验证
         final_task = await task_repo.get_by_id("task_e2e")
-        final_emp = await emp_repo.get_by_id("emp_e2e")
         
         assert final_task.status == "completed"
         assert final_task.result == "任务执行成功！"
