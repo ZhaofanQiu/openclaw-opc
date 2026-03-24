@@ -20,42 +20,42 @@ from sqlalchemy.pool import NullPool
 from opc_database.models import Base
 
 
-# 使用内存数据库进行测试
-TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+# 使用文件数据库进行测试（避免内存数据库连接问题）
+TEST_DATABASE_URL = "sqlite+aiosqlite:///./test.db"
 
 
-@pytest_asyncio.fixture(scope="session")
-async def db_engine():
-    """创建测试数据库引擎（内存模式）"""
+@pytest_asyncio.fixture(scope="function")
+async def db_session() -> AsyncSession:
+    """
+    提供数据库会话（每个测试独立，使用新数据库）
+    """
+    # 创建引擎
     engine = create_async_engine(
         TEST_DATABASE_URL,
-        poolclass=NullPool,  # 禁用连接池，适合测试
-        echo=False  # 设置为True可查看SQL日志
+        poolclass=NullPool,
+        echo=False
     )
     
     # 创建所有表
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     
-    yield engine
-    
-    # 清理
-    await engine.dispose()
-
-
-@pytest_asyncio.fixture
-async def db_session(db_engine) -> AsyncSession:
-    """提供数据库会话（每个测试独立）"""
+    # 创建会话
     async_session = async_sessionmaker(
-        db_engine,
+        engine,
         class_=AsyncSession,
-        expire_on_commit=False
+        expire_on_commit=False,
+        autoflush=False
     )
     
-    async with async_session() as session:
-        yield session
-        # 回滚所有更改
-        await session.rollback()
+    session = async_session()
+    yield session
+    
+    # 清理
+    await session.close()
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+    await engine.dispose()
 
 
 @pytest.fixture
@@ -76,7 +76,6 @@ def sample_employee_data():
 def sample_company_data():
     """示例公司数据"""
     return {
-        "name": "测试公司",
         "total_budget": 10000.0,
         "used_budget": 0.0
     }

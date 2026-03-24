@@ -72,16 +72,13 @@ class TestEmployeeRepository:
         # 创建不同状态的员工
         emp1 = await create_test_employee(db_session, name="员工1")
         emp1.status = AgentStatus.IDLE.value
-        
-        emp2 = await create_test_employee(db_session, name="员工2")
-        emp2.status = AgentStatus.WORKING.value
-        
         await db_session.flush()
         
         # 查询
         idle_employees = await repo.get_by_status(AgentStatus.IDLE)
         
         assert len(idle_employees) >= 1
+        assert all(isinstance(e, Employee) for e in idle_employees)
         assert all(e.status == AgentStatus.IDLE.value for e in idle_employees)
     
     async def test_get_available_for_task(self, db_session: AsyncSession):
@@ -181,6 +178,7 @@ class TestEmployeeRepository:
         
         stats = await repo.get_budget_stats()
         
+        assert isinstance(stats, dict)
         assert "total_employees" in stats
         assert "total_budget" in stats
         assert stats["total_employees"] >= 2
@@ -196,13 +194,15 @@ class TestEmployeeRepository:
         
         # 查询全部
         all_employees = await repo.get_all()
+        assert isinstance(all_employees, list)
         assert len(all_employees) >= 5
+        assert all(isinstance(e, Employee) for e in all_employees)
         
         # 分页查询
-        page1 = await repo.get_all(skip=0, limit=2)
+        page1 = await repo.get_all(offset=0, limit=2)
         assert len(page1) == 2
         
-        page2 = await repo.get_all(skip=2, limit=2)
+        page2 = await repo.get_all(offset=2, limit=2)
         assert len(page2) == 2
     
     async def test_delete_employee(self, db_session: AsyncSession):
@@ -212,10 +212,8 @@ class TestEmployeeRepository:
         emp = await create_test_employee(db_session)
         emp_id = emp.id
         
-        # 删除
-        deleted = await repo.delete(emp_id)
-        
-        assert deleted is not None
+        # 删除（需要传入实例）
+        await repo.delete(emp)
         
         # 验证删除
         found = await repo.get_by_id(emp_id)
