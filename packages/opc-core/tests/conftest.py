@@ -8,6 +8,7 @@ opc-core: 测试配置
 
 import sys
 from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock
 
 # 添加src到路径
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
@@ -60,3 +61,58 @@ def mock_task_data():
         "estimated_cost": 500.0,
         "status": "pending"
     }
+
+
+# ============================================
+# Integration Test Fixtures
+# ============================================
+
+@pytest.fixture
+def mock_employee_repo():
+    """Mock Employee Repository"""
+    repo = MagicMock()
+    repo.get_all = MagicMock(return_value=[])
+    repo.get_by_id = MagicMock(return_value=None)
+    repo.create = MagicMock()
+    repo.update = MagicMock()
+    repo.delete = MagicMock()
+    repo.update_status = MagicMock()
+    repo.get_by_status = MagicMock(return_value=[])
+    repo.get_available_employees = MagicMock(return_value=[])
+    repo.update_budget = MagicMock()
+    repo.get_budget_stats = MagicMock(return_value={"total": 0, "used": 0})
+    repo.bind_agent = MagicMock()
+    repo.unbind_agent = MagicMock()
+    repo.set_current_task = MagicMock()
+    repo.clear_current_task = MagicMock()
+    repo.increment_completed_tasks = MagicMock()
+    return repo
+
+
+@pytest.fixture
+def mock_task_repo():
+    """Mock Task Repository"""
+    repo = MagicMock()
+    repo.get_all = MagicMock(return_value=[])
+    repo.get_by_id = MagicMock(return_value=None)
+    repo.create = MagicMock()
+    repo.update = MagicMock()
+    repo.delete = MagicMock()
+    repo.get_by_status = MagicMock(return_value=[])
+    repo.get_by_employee = MagicMock(return_value=[])
+    repo.assign_task = MagicMock()
+    repo.start_task = MagicMock()
+    repo.complete_task = MagicMock()
+    repo.fail_task = MagicMock()
+    repo.request_rework = MagicMock()
+    repo.get_stats = MagicMock(return_value={"total": 0, "completed": 0})
+    return repo
+
+
+@pytest.fixture
+def mock_openclaw_client():
+    """Mock OpenClaw Client"""
+    client = MagicMock()
+    client.agents = MagicMock()
+    client.sessions = MagicMock()
+    return client
