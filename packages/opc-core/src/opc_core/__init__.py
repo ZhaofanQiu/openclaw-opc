@@ -5,7 +5,7 @@ FastAPI + Repository 模式实现的 OPC 业务逻辑
 
 使用示例:
     from opc_core import create_app
-    
+
     app = create_app()
     # uvicorn.run(app, host="0.0.0.0", port=8000)
 

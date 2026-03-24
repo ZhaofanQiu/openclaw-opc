@@ -119,7 +119,7 @@ def get_skill_definition() -> str:
 def get_skill_yaml() -> str:
     """
     获取 Skill YAML 配置
-    
+
     用于安装到 OpenClaw
     """
     return """name: opc-bridge

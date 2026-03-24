@@ -20,28 +20,27 @@ from .api import api_router
 async def lifespan(app: FastAPI):
     """
     应用生命周期管理
-    
+
     启动时：初始化数据库
     关闭时：清理资源
     """
     # 启动
     from opc_database import init_db
+
     await init_db()
-    
+
     yield
-    
+
     # 关闭
     # 清理资源（如果有）
 
 
 def create_app(
-    title: str = "OpenClaw OPC API",
-    version: str = "0.4.0",
-    **kwargs
+    title: str = "OpenClaw OPC API", version: str = "0.4.0", **kwargs
 ) -> FastAPI:
     """
     创建 FastAPI 应用
-    
+
     Returns:
         FastAPI: 配置好的应用实例
     """
@@ -52,7 +51,7 @@ def create_app(
         lifespan=lifespan,
         **kwargs
     )
-    
+
     # CORS 配置
     app.add_middleware(
         CORSMiddleware,
@@ -61,24 +60,20 @@ def create_app(
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    
+
     # 注册 API 路由
     app.include_router(api_router)
-    
+
     # 健康检查
     @app.get("/health")
     async def health_check():
         """健康检查端点"""
         return {"status": "ok", "version": version}
-    
+
     # 根路径
     @app.get("/")
     async def root():
         """API 根路径"""
-        return {
-            "name": title,
-            "version": version,
-            "docs": "/docs"
-        }
-    
+        return {"name": title, "version": version, "docs": "/docs"}
+
     return app

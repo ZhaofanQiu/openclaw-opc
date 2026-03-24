@@ -37,35 +37,35 @@ async def get_task_repo(session=Depends(get_db_session)) -> TaskRepository:
 
 
 async def verify_api_key(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
+    credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> str:
     """
     验证 API Key
-    
+
     如果配置了 API_KEY 环境变量，则必须提供正确的 key
     未配置或提供正确 key 时通过
     """
     import os
-    
+
     api_key = os.getenv("OPC_API_KEY")
-    
+
     # 如果没有配置 API_KEY，允许通过
     if not api_key:
         return None
-    
+
     # 需要验证
     if not credentials:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="API Key required",
-            headers={"WWW-Authenticate": "Bearer"}
+            headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     if credentials.credentials != api_key:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid API Key",
-            headers={"WWW-Authenticate": "Bearer"}
+            headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     return credentials.credentials
