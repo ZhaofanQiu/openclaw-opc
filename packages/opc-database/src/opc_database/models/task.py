@@ -200,7 +200,7 @@ class TaskMessage(Base):
     message_type: Mapped[str] = mapped_column(String, default="text")  # "text" | "file" | "action"
     
     # 元数据 (JSON)
-    metadata: Mapped[str] = mapped_column(Text, default="{}")
+    extra_data: Mapped[str] = mapped_column(Text, default="{}")
     
     # 关联关系
     task: Mapped["Task"] = relationship("Task", back_populates="messages")
@@ -215,6 +215,6 @@ class TaskMessage(Base):
             "sender_id": self.sender_id,
             "content": self.content,
             "message_type": self.message_type,
-            "metadata": self.metadata,
+            "extra_data": self.extra_data,
         })
         return base
