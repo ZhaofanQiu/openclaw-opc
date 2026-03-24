@@ -1,108 +1,129 @@
-# OPC 部署指南
+# OpenClaw OPC 部署指南
 
-> 新用户如何部署 OpenClaw OPC 系统
+> v0.4.0 模块化架构部署指南
 
 ---
 
 ## 📋 前置要求
 
-1. **OpenClaw 已安装并运行**
-   ```bash
-   # 验证 OpenClaw
-   openclaw --version
-   openclaw gateway status
-   ```
+| 组件 | 版本 | 说明 |
+|------|------|------|
+| Python | 3.12+ | 后端运行环境 |
+| Node.js | 18+ | 前端构建 |
+| OpenClaw | latest | Agent 运行环境 |
+| Git | - | 代码管理 |
 
-2. **Python 3.8+**
-   ```bash
-   python3 --version
-   ```
-
-3. **Git** (可选，用于克隆仓库)
+验证环境：
+```bash
+python3 --version    # >= 3.12
+node --version       # >= 18
+openclaw --version   # 已安装
+```
 
 ---
 
 ## 🚀 快速部署
 
-### 步骤 1: 克隆仓库
+### 方式一：开发环境（推荐）
+
+#### 1. 克隆仓库
 
 ```bash
-git clone https://github.com/your-org/openclaw-opc.git
-cd openclaw-opc/backend/src
+git clone https://github.com/ZhaofanQiu/openclaw-opc.git
+cd openclaw-opc
 ```
 
-### 步骤 2: 安装依赖
+#### 2. 安装后端模块
 
 ```bash
-pip install -r requirements.txt
+# 安装数据库模块
+cd packages/opc-database
+pip install -e ".[dev]"
+
+# 安装 OpenClaw 集成模块
+cd ../opc-openclaw
+pip install -e ".[dev]"
+
+# 安装核心业务模块
+cd ../opc-core
+pip install -e ".[dev]"
 ```
 
-### 步骤 3: 安装 OPC Bridge Skill
+#### 3. 安装前端
 
 ```bash
-# 方法1: 使用安装脚本
-cd ../../skills/opc-bridge-v2
-chmod +x install.sh
-./install.sh
-
-# 选择 1) From local repository
+cd packages/opc-ui
+npm install
 ```
 
-或者手动安装：
+#### 4. 启动服务
 
+终端 1 - 后端 API：
 ```bash
-# 方法2: 手动复制
-mkdir -p ~/.openclaw/skills
-cp -r ../../skills/opc-bridge-v2 ~/.openclaw/skills/
-chmod +x ~/.openclaw/skills/opc-bridge-v2/scripts/*.py
+cd packages/opc-core
+python -c "from opc_core import create_app; import uvicorn; uvicorn.run(create_app(), host='0.0.0.0', port=8000)"
 ```
 
-### 步骤 4: 启动 OPC 服务
-
+终端 2 - 前端开发服务器：
 ```bash
-cd backend/src
-python3 -m uvicorn main_v2:app --host 0.0.0.0 --port 8080
+cd packages/opc-ui
+npm run dev
 ```
 
-验证服务：
+访问：http://localhost:3000
+
+---
+
+### 方式二：Docker 部署（生产）
+
+创建 `docker-compose.yml`：
+
+```yaml
+version: '3.8'
+
+services:
+  # PostgreSQL 数据库
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: opc
+      POSTGRES_PASSWORD: opc_password
+      POSTGRES_DB: opc
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  # OPC Core API
+  opc-core:
+    build:
+      context: ./packages/opc-core
+      dockerfile: Dockerfile
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://opc:opc_password@postgres:5432/opc
+      - OPENCLAW_URL=http://host.docker.internal:8080
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+
+  # OPC UI (Nginx)
+  opc-ui:
+    build:
+      context: ./packages/opc-ui
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - opc-core
+
+volumes:
+  postgres_data:
+```
+
+启动：
 ```bash
-curl http://localhost:8080/health
-# 应返回: {"status":"ok","version":"2.0.0"}
-```
-
-### 步骤 5: 配置 Agent
-
-编辑 `~/.openclaw/openclaw.json`，添加 OPC Agent：
-
-```json
-{
-  "agents": {
-    "list": [
-      {
-        "id": "opc_partner",
-        "name": "OPC Partner Assistant",
-        "workspace": "/root/.openclaw/agents/opc_partner/workspace",
-        "agentDir": "/root/.openclaw/agents/opc_partner"
-      }
-    ]
-  }
-}
-```
-
-**重要**: 不要添加 `tools` 或 `skills` 字段！
-
-重启 Gateway：
-```bash
-openclaw gateway restart
-```
-
-### 步骤 6: 初始化数据库
-
-OPC 会自动创建 SQLite 数据库和初始数据。
-
-访问 Dashboard：
-```
-http://localhost:8080/dashboard/
+docker-compose up -d
 ```
 
 ---
@@ -111,119 +132,156 @@ http://localhost:8080/dashboard/
 
 ### 环境变量
 
+#### opc-database
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
-| `OPC_CORE_URL` | `http://localhost:8080` | OPC Core 服务地址 |
-| `OPC_AGENT_ID` | 自动检测 | Agent ID |
-| `DATABASE_URL` | `sqlite:///data/opc.db` | 数据库连接 |
+| `DATABASE_URL` | `sqlite+aiosqlite:///data/opc.db` | 数据库连接 |
 
-### 回调地址配置
+#### opc-openclaw
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `OPENCLAW_URL` | `http://localhost:8080` | OpenClaw Gateway |
+| `OPENCLAW_API_KEY` | - | API Key（可选）|
 
-如果使用远程部署，需要更新回调脚本中的地址：
+#### opc-core
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `DATABASE_URL` | - | 复用 opc-database |
+| `OPENCLAW_URL` | `http://localhost:8080` | OpenClaw 地址 |
+| `API_KEY` | - | 管理 API Key |
 
-编辑 `~/.openclaw/skills/opc-bridge-v2/scripts/opc-report.py`：
+#### opc-ui
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `VITE_API_BASE` | `/api/v1` | API 基础路径 |
 
-```python
-# 修改默认地址为实际IP
-OPC_CORE_URL = os.getenv("OPC_CORE_URL", "http://YOUR_SERVER_IP:8080")
+---
+
+## 🔧 模块独立测试
+
+每个模块可独立测试：
+
+```bash
+# 测试数据库模块
+cd packages/opc-database
+pytest tests/ -v --cov=opc_database
+
+# 测试 OpenClaw 模块（使用 Mock）
+cd packages/opc-openclaw
+pytest tests/ -v --cov=opc_openclaw
+
+# 测试核心业务（使用 TestClient）
+cd packages/opc-core
+pytest tests/ -v --cov=opc_core
+
+# 测试前端
+cd packages/opc-ui
+npm run test
 ```
 
 ---
 
 ## 🧪 验证部署
 
-### 测试 1: Skill 安装
+### 1. 健康检查
 
 ```bash
-python3 ~/.openclaw/skills/opc-bridge-v2/scripts/opc-get-budget.py
+curl http://localhost:8000/health
+# {"status":"ok","version":"0.4.0"}
 ```
 
-### 测试 2: Agent 连接
+### 2. API 文档
 
-```bash
-openclaw agent --agent opc_partner --message "echo hello" --json
-```
+访问：http://localhost:8000/docs
 
-### 测试 3: 完整闭环
+### 3. 前端登录
 
-1. 访问 Dashboard: `http://localhost:8080/dashboard/`
-2. 创建员工并绑定到 `opc_partner`
-3. 分配任务
-4. 验证任务完成和回调
-
----
-
-## 🔧 故障排除
-
-### 问题 1: Skill 未找到
-
-**症状**: `No such file or directory: ~/.openclaw/skills/opc-bridge-v2/`
-
-**解决**:
-```bash
-# 重新安装 skill
-cp -r /path/to/openclaw-opc/skills/opc-bridge-v2 ~/.openclaw/skills/
-chmod +x ~/.openclaw/skills/opc-bridge-v2/scripts/*.py
-```
-
-### 问题 2: 回调失败 Connection refused
-
-**症状**: Agent 报告回调连接失败
-
-**解决**:
-1. 确保 OPC 服务在 `0.0.0.0:8080` 监听
-2. 更新回调脚本中的 `OPC_CORE_URL` 为实际IP
-3. 检查防火墙设置
-
-### 问题 3: Agent 无法执行命令
-
-**症状**: Agent 说没有工具权限
-
-**解决**: 检查 Agent 配置，确保没有 `tools.allow` 字段限制权限
+1. 访问 http://localhost:3000
+2. 输入 API Key（在 opc-core 中配置）
+3. 进入 Dashboard
 
 ---
 
 ## 📁 目录结构
 
-部署后的目录结构：
+部署后的项目结构：
 
 ```
-~/.openclaw/
-├── openclaw.json          # OpenClaw 配置
-├── agents/
-│   └── opc_partner/       # Agent 工作空间
-│       ├── workspace/
-│       └── agent/
-└── skills/
-    └── opc-bridge-v2/     # OPC Bridge Skill ← 关键
-        ├── SKILL.md
-        ├── install.sh
-        └── scripts/
-            ├── opc-report.py
-            ├── opc-check-task.py
-            └── opc-get-budget.py
-
 openclaw-opc/
-├── backend/
-│   └── src/
-│       ├── main_v2.py     # OPC 服务入口
-│       ├── core/          # 核心业务逻辑
-│       └── ...
-└── skills/
-    └── opc-bridge-v2/     # Skill 源代码
+├── packages/
+│   ├── opc-database/      # 数据库模块
+│   │   ├── src/
+│   │   └── tests/
+│   ├── opc-openclaw/      # OpenClaw 集成
+│   │   ├── src/
+│   │   └── tests/
+│   ├── opc-core/          # 业务 API
+│   │   ├── src/
+│   │   └── tests/
+│   └── opc-ui/            # Vue3 前端
+│       ├── src/
+│       └── tests/
+├── data/                   # 数据目录（SQLite/头像）
+│   └── .gitkeep
+├── docs/                   # 文档
+├── archive/                # 归档（V2 代码）
+└── memory/                 # 开发日志
 ```
+
+---
+
+## 🐛 故障排除
+
+### 问题 1: 模块导入失败
+
+**症状**: `ModuleNotFoundError: No module named 'opc_database'`
+
+**解决**:
+```bash
+cd packages/opc-database
+pip install -e "."
+```
+
+### 问题 2: 数据库连接失败
+
+**症状**: `asyncpg.exceptions.ConnectionDoesNotExistError`
+
+**解决**:
+1. 检查 PostgreSQL 是否运行
+2. 验证 `DATABASE_URL` 配置
+3. 开发环境可使用 SQLite：`sqlite+aiosqlite:///data/opc.db`
+
+### 问题 3: 前端 API 请求失败
+
+**症状**: `Failed to fetch`
+
+**解决**:
+1. 检查后端是否运行在 `localhost:8000`
+2. 检查 vite.config.js 代理配置
+3. 检查 CORS 配置
+
+### 问题 4: 权限错误
+
+**症状**: `401 Unauthorized`
+
+**解决**:
+1. 在 Dashboard 输入正确的 API Key
+2. 检查 opc-core 的 `API_KEY` 环境变量
 
 ---
 
 ## 📝 更新日志
 
-| 日期 | 更新内容 |
-|------|----------|
-| 2026-03-23 | 修复 skill 目录结构，添加 v2 版本 |
+| 日期 | 版本 | 更新内容 |
+|------|------|----------|
+| 2026-03-24 | v0.4.0 | 重构为模块化架构，四大独立包 |
+| 2026-03-21 | v0.3.x | 旧版单体架构 |
 
 ---
 
-**相关文档**:
-- `docs/AGENT_INTERACTION_BEST_PRACTICES.md` - Agent 交互最佳实践
-- `docs/AGENT_CONFIG_NOTES.md` - Agent 配置指南
-- `skills/opc-bridge-v2/SKILL.md` - Skill 使用说明
+## 📚 相关文档
+
+- `PLAN_v0.4.0.md` - 架构重构规划
+- `DEVELOPMENT.md` - 开发者规范
+- `DESIGN.md` - 产品设计文档
+- `packages/*/README.md` - 各模块文档
