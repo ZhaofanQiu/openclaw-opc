@@ -57,9 +57,13 @@ jobs:
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
       with:
-        file: ./packages/${{ matrix.package }}/coverage.xml
+        files: ./packages/${{ matrix.package }}/coverage.xml
         flags: ${{ matrix.package }}
         name: ${{ matrix.package }}-py${{ matrix.python-version }}
+        fail_ci_if_error: false
+        verbose: true
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   # ============================================
   # Node.js 前端测试
