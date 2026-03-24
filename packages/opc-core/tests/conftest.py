@@ -12,6 +12,12 @@ from pathlib import Path
 # 添加src到路径
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
+# 添加 opc-database 到路径
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "opc-database" / "src"))
+
+# 添加 opc-openclaw 到路径
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "opc-openclaw" / "src"))
+
 import pytest
 from fastapi.testclient import TestClient
 
