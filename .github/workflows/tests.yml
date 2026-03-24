@@ -42,6 +42,12 @@ jobs:
     
     - name: Install dependencies
       run: |
+        if [ "${{ matrix.package }}" = "opc-openclaw" ]; then
+          pip install -e "packages/opc-database"
+        elif [ "${{ matrix.package }}" = "opc-core" ]; then
+          pip install -e "packages/opc-database"
+          pip install -e "packages/opc-openclaw"
+        fi
         cd packages/${{ matrix.package }}
         pip install -e ".[dev]"
     
