@@ -1,480 +1,74 @@
-# OpenClaw One-Person Company (OPC)
+# OpenClaw OPC v0.4.0
 
-> 基于 OpenClaw 的多 Agent 协作可视化管理工具
-> 将 AI Agent 作为员工管理，构建你的一人公司
+**一人公司管理系统** - 模块化架构重构版本
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-0.3.0--beta-blue)](https://github.com/ZhaofanQiu/openclaw-opc)
-[![OpenClaw](https://img.shields.io/badge/Built%20for-OpenClaw-green)](https://openclaw.ai)
+## 项目架构
 
----
+采用四模块设计，每个模块独立维护、独立测试：
 
-## 🎯 核心理念
+```
+packages/
+├── opc-database/     # 数据库层 (SQLAlchemy 2.0)
+├── opc-openclaw/     # OpenClaw 集成 (HTTP Client + Agent 管理)
+├── opc-core/         # 业务 API (FastAPI)
+└── opc-ui/           # 前端 (Vue3 + Vite + Pinia)
+```
 
-**不是让 AI 替代你，而是让 AI 成为你的团队，你当 CEO。**
+## 快速开始
 
-OpenClaw OPC 是一个数字化的微型公司操作系统，让你能够将多个 OpenClaw Agent 组织成一个协作团队，像管理真实公司一样管理它们。
+### 环境要求
 
-### 关键特性
+- Python 3.12+
+- Node.js 18+
+- SQLite (开发) / PostgreSQL (生产)
 
-- 🏢 **员工化管理** - Agent 拥有职位、技能、预算
-- 💰 **预算控制** - Token 消耗转化为 OC币，实时熔断保护
-- 👑 **Partner 协调** - Partner Agent 自动分配任务
-- 📊 **可视化仪表板** - Web UI 实时查看公司状态
-- 🎨 **像素办公室** - 游戏化可视化，实时监控员工状态
-- 🛡️ **安全第一** - 预算熔断机制，防止 Token 无限消耗
-- 📈 **工作日报** - 自动生成每日工作汇总
-- 🔐 **API Key 认证** - Dashboard 登录保护，安全的外网访问
-
----
-
-## 🚀 快速开始
-
-### 前置要求
-
-- **OpenClaw** 已安装并运行
-- **Python 3.8+**
-- **opc-bridge-v2** Skill 已安装（见下方）
-
-### 步骤 1: 安装 OPC Bridge Skill
+### 安装后端
 
 ```bash
-# 方法1: 使用安装脚本
-cd skills/opc-bridge-v2
-./install.sh
-# 选择 1) From local repository
+cd packages/opc-database
+pip install -e ".[dev]"
 
-# 方法2: 手动安装
-mkdir -p ~/.openclaw/skills
-cp -r skills/opc-bridge-v2 ~/.openclaw/skills/
-chmod +x ~/.openclaw/skills/opc-bridge-v2/scripts/*.py
+cd ../opc-openclaw
+pip install -e ".[dev]"
+
+cd ../opc-core
+pip install -e ".[dev]"
 ```
 
-### 步骤 2: 使用 Docker 启动 (推荐)
+### 安装前端
 
 ```bash
-# 1. 克隆仓库
-git clone https://github.com/ZhaofanQiu/openclaw-opc.git
-cd openclaw-opc
-
-# 2. 配置环境变量（可选）
-cp .env.example .env
-# 编辑 .env 文件修改配置
-
-# 3. 一键启动
-chmod +x start.sh
-./start.sh
-
-# 4. 配置 Partner Agent（关键步骤！）
-# 打开浏览器访问 Dashboard，在配置向导中：
-#   - 方式1: 一键自动创建（推荐）
-#   - 方式2: 绑定现有 OpenClaw Agent
-
-# 5. 重启 OpenClaw Gateway 使 Partner Agent 生效
-
-# 6. 打开浏览器访问
-# Dashboard:      http://localhost:3000
-# 像素办公室:      http://localhost:3000/pixel-office
-# 工作日报:        http://localhost:3000/reports
-# API Docs:       http://localhost:8080/docs
+cd packages/opc-ui
+npm install
 ```
 
-### Partner Agent 配置
-
-Partner Agent 是 OPC 的核心，负责：
-- 🎉 欢迎用户并提供公司状态
-- 📋 协助雇佣员工、发布任务
-- 📊 生成日报和洞察
-- 💬 与用户对话式交互
-
-**推荐：一键自动创建**
-
-系统会自动创建 `opc_partner` Agent：
-- ✅ 独立的 workspace（上下文隔离）
-- ✅ 独立的 memory（不影响你的主 Agent）
-- ✅ 预设 CEO Assistant 身份
+### 启动服务
 
 ```bash
-# API 调用方式
-curl -X POST http://localhost:8080/api/agents/partner/setup-auto \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"monthly_budget": 10000}'
+# 终端 1: 后端 API
+cd packages/opc-core
+python -c "from opc_core import create_app; import uvicorn; uvicorn.run(create_app(), host='0.0.0.0', port=8000)"
 
-# 如果创建了新的 Agent，重启 OpenClaw Gateway
-openclaw gateway restart
+# 终端 2: 前端开发服务器
+cd packages/opc-ui
+npm run dev
 ```
 
-### 手动安装
+访问 http://localhost:3000
 
-```bash
-# 1. 安装后端依赖
-cd backend
-pip install -r requirements.txt
+## 开发文档
 
-# 2. 启动 Core Service
-python3 -m uvicorn src.main:app --host 0.0.0.0 --port 8080
+- [架构规划](PLAN_v0.4.0.md) - v0.4.0 详细架构设计
+- [开发规范](DEVELOPMENT.md) - 代码规范与贡献指南
+- [CHANGELOG](CHANGELOG.md) - 版本变更记录
 
-# 3. 打开前端
-# 访问 http://localhost:8080/dashboard/
-```
+## 历史版本
 
----
+旧版本代码已归档到 `archive/` 目录，包括：
+- V2 后端完整代码
+- V2 前端完整代码
+- 过时文档和设计稿
 
-## 📁 项目结构
+## 许可证
 
-```
-openclaw-opc/
-├── backend/              # Core Service (FastAPI)
-│   ├── src/
-│   │   ├── main.py       # FastAPI 应用
-│   │   ├── models/       # 数据库模型
-│   │   ├── routers/      # API 路由
-│   │   └── services/     # 业务逻辑
-│   ├── requirements.txt
-│   └── Dockerfile
-├── web/                  # 前端仪表板
-│   ├── index.html        # Dashboard
-│   ├── pixel-office.html # 像素办公室
-│   └── reports.html      # 工作日报
-├── skill/                # OPC Bridge Skill
-│   └── SKILL.md
-├── docs/                 # 文档
-│   ├── PROGRESS_REPORT.md  # 进展报告
-│   ├── TECHNICAL.md        # 技术方案
-│   └── ROADMAP.md          # 路线图
-├── docker-compose.yml    # Docker 编排
-├── nginx.conf            # Nginx 配置
-└── start.sh              # 一键启动脚本
-```
-
----
-
-## 📖 API 文档
-
-启动服务后访问：http://localhost:8080/docs
-
-### 主要端点
-
-#### Agent 管理
-```
-GET  /api/agents                     # 列出所有员工
-POST /api/agents                     # 创建员工
-GET  /api/agents/{id}                # 员工详情
-GET  /api/agents/{id}/task           # 查询当前任务
-```
-
-#### Partner 管理
-```
-POST /api/agents/partner/setup       # 设置 Partner
-POST /api/agents/partner/hire        # Partner 招聘员工
-GET  /api/agents/partner/status      # Partner 查看公司状态
-POST /api/agents/partner/assign/{id} # Partner 自动分配任务
-POST /api/agents/partner/assign-all  # Partner 批量分配任务
-POST /api/agents/partner/heartbeat   # Partner 心跳检测
-GET  /api/agents/partner/health      # Partner 健康状态
-```
-
-#### 任务管理
-```
-GET  /api/tasks                      # 列出任务
-POST /api/tasks                      # 创建任务
-GET  /api/tasks/{id}                 # 任务详情
-POST /api/tasks/{id}/assign          # 手动分配任务
-```
-
-#### 技能系统
-```
-GET  /api/skills                     # 列出所有技能
-GET  /api/skills/match/{task_id}     # 匹配最佳员工
-```
-
-#### 预算管理
-```
-GET  /api/budget/company             # 公司预算概览
-GET  /api/budget/agents/{id}         # 员工预算详情
-POST /api/agents/report              # 上报任务完成（扣减预算）
-```
-
-#### 报告系统
-```
-GET  /api/reports/daily              # 日报（默认昨天）
-GET  /api/reports/weekly             # 周报
-GET  /api/reports/recent             # 最近N天汇总
-```
-
-#### 系统配置
-```
-GET  /api/config                     # 获取系统配置
-POST /api/config                     # 更新系统配置
-```
-
-#### 通知系统
-```
-GET  /api/notifications              # 获取通知列表
-POST /api/notifications/{id}/read    # 标记已读
-DELETE /api/notifications/{id}       # 删除通知
-```
-
----
-
-## 🎮 使用流程
-
-### 1. 初始化公司
-
-```bash
-# 查看现有 OpenClaw Agents
-curl http://localhost:8080/api/agents/openclaw/agents
-
-# 设置 Partner
-curl -X POST http://localhost:8080/api/agents/partner/setup \
-  -H "Content-Type: application/json" \
-  -d '{"openclaw_agent_id": "main", "monthly_budget": 10000}'
-
-# 初始化公司
-curl -X POST http://localhost:8080/api/agents/company/init \
-  -H "Content-Type: application/json" \
-  -d '{"partner_agent_id": "main", "company_name": "星际工作室"}'
-```
-
-### 2. 招聘员工
-
-```bash
-# Partner 招聘员工
-curl -X POST "http://localhost:8080/api/agents/partner/hire?partner_id=main" \
-  -H "Content-Type: application/json" \
-  -d '{"name": "前端阿强", "agent_id": "frontend-1", "monthly_budget": 3000}'
-```
-
-### 3. 创建并分配任务
-
-```bash
-# 创建任务
-curl -X POST http://localhost:8080/api/tasks \
-  -H "Content-Type: application/json" \
-  -d '{"title": "重构登录页", "description": "使用React重构", "estimated_cost": 200, "required_skills": ["javascript", "ui-design"]}'
-
-# Partner 自动分配（按预算策略）
-curl -X POST "http://localhost:8080/api/agents/partner/assign/{task_id}?partner_id=main&strategy=budget"
-```
-
-### 4. 查看仪表板
-
-| 页面 | URL | 功能 |
-|------|-----|------|
-| Dashboard | http://localhost:3000 | 员工、任务、预算总览 |
-| 像素办公室 | http://localhost:3000/pixel-office | 可视化员工状态 |
-| 工作日报 | http://localhost:3000/reports | 每日/每周工作汇总 |
-
----
-
-## ✨ v0.2.0-alpha 新功能
-
-### 🎨 像素办公室
-- CSS Grid 布局的 8 工位可视化
-- 像素风格 SVG 头像（根据职位自动匹配）
-- 实时状态显示（工作中/空闲/离线）
-- 预算进度条可视化
-- 任务看板状态统计
-
-### 📊 工作日报
-- 自动生成每日/每周工作汇总
-- 统计：完成任务数、消耗OC币、新建任务、完成率
-- 员工表现排名
-- 最近7天趋势
-
-### 🎯 员工技能系统
-- 8个默认技能（Python、JS、DB、UI等）
-- 技能熟练度（0-100）
-- 任务-员工自动匹配
-- 最佳员工推荐
-
-### 🔔 通知系统
-- 任务分配/完成/失败通知
-- 预算警告通知
-- 任务超时提醒
-- 右上角通知中心
-
-### ⚙️ 系统配置面板
-- 任务超时时间配置
-- Token换算比例
-- 预算警告阈值
-- 自动分配策略
-
-### 💓 Partner 健康监控
-- 心跳检测机制
-- 在线/离线状态显示
-- 超时自动标记离线
-
----
-
-## 📚 文档索引
-
-| 文档 | 内容 |
-|------|------|
-| [PROJECT_STATUS.md](./docs/PROJECT_STATUS.md) | 项目完成状态与发布信息 |
-| [PROJECT_REVIEW.md](./docs/PROJECT_REVIEW.md) | 项目Review与优化方案 |
-| [ROADMAP.md](./docs/ROADMAP.md) | 未来开发路线图（含协作机制设计） |
-| [TECHNICAL.md](./docs/TECHNICAL.md) | 技术方案详细说明 |
-| [REMOTE_TESTING.md](./docs/REMOTE_TESTING.md) | 远程测试报告与安全指南 |
-| [CHANGELOG.md](./CHANGELOG.md) | 版本变更记录 |
-| [CONTRIBUTING.md](./CONTRIBUTING.md) | 贡献指南 |
-| [archive/](./docs/archive/) | 历史文档归档 |
-
----
-
-## 🛠️ 开发状态
-
-| 组件 | 状态 | 版本 |
-|------|------|------|
-| Core Service | ✅ 完成 | v0.3.0-beta |
-| Web Dashboard | ✅ 完成 | v0.3.0-beta |
-| 像素办公室 | ✅ 完成 | v0.3.0-beta |
-| 员工技能系统 | ✅ 完成 | v0.3.0-beta |
-| Partner 自动分配 | ✅ 完成 | v0.3.0-beta |
-| Partner 健康监控 | ✅ 完成 | v0.3.0-beta |
-| 工作日报 | ✅ 完成 | v0.3.0-beta |
-| 通知系统 | ✅ 完成 | v0.3.0-beta |
-| 系统配置面板 | ✅ 完成 | v0.3.0-beta |
-| OPC Bridge Skill | ✅ 完成 | v0.3.0-beta |
-| Docker 部署 | ✅ 完成 | v0.3.0-beta |
-| **异步消息系统** | ✅ 完成 | **v0.3.0-beta** |
-| **Agent 自动创建** | ✅ 完成 | **v0.3.0-beta** |
-| **精确 Token 追踪** | ✅ 完成 | **v0.3.0-beta** |
-| **PostgreSQL 迁移** | ✅ 完成 | **v0.3.0-beta** |
-| **像素头像 V2** | ✅ 完成 | **v0.3.0-beta** |
-| **图表可视化** | ✅ 完成 | **v0.3.0-beta** |
-| **熔断后选项** | ✅ 完成 | **v0.3.0-beta** |
-| **任务流/审批流** | 📋 规划中 | **v0.4.0** |
-
----
-
-## 🤝 贡献
-
-欢迎提交 Issue 和 PR！
-
----
-
-## 📜 许可证
-
-MIT License - 详见 [LICENSE](./LICENSE)
-
----
-
-*Built with ❤️ for the OpenClaw community*
-
----
-
-## 🔐 Dashboard 登录认证
-
-Dashboard 和 Reports 页面已启用 API Key 认证保护，确保外网访问安全。
-
-### 创建 API Key
-
-首次访问前需要创建 API Key：
-
-```bash
-# 使用脚本创建测试 API Key
-cd /root/.openclaw/workspace/openclaw-opc
-python3 create_api_key.py
-```
-
-输出示例：
-```
-============================================================
-✅ API Key 创建成功！
-============================================================
-
-📝 Key 名称: Dashboard Access Key
-🔑 Key ID: key_abc123
-
-⚠️  请立即保存以下 API Key（只显示一次）:
-
-   opc_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-权限: read,write,admin
-过期时间: 2026-03-21 00:00:00
-
-============================================================
-使用方式:
-  1. 打开 Dashboard: http://localhost/dashboard
-  2. 输入上面的 API Key 登录
-============================================================
-```
-
-### 登录流程
-
-1. 打开 Dashboard: `http://localhost/dashboard` 或 Reports: `http://localhost/reports`
-2. 输入 API Key 登录
-3. 登录成功后，API Key 存储在浏览器 localStorage 中
-4. 所有 API 请求自动携带 `Authorization: Bearer <api_key>` 头部
-
-### 登出
-
-- Dashboard: 点击右上角 "🚪 登出" 按钮
-- Reports: 点击顶部导航栏的 "🚪 登出" 链接
-
-### 禁用认证（内网环境）
-
-如需在内网环境禁用认证，设置环境变量：
-
-```bash
-# .env 文件或 docker-compose.yml
-API_KEY_AUTH_ENABLED=false
-```
-
-### API Key 管理
-
-通过 API 管理 API Key（需要 admin 权限）：
-
-```bash
-# 列出所有 API Keys
-curl -H "Authorization: Bearer YOUR_API_KEY" \
-  http://localhost:8080/api/keys
-
-# 创建新 API Key
-curl -X POST -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"name": "新Key", "permissions": ["read"]}' \
-  http://localhost:8080/api/keys
-
-# 撤销 API Key
-curl -X POST -H "Authorization: Bearer YOUR_API_KEY" \
-  http://localhost:8080/api/keys/{key_id}/revoke
-```
-
----
-
-## 🌐 外网访问（临时测试）
-
-> ⚠️ **警告：以下方案仅供临时测试使用，生产环境请使用正式方案**
-> 
-> 详细测试报告：[docs/REMOTE_TESTING.md](./docs/REMOTE_TESTING.md)
-
-### 安全提示
-
-- **Cpolar 仅用于临时测试**，测试完成后必须关闭
-- 公网 URL 泄露后任何人可访问你的 Dashboard
-- 生产环境建议使用：**公网 IP + DDNS** 或 **云服务器**
-
-### Cloudflare Quick Tunnel（临时测试）
-
-```bash
-# 1. 确保 OpenClaw OPC 本地运行
-# 2. 启动 Quick Tunnel
-docker run --rm -it cloudflare/cloudflared:latest tunnel --url http://host.docker.internal:3000
-
-# 3. 复制输出的 URL 访问 Dashboard
-```
-
-**测试完成后务必关闭：**
-```bash
-pkill -f cpolar  # 如果使用 cpolar
-```
-
-### 生产环境建议
-
-如需稳定的公网访问，建议：
-1. 使用传统方案（公网 IP + DDNS + 反向代理）
-2. 使用云服务器部署
-3. 配置正式 Cloudflare Tunnel（需账号和域名）
+MIT

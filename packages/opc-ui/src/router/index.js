@@ -1,0 +1,69 @@
+import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+
+const routes = [
+  {
+    path: '/login',
+    name: 'login',
+    component: () => import('@/views/LoginView.vue'),
+    meta: { public: true },
+  },
+  {
+    path: '/',
+    name: 'dashboard',
+    component: () => import('@/views/DashboardView.vue'),
+  },
+  {
+    path: '/employees',
+    name: 'employees',
+    component: () => import('@/views/EmployeesView.vue'),
+  },
+  {
+    path: '/employees/:id',
+    name: 'employee-detail',
+    component: () => import('@/views/EmployeeDetailView.vue'),
+  },
+  {
+    path: '/tasks',
+    name: 'tasks',
+    component: () => import('@/views/TasksView.vue'),
+  },
+  {
+    path: '/tasks/:id',
+    name: 'task-detail',
+    component: () => import('@/views/TaskDetailView.vue'),
+  },
+  {
+    path: '/budget',
+    name: 'budget',
+    component: () => import('@/views/BudgetView.vue'),
+  },
+  {
+    path: '/reports',
+    name: 'reports',
+    component: () => import('@/views/ReportsView.vue'),
+  },
+  {
+    path: '/settings',
+    name: 'settings',
+    component: () => import('@/views/SettingsView.vue'),
+  },
+]
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes,
+})
+
+// 路由守卫
+router.beforeEach((to, from, next) => {
+  const authStore = useAuthStore()
+  
+  if (!to.meta.public && !authStore.isAuthenticated) {
+    next('/login')
+  } else {
+    next()
+  }
+})
+
+export default router

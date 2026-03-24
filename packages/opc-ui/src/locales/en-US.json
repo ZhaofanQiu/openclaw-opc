@@ -1,0 +1,97 @@
+{
+  "app": {
+    "title": "OpenClaw OPC",
+    "subtitle": "One-Person Company System"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "employees": "Employees",
+    "tasks": "Tasks",
+    "budget": "Budget",
+    "reports": "Reports",
+    "settings": "Settings"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "create": "Create",
+    "edit": "Edit",
+    "delete": "Delete",
+    "search": "Search",
+    "loading": "Loading...",
+    "noData": "No Data",
+    "confirm": "Confirm",
+    "close": "Close",
+    "back": "Back",
+    "actions": "Actions"
+  },
+  "login": {
+    "title": "Login",
+    "apiKey": "API Key",
+    "apiKeyPlaceholder": "Enter API Key",
+    "submit": "Login"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "stats": {
+      "totalEmployees": "Total Employees",
+      "onlineEmployees": "Online",
+      "totalTasks": "Total Tasks",
+      "completedTasks": "Completed",
+      "totalBudget": "Total Budget",
+      "remainingBudget": "Remaining"
+    }
+  },
+  "employees": {
+    "title": "Employees",
+    "create": "Create Employee",
+    "name": "Name",
+    "status": "Status",
+    "budget": "Budget",
+    "tasks": "Tasks",
+    "bind": "Bind Agent",
+    "unbind": "Unbind",
+    "statusTypes": {
+      "idle": "Idle",
+      "working": "Working",
+      "offline": "Offline"
+    }
+  },
+  "tasks": {
+    "title": "Tasks",
+    "create": "Create Task",
+    "assign": "Assign",
+    "start": "Start",
+    "complete": "Complete",
+    "rework": "Rework",
+    "status": {
+      "pending": "Pending",
+      "assigned": "Assigned",
+      "in_progress": "In Progress",
+      "completed": "Completed",
+      "failed": "Failed"
+    },
+    "priority": {
+      "low": "Low",
+      "normal": "Normal",
+      "high": "High"
+    }
+  },
+  "budget": {
+    "title": "Budget",
+    "monthly": "Monthly Budget",
+    "used": "Used",
+    "remaining": "Remaining",
+    "addBudget": "Add Budget"
+  },
+  "reports": {
+    "title": "Reports",
+    "employeePerformance": "Employee Performance",
+    "taskStatistics": "Task Statistics"
+  },
+  "validation": {
+    "required": "Required",
+    "minLength": "At least {min} characters",
+    "maxLength": "At most {max} characters"
+  }
+}

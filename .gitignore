@@ -31,7 +31,10 @@ Thumbs.db
 *.db
 *.sqlite
 *.sqlite3
-data/
+
+# Data directory (keep .gitkeep)
+/data/*
+!/data/.gitkeep
 
 # Logs
 logs/

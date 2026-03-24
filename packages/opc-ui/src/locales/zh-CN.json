@@ -1,0 +1,97 @@
+{
+  "app": {
+    "title": "OpenClaw OPC",
+    "subtitle": "一人公司管理系统"
+  },
+  "nav": {
+    "dashboard": "仪表盘",
+    "employees": "员工",
+    "tasks": "任务",
+    "budget": "预算",
+    "reports": "报表",
+    "settings": "设置"
+  },
+  "common": {
+    "save": "保存",
+    "cancel": "取消",
+    "create": "创建",
+    "edit": "编辑",
+    "delete": "删除",
+    "search": "搜索",
+    "loading": "加载中...",
+    "noData": "暂无数据",
+    "confirm": "确认",
+    "close": "关闭",
+    "back": "返回",
+    "actions": "操作"
+  },
+  "login": {
+    "title": "登录",
+    "apiKey": "API Key",
+    "apiKeyPlaceholder": "请输入 API Key",
+    "submit": "登录"
+  },
+  "dashboard": {
+    "title": "仪表盘",
+    "stats": {
+      "totalEmployees": "总员工数",
+      "onlineEmployees": "在线员工",
+      "totalTasks": "总任务数",
+      "completedTasks": "已完成任务",
+      "totalBudget": "总预算",
+      "remainingBudget": "剩余预算"
+    }
+  },
+  "employees": {
+    "title": "员工管理",
+    "create": "创建员工",
+    "name": "姓名",
+    "status": "状态",
+    "budget": "预算",
+    "tasks": "任务数",
+    "bind": "绑定 Agent",
+    "unbind": "解绑",
+    "statusTypes": {
+      "idle": "空闲",
+      "working": "工作中",
+      "offline": "离线"
+    }
+  },
+  "tasks": {
+    "title": "任务管理",
+    "create": "创建任务",
+    "assign": "分配",
+    "start": "开始",
+    "complete": "完成",
+    "rework": "返工",
+    "status": {
+      "pending": "待分配",
+      "assigned": "已分配",
+      "in_progress": "进行中",
+      "completed": "已完成",
+      "failed": "失败"
+    },
+    "priority": {
+      "low": "低",
+      "normal": "中",
+      "high": "高"
+    }
+  },
+  "budget": {
+    "title": "预算管理",
+    "monthly": "月度预算",
+    "used": "已使用",
+    "remaining": "剩余",
+    "addBudget": "增加预算"
+  },
+  "reports": {
+    "title": "报表",
+    "employeePerformance": "员工绩效",
+    "taskStatistics": "任务统计"
+  },
+  "validation": {
+    "required": "必填项",
+    "minLength": "至少 {min} 个字符",
+    "maxLength": "最多 {max} 个字符"
+  }
+}
