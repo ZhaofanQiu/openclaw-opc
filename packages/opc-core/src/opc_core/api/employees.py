@@ -11,17 +11,16 @@ API文档: API.md#Employee
 """
 
 import uuid
-from typing import List, Optional
+from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from opc_database.repositories import EmployeeRepository
-from opc_database.models import AgentStatus, PositionLevel
-from opc_openclaw import AgentManager, BindingResult
+from opc_database.models import AgentStatus
+from opc_openclaw import AgentManager
 
 from ..api.dependencies import get_employee_repo, verify_api_key
-from ..services.employee_service import EmployeeService
 
 router = APIRouter(prefix="/employees", tags=["Employees"])
 

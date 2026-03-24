@@ -10,9 +10,8 @@ Report Router
 API文档: API.md#Report
 """
 
-from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 
 from opc_database.repositories import EmployeeRepository, TaskRepository
 

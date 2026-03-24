@@ -11,8 +11,7 @@ API文档: API.md#Messenger
 """
 
 import uuid
-from dataclasses import dataclass, field
-from datetime import datetime
+from dataclasses import dataclass
 from enum import Enum as PyEnum
 from typing import Any, Dict, Optional
 

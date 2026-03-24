@@ -12,7 +12,7 @@ API文档: API.md#SkillAPI
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from opc_database.repositories import EmployeeRepository, TaskRepository
@@ -120,7 +120,7 @@ async def report_task_result(
     cost = data.tokens_used * 0.01
     
     # 完成任务
-    from opc_database.models import TaskStatus, AgentStatus
+    from opc_database.models import AgentStatus
     await task_repo.complete_task(
         task_id=data.task_id,
         result=data.result,

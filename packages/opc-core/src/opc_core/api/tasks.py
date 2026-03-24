@@ -11,14 +11,14 @@ API文档: API.md#Task
 """
 
 import uuid
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from opc_database.repositories import EmployeeRepository, TaskRepository
-from opc_database.models import AgentStatus, TaskStatus, TaskPriority
-from opc_openclaw import Messenger, MessageType
+from opc_database.models import AgentStatus, TaskStatus
+from opc_openclaw import Messenger
 
 from ..api.dependencies import get_employee_repo, get_task_repo, verify_api_key
 
@@ -339,7 +339,6 @@ async def get_messages(
     api_key: str = Depends(verify_api_key)
 ):
     """获取任务消息"""
-    from opc_database.repositories import TaskMessageRepository
     
     task = await repo.get_by_id(task_id)
     if not task:

@@ -11,7 +11,7 @@ opc-database: 数据库连接管理
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import AsyncGenerator, Optional
+from typing import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import (
     AsyncSession,

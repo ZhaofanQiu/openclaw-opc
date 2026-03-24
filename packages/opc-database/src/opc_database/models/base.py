@@ -11,7 +11,7 @@ opc-database: 基础模型模块
 from datetime import datetime
 from typing import Any, Dict
 
-from sqlalchemy import DateTime, String
+from sqlalchemy import DateTime
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 

@@ -12,10 +12,10 @@ API文档: API.md#EmployeeRepository
 
 from typing import List, Optional
 
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..models.employee import AgentStatus, Employee, PositionLevel
+from ..models.employee import AgentStatus, Employee
 from .base import BaseRepository
 
 

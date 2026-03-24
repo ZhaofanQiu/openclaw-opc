@@ -16,7 +16,7 @@ from typing import List, Optional
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..models.task import Task, TaskMessage, TaskPriority, TaskStatus
+from ..models.task import Task, TaskMessage, TaskStatus
 from .base import BaseRepository
 
 

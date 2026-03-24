@@ -10,11 +10,10 @@ opc-database: 员工模型
 API文档: API.md#EmployeeModel
 """
 
-from datetime import datetime
 from enum import Enum as PyEnum
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from sqlalchemy import Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Float, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base

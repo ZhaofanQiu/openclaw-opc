@@ -10,7 +10,7 @@ opc-database: 公司模型
 
 from typing import Any, Dict, Optional
 
-from sqlalchemy import Float, Integer, String, Text
+from sqlalchemy import Float, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import Base

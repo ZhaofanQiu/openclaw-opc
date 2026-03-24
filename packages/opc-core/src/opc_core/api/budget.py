@@ -10,7 +10,6 @@ Budget Router
 API文档: API.md#Budget
 """
 
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
