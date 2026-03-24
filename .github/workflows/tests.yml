@@ -46,7 +46,13 @@ jobs:
     - name: Run tests with coverage
       run: |
         cd packages/${{ matrix.package }}
-        pytest tests/ -v --cov=${{ matrix.package.replace('opc-', 'opc_') }} --cov-report=xml --cov-report=term-missing
+        if [ "${{ matrix.package }}" = "opc-database" ]; then
+          pytest tests/ -v --cov=opc_database --cov-report=xml --cov-report=term-missing
+        elif [ "${{ matrix.package }}" = "opc-openclaw" ]; then
+          pytest tests/ -v --cov=opc_openclaw --cov-report=xml --cov-report=term-missing
+        elif [ "${{ matrix.package }}" = "opc-core" ]; then
+          pytest tests/ -v --cov=opc_core --cov-report=xml --cov-report=term-missing
+        fi
     
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
