@@ -80,7 +80,7 @@ class BaseClient:
             **kwargs: 其他请求参数
             
         Returns:
-            响应数据 (JSON)
+            响应数据 (JSON)，空响应返回 {}
             
         Raises:
             OpenClawAPIError: API调用失败
@@ -88,6 +88,9 @@ class BaseClient:
         try:
             response = await self._client.request(method, path, **kwargs)
             response.raise_for_status()
+            # 处理空响应 (如 204 No Content)
+            if not response.content:
+                return {}
             return response.json()
         except httpx.HTTPStatusError as e:
             raise OpenClawAPIError(
