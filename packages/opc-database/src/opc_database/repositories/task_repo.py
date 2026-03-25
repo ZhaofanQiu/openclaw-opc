@@ -247,6 +247,120 @@ class TaskRepository(BaseRepository[Task]):
             "status_counts": status_counts,
         }
 
+    # ========== v0.4.2 新增：工作流相关方法 ==========
+
+    async def get_by_workflow(self, workflow_id: str) -> List[Task]:
+        """
+        获取工作流的所有任务
+
+        Args:
+            workflow_id: 工作流ID
+
+        Returns:
+            按 step_index 排序的任务列表
+        """
+        result = await self.session.execute(
+            select(Task)
+            .where(Task.workflow_id == workflow_id)
+            .order_by(Task.step_index)
+        )
+        return list(result.scalars().all())
+
+    async def get_workflow_head(self, workflow_id: str) -> Optional[Task]:
+        """
+        获取工作流的第一个任务
+
+        Args:
+            workflow_id: 工作流ID
+
+        Returns:
+            第一步任务或None
+        """
+        result = await self.session.execute(
+            select(Task)
+            .where(Task.workflow_id == workflow_id)
+            .where(Task.step_index == 0)
+        )
+        return result.scalar_one_or_none()
+
+    async def get_next_task(self, task_id: str) -> Optional[Task]:
+        """
+        获取下一个任务
+
+        Args:
+            task_id: 当前任务ID
+
+        Returns:
+            下一个任务或None
+        """
+        # 通过 next_task_id 查找
+        current = await self.get_by_id(task_id)
+        if current and current.next_task_id:
+            return await self.get_by_id(current.next_task_id)
+        return None
+
+    async def get_prev_task(self, task_id: str) -> Optional[Task]:
+        """
+        获取上一个任务
+
+        Args:
+            task_id: 当前任务ID
+
+        Returns:
+            上一个任务或None
+        """
+        # 通过 depends_on 查找
+        current = await self.get_by_id(task_id)
+        if current and current.depends_on:
+            return await self.get_by_id(current.depends_on)
+        return None
+
+    async def update_task_chain(
+        self, task_id: str, next_task_id: Optional[str] = None, depends_on: Optional[str] = None
+    ) -> Optional[Task]:
+        """
+        更新任务链关系
+
+        Args:
+            task_id: 任务ID
+            next_task_id: 下一个任务ID
+            depends_on: 依赖的上一个任务ID
+
+        Returns:
+            更新后的任务
+        """
+        task = await self.get_by_id(task_id)
+        if not task:
+            return None
+
+        if next_task_id is not None:
+            task.next_task_id = next_task_id
+        if depends_on is not None:
+            task.depends_on = depends_on
+
+        await self.session.flush()
+        return task
+
+    async def get_reworkable_tasks(self, workflow_id: str, from_step: int) -> List[Task]:
+        """
+        获取可以返工的目标任务（上游步骤）
+
+        Args:
+            workflow_id: 工作流ID
+            from_step: 当前步骤索引
+
+        Returns:
+            可以返工的上游任务列表
+        """
+        result = await self.session.execute(
+            select(Task)
+            .where(Task.workflow_id == workflow_id)
+            .where(Task.step_index < from_step)
+            .where(Task.can_rework())
+            .order_by(Task.step_index)
+        )
+        return list(result.scalars().all())
+
 
 class TaskMessageRepository(BaseRepository[TaskMessage]):
     """任务消息仓库"""

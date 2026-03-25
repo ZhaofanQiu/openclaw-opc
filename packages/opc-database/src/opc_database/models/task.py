@@ -111,6 +111,34 @@ class Task(Base):
     rework_count: Mapped[int] = mapped_column(Integer, default=0)
     max_rework: Mapped[int] = mapped_column(Integer, default=3)
 
+    # ========== v0.4.2 新增：工作流支持 ==========
+    # 工作流关联
+    workflow_id: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)
+    step_index: Mapped[int] = mapped_column(Integer, default=0)
+    total_steps: Mapped[int] = mapped_column(Integer, default=1)
+
+    # 步骤链（链表结构）
+    depends_on: Mapped[Optional[str]] = mapped_column(
+        String, ForeignKey("tasks.id"), nullable=True
+    )
+    next_task_id: Mapped[Optional[str]] = mapped_column(
+        String, ForeignKey("tasks.id"), nullable=True
+    )
+
+    # 结构化数据传递
+    input_data: Mapped[str] = mapped_column(Text, default="{}")  # JSON格式
+    output_data: Mapped[str] = mapped_column(Text, default="{}")  # JSON格式
+
+    # 返工机制增强
+    is_rework: Mapped[bool] = mapped_column(default=False)
+    rework_target: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    rework_triggered_by: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    rework_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    rework_instructions: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # 执行历史日志
+    execution_log: Mapped[str] = mapped_column(Text, default="[]")  # JSON数组格式
+
     # 关联关系
     assignee: Mapped[Optional["Employee"]] = relationship(
         "Employee", back_populates="tasks", foreign_keys=[assigned_to]
@@ -138,8 +166,52 @@ class Task(Base):
         """是否可以返工"""
         return self.rework_count < self.max_rework
 
+    def is_workflow_task(self) -> bool:
+        """是否为工作流任务"""
+        return self.workflow_id is not None and self.total_steps > 1
+
+    def is_first_step(self) -> bool:
+        """是否为工作流第一步"""
+        return self.step_index == 0
+
+    def is_last_step(self) -> bool:
+        """是否为工作流最后一步"""
+        return self.step_index >= self.total_steps - 1
+
+    def get_progress(self) -> dict:
+        """获取工作流进度信息"""
+        if not self.is_workflow_task():
+            return {"is_workflow": False}
+        return {
+            "is_workflow": True,
+            "workflow_id": self.workflow_id,
+            "current_step": self.step_index + 1,
+            "total_steps": self.total_steps,
+            "progress_percent": round((self.step_index + 1) / self.total_steps * 100, 1),
+        }
+
+    def add_execution_log(self, entry: dict) -> None:
+        """添加执行日志记录"""
+        import json
+        log = json.loads(self.execution_log) if self.execution_log else []
+        entry["timestamp"] = datetime.utcnow().isoformat()
+        log.append(entry)
+        self.execution_log = json.dumps(log, ensure_ascii=False)
+
+    def set_input_data(self, data: dict) -> None:
+        """设置输入数据"""
+        import json
+        self.input_data = json.dumps(data, ensure_ascii=False)
+
+    def set_output_data(self, data: dict) -> None:
+        """设置输出数据"""
+        import json
+        self.output_data = json.dumps(data, ensure_ascii=False)
+
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
+        import json
+
         base = super().to_dict()
         base.update(
             {
@@ -168,6 +240,20 @@ class Task(Base):
                 "score": self.score,
                 "rework_count": self.rework_count,
                 "max_rework": self.max_rework,
+                # v0.4.2 新增字段
+                "workflow_id": self.workflow_id,
+                "step_index": self.step_index,
+                "total_steps": self.total_steps,
+                "depends_on": self.depends_on,
+                "next_task_id": self.next_task_id,
+                "input_data": json.loads(self.input_data) if self.input_data else {},
+                "output_data": json.loads(self.output_data) if self.output_data else {},
+                "is_rework": self.is_rework,
+                "rework_target": self.rework_target,
+                "rework_triggered_by": self.rework_triggered_by,
+                "rework_reason": self.rework_reason,
+                "rework_instructions": self.rework_instructions,
+                "execution_log": json.loads(self.execution_log) if self.execution_log else [],
             }
         )
         return base
