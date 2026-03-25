@@ -20,6 +20,26 @@ const route = useRoute()
 const isLoginPage = computed(() => route.name === 'login')
 </script>
 
+<style>
+/* 全局视图样式 */
+.view {
+  padding: 24px;
+  min-height: 100%;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 24px;
+}
+</style>
+
 <style scoped>
 .app {
   min-height: 100vh;

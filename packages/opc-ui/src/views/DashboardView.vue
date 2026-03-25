@@ -73,6 +73,11 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.view {
+  padding: 24px;
+  min-height: 100%;
+}
+
 .page-header {
   margin-bottom: 32px;
 }

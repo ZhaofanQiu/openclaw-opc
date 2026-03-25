@@ -1,5 +1,5 @@
 <template>
-  <div class="view">
+  <div class="budget-view">
     <div class="page-header">
       <h1>{{ $t('budget.title') }}</h1>
     </div>
@@ -80,8 +80,17 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.budget-view {
+  padding: 24px;
+}
+
 .page-header {
   margin-bottom: 24px;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 24px;
 }
 
 .budget-overview {

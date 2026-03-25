@@ -1,13 +1,12 @@
-"""
-opc-ui: 工作流分析 Store (v0.4.2-P2)
-"""
+/**
+ * opc-ui: 工作流分析 Store (v0.4.2-P2)
+ */
 
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { useApi } from '@/composables/useApi'
+import { api } from '@/utils/api'
 
 export const useAnalyticsStore = defineStore('analytics', () => {
-  const api = useApi()
   
   // State
   const stats = ref(null)

@@ -196,7 +196,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Search, Plus, StarFilled, User, Connection, Delete } from '@element-plus/icons-vue'
 import { useTemplateStore } from '@/stores/template'
-import { useEmployeeStore } from '@/stores/employee'
+import { useEmployeeStore } from '@/stores/employees'
 
 const router = useRouter()
 const templateStore = useTemplateStore()
@@ -375,6 +375,7 @@ onMounted(() => {
 <style scoped>
 .template-market {
   padding: 24px;
+  min-height: 100%;
 }
 
 .page-header {
@@ -392,6 +393,7 @@ onMounted(() => {
 .header-actions {
   display: flex;
   gap: 12px;
+  align-items: center;
 }
 
 .search-input {
@@ -401,7 +403,10 @@ onMounted(() => {
 .category-tabs {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   margin-bottom: 24px;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
 .template-grid {

@@ -155,7 +155,7 @@ import {
   VideoPlay,
   VideoPause,
 } from '@element-plus/icons-vue'
-import { useWorkflowStore } from '@/stores/workflow'
+import { useWorkflowStore } from '@/stores/workflows'
 
 const route = useRoute()
 const workflowStore = useWorkflowStore()

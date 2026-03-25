@@ -311,6 +311,8 @@ onMounted(() => {
 
 .employee-emoji {
   font-size: 40px;
+  line-height: 1;
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
 }
 
 .employee-status {

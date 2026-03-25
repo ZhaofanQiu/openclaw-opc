@@ -33,9 +33,16 @@ const elapsedTime = computed(() => {
   const start = new Date(props.task.started_at).getTime()
   const elapsed = Math.floor((now.value - start) / 1000)
   
-  const minutes = Math.floor(elapsed / 60)
+  const hours = Math.floor(elapsed / 3600)
+  const minutes = Math.floor((elapsed % 3600) / 60)
   const seconds = elapsed % 60
   
+  // 超过1小时显示 "Xh XXm" 格式
+  if (hours > 0) {
+    return `${hours}h ${minutes.toString().padStart(2, '0')}m`
+  }
+  
+  // 否则显示 "MM:SS" 格式
   return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
 })
 

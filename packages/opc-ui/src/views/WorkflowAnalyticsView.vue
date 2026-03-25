@@ -224,7 +224,8 @@ const loadData = async () => {
       analyticsStore.getEmployeeRankings(days),
     ])
     
-    stats.value = statsRes.data
+    // 修复：直接使用返回的数据，不需要 .data
+    stats.value = statsRes.data || {}
     stepStats.value = stepRes.data || []
     employeeRankings.value = rankingRes.data || []
     
@@ -233,7 +234,8 @@ const loadData = async () => {
     renderTrendChart(dailyRes.data || [])
     renderStatusChart(statsRes.data?.overview)
   } catch (error) {
-    ElMessage.error('加载数据失败')
+    console.error('加载分析数据失败:', error)
+    ElMessage.error('加载数据失败: ' + (error.message || '未知错误'))
   } finally {
     loading.value = false
   }
@@ -389,6 +391,7 @@ onMounted(() => {
 <style scoped>
 .workflow-analytics {
   padding: 24px;
+  min-height: 100%;
 }
 
 .page-header {

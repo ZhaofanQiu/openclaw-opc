@@ -40,7 +40,7 @@
       
       <div class="about-info">
         <p><strong>OpenClaw OPC</strong></p>
-        <p>版本: v0.4.0</p>
+        <p>版本: v0.4.2</p>
         <p>一人公司管理系统</p>
       </div>
     </div>
