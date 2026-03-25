@@ -69,6 +69,8 @@ echo ""
 # ============================================
 echo -e "${BLUE}[2/4] 测试 opc-openclaw${NC}"
 if [ -d "$PROJECT_ROOT/packages/opc-openclaw" ]; then
+    # opc-openclaw 依赖 opc-database，先安装
+    pip install -e "$PROJECT_ROOT/packages/opc-database" -q 2>/dev/null || true
     run_test "opc-openclaw" \
         "pip install -e '.[dev]' -q && pytest tests/ -v --tb=short" \
         "$PROJECT_ROOT/packages/opc-openclaw" || true
@@ -82,6 +84,9 @@ echo ""
 # ============================================
 echo -e "${BLUE}[3/4] 测试 opc-core${NC}"
 if [ -d "$PROJECT_ROOT/packages/opc-core" ]; then
+    # opc-core 依赖 opc-database 和 opc-openclaw，先安装
+    pip install -e "$PROJECT_ROOT/packages/opc-database" -q 2>/dev/null || true
+    pip install -e "$PROJECT_ROOT/packages/opc-openclaw" -q 2>/dev/null || true
     run_test "opc-core" \
         "pip install -e '.[dev]' -q && pytest tests/ -v --tb=short" \
         "$PROJECT_ROOT/packages/opc-core" || true
