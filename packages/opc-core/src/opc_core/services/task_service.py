@@ -213,6 +213,11 @@ class TaskService:
                     employee.completed_tasks += 1
                 await emp_repo.update(employee)
 
+                # v0.4.2: 触发工作流回调（如果这是工作流任务）
+                if task.workflow_id:
+                    print(f"[DEBUG] Task {task_id} is part of workflow {task.workflow_id}, triggering workflow callback", flush=True)
+                    await self._trigger_workflow_callback(task.id)
+
             except Exception as e:
                 # 意外错误，标记为失败
                 task = await task_repo.get_by_id(task_id)
@@ -360,6 +365,33 @@ class TaskService:
             employee.used_budget += cost
             task.actual_cost = cost
             task.tokens_output = tokens_used
+
+    async def _trigger_workflow_callback(self, task_id: str) -> None:
+        """
+        触发工作流回调
+
+        当任务完成时，通知 WorkflowService 触发下一步
+        """
+        # 避免循环导入，延迟导入
+        from .workflow_service import WorkflowService
+
+        # 创建新的 session 来执行回调
+        from opc_database import get_session
+
+        async with get_session() as session:
+            task_repo = TaskRepository(session)
+            emp_repo = EmployeeRepository(session)
+
+            # 创建临时的 task_service（不需要 workflow 回调）
+            temp_task_service = TaskService(task_repo, emp_repo)
+
+            workflow_service = WorkflowService(
+                task_repo=task_repo,
+                emp_repo=emp_repo,
+                task_service=temp_task_service,
+            )
+
+            await workflow_service.on_task_completed(task_id)
 
     # ============================================================
     # 其他任务方法
