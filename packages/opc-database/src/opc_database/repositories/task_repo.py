@@ -221,7 +221,7 @@ class TaskRepository(BaseRepository[Task]):
         获取任务统计
 
         Returns:
-            统计字典
+            统计字典，包含前端期望的字段
         """
         from sqlalchemy import func
 
@@ -240,11 +240,24 @@ class TaskRepository(BaseRepository[Task]):
         )
         status_counts = {row.status: row.count for row in status_result.all()}
 
+        # 兼容前端期望的字段名
+        total_tasks = row.total or 0
+        completed_tasks = status_counts.get(TaskStatus.COMPLETED.value, 0)
+        failed_tasks = status_counts.get(TaskStatus.FAILED.value, 0)
+        in_progress_tasks = status_counts.get(TaskStatus.IN_PROGRESS.value, 0)
+        pending_tasks = status_counts.get(TaskStatus.PENDING.value, 0)
+
         return {
-            "total_tasks": row.total or 0,
+            "total_tasks": total_tasks,
+            "completed_tasks": completed_tasks,
+            "failed_tasks": failed_tasks,
+            "in_progress_tasks": in_progress_tasks,
+            "pending_tasks": pending_tasks,
             "total_estimated_cost": float(row.total_estimated or 0),
             "total_actual_cost": float(row.total_actual or 0),
             "status_counts": status_counts,
+            # 计算完成率
+            "completion_rate": completed_tasks / total_tasks if total_tasks > 0 else 0,
         }
 
     # ========== v0.4.2 新增：工作流相关方法 ==========

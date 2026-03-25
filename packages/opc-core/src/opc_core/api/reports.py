@@ -43,6 +43,10 @@ async def get_dashboard_report(
     online_count = sum(1 for e in employees if e.status == AgentStatus.IDLE.value)
     working_count = sum(1 for e in employees if e.status == AgentStatus.WORKING.value)
 
+    # 计算预算相关值
+    total_remaining = budget_stats["total_budget"] - budget_stats["total_used"]
+    usage_rate = budget_stats["total_used"] / budget_stats["total_budget"] if budget_stats["total_budget"] > 0 else 0
+
     return {
         "employees": {
             "total": len(employees),
@@ -50,18 +54,18 @@ async def get_dashboard_report(
             "working": working_count,
             "total_budget": budget_stats["total_budget"],
             "total_used": budget_stats["total_used"],
-            "total_remaining": budget_stats["total_remaining"],
+            "total_remaining": total_remaining,
         },
         "tasks": task_stats,
         "summary": {
-            "status": "normal" if budget_stats["total_remaining"] > 1000 else "warning",
+            "status": "normal" if total_remaining > 1000 else "warning",
             "health_score": (
                 min(
                     100,
                     int(
                         (
                             task_stats["completion_rate"] * 0.5
-                            + (1 - budget_stats["usage_rate"]) * 0.5
+                            + (1 - usage_rate) * 0.5
                         )
                         * 100
                     ),
