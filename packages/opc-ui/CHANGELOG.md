@@ -4,6 +4,18 @@
 
 ## [0.4.2] - 2026-03-25
 
+### 修复
+
+- **BudgetView**: 修复内容空白问题，添加 .budget-view 容器样式
+- **WorkflowAnalyticsView**: 修复数据响应格式处理，确保图表正常渲染
+- **TemplateMarketView**: 优化布局，修复分类标签间距问题
+- **WorkflowsView**: 修复按钮与标题重叠问题
+- **DashboardView**: 修复内容区域样式
+- **SettingsView**: 更新版本号显示 v0.4.2
+- **TaskProgress**: 优化时间显示，超过1小时显示为 Xh XXm 格式
+- **EmployeesView**: 添加 emoji 字体支持
+- **全局样式**: 在 App.vue 中添加 .view 和 .page-header 全局样式
+
 ### Workflow UI
 
 - **WorkflowsView** - 工作流列表
