@@ -158,11 +158,11 @@ class Task(Base):
                 "total_tokens": self.total_tokens,
                 "session_key": self.session_key,
                 "assigned_at": (
-                    self.assigned_at.isoformat() if self.assigned_at else None
+                    self.assigned_at.isoformat() + 'Z' if self.assigned_at else None
                 ),
-                "started_at": self.started_at.isoformat() if self.started_at else None,
+                "started_at": self.started_at.isoformat() + 'Z' if self.started_at else None,
                 "completed_at": (
-                    self.completed_at.isoformat() if self.completed_at else None
+                    self.completed_at.isoformat() + 'Z' if self.completed_at else None
                 ),
                 "result": self.result,
                 "score": self.score,

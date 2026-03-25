@@ -2,6 +2,44 @@
 
 所有 opc-core 模块的变更记录。
 
+## [0.4.1] - 2026-03-25
+
+### 异步任务架构
+
+- **异步任务执行**
+  - `assign_task()` 立即返回 assigned 状态
+  - 后台任务 (`_execute_task_in_background`) 使用独立数据库 session
+  - 员工状态同步更新为 working（前端立即可见）
+  - 支持前端轮询获取最终状态
+
+- **ResponseParser 集成**
+  - 解析 `OPC-REPORT` 格式响应
+  - 支持状态: completed, failed, needs_revision, needs_review
+  - 自动提取 tokens_used、summary、result_files
+
+- **预算结算**
+  - 任务完成后自动结算预算
+  - 更新员工 used_budget 和 completed_tasks
+  - 失败任务支持返工 (rework_count/max_rework)
+
+### API 更新
+
+- `POST /api/v1/tasks` - 创建任务并自动分配
+- `POST /api/v1/tasks/{id}/assign` - 分配任务给员工
+- `POST /api/v1/tasks/{id}/retry` - 重试失败任务
+- `GET /api/v1/tasks/{id}/poll` - 轮询任务状态
+
+### 测试
+
+- 新增 12 个集成测试
+  - `tests/integration/test_phase3_new_architecture.py`
+  - ResponseParser 解析测试
+  - 异步任务分配测试
+  - 任务重试测试
+  - 错误处理测试
+
+---
+
 ## [0.4.0] - 2026-03-24
 
 ### 新增

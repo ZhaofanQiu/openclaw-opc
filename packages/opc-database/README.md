@@ -2,7 +2,7 @@
 
 OpenClaw OPC - Database Management Module
 
-**版本**: v0.4.0
+**版本**: v0.4.1
 
 ## 职责
 

@@ -11,13 +11,18 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3000,
+    port: 5173,
+    host: '0.0.0.0',
+    allowedHosts: ['.cpolar.cn', '.cpolar.com', 'localhost'],
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'http://localhost:8080',
         changeOrigin: true,
+        // 保留 /api 前缀，因为后端路由是 /api/v1/xxx
+        // rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },
+    cors: true,
   },
   build: {
     outDir: 'dist',

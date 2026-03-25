@@ -1,173 +1,656 @@
 <template>
   <div class="view">
+    <!-- 返回按钮 -->
     <div class="page-header">
-      <router-link to="/tasks" class="back-link">← {{ $t('common.back') }}</router-link>
-      <h1>{{ task?.title || '任务详情' }}</h1>
+      <router-link to="/tasks" class="back-link">
+        ← 返回任务列表
+      </router-link>
     </div>
 
+    <!-- 加载中 -->
     <div v-if="loading" class="loading">
       <div class="spinner"></div>
+      <p>加载中...</p>
     </div>
 
+    <!-- 任务详情 -->
     <div v-else-if="task" class="task-detail">
-      <div class="detail-card">
-        <div class="task-header">
-          <h2>{{ task.title }}</h2>
-          <span :class="['badge', getStatusClass(task.status)]">
-            {{ $t(`tasks.status.${task.status}`) }}
-          </span>
+      <!-- 头部信息 -->
+      <div class="detail-header">
+        <div class="header-main">
+          <h1>{{ task.title }}</h1>
+          <TaskStatusBadge :status="task.status" size="large" />
         </div>
+        <div class="header-actions">
+          <button
+            v-if="task.status === 'pending'"
+            class="btn btn-primary"
+            @click="showAssignModal = true"
+          >
+            分配任务
+          </button>
+          <button
+            v-if="['failed', 'needs_review'].includes(task.status)"
+            class="btn btn-warning"
+            @click="retryTask"
+          >
+            重新执行
+          </button>
+        </div>
+      </div>
 
-        <p class="task-description">{{ task.description || '无描述' }}</p>
+      <!-- 执行中提示 -->
+      <div v-if="isRunning" class="running-panel">
+        <div class="running-indicator">
+          <div class="spinner-lg"></div>
+          <div class="running-info">
+            <h3>Agent 正在执行任务</h3>
+            <p>已用时: {{ elapsedTime }}</p>
+            <p class="hint">您可以离开此页面，任务将在后台继续执行</p>
+          </div>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill indeterminate"></div>
+        </div>
+      </div>
 
+      <!-- 基本信息卡片 -->
+      <div class="detail-card">
+        <h3>基本信息</h3>
         <div class="detail-grid">
           <div class="detail-item">
-            <label>优先级</label>
-            <span :class="['badge', getPriorityClass(task.priority)]">
-              {{ $t(`tasks.priority.${task.priority}`) }}
-            </span>
+            <label>描述</label>
+            <p class="description">{{ task.description || '暂无描述' }}</p>
           </div>
           <div class="detail-item">
-            <label>分配</label>
-            <value>{{ task.assigned_to || '未分配' }}</value>
+            <label>分配员工</label>
+            <p v-if="employee">{{ employee.name }} ({{ employee.position_title }})</p>
+            <p v-else class="text-muted">未分配</p>
           </div>
           <div class="detail-item">
             <label>预估成本</label>
-            <value>¥{{ task.estimated_cost }}</value>
+            <p>{{ task.estimated_cost || 0 }} OC币</p>
           </div>
           <div class="detail-item">
-            <label>实际成本</label>
-            <value>¥{{ task.actual_cost || 0 }}</value>
+            <label>实际消耗</label>
+            <p :class="{ 'text-success': task.actual_cost }">
+              {{ task.actual_cost ? `${task.actual_cost} OC币` : '-' }}
+            </p>
+          </div>
+          <div class="detail-item">
+            <label>创建时间</label>
+            <p>{{ formatDateTime(task.created_at) }}</p>
+          </div>
+          <div class="detail-item" v-if="task.completed_at">
+            <label>完成时间</label>
+            <p>{{ formatDateTime(task.completed_at) }}</p>
+          </div>
+          <div class="detail-item" v-if="task.rework_count > 0">
+            <label>重试次数</label>
+            <p>{{ task.rework_count }} / {{ task.max_rework }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 执行结果 -->
+      <div v-if="task.result || task.status === 'completed'" class="result-card">
+        <h3>执行结果</h3>
+        
+        <!-- 成功完成 -->
+        <div v-if="task.status === 'completed'" class="result-success">
+          <div class="result-icon">✅</div>
+          <div class="result-content">
+            <p class="result-summary">{{ task.result || '任务已完成' }}</p>
+            <div v-if="task.tokens_output" class="result-meta">
+              <span>Token 消耗: {{ task.tokens_output }}</span>
+            </div>
           </div>
         </div>
 
-        <div v-if="task.result" class="result-section">
-          <h3>执行结果</h3>
-          <p>{{ task.result }}</p>
+        <!-- 执行失败 -->
+        <div v-else-if="task.status === 'failed'" class="result-failed">
+          <div class="result-icon">❌</div>
+          <div class="result-content">
+            <p class="error-title">任务执行失败</p>
+            <pre class="error-detail">{{ task.result }}</pre>
+          </div>
         </div>
+
+        <!-- 需要返工 -->
+        <div v-else-if="task.status === 'needs_revision'" class="result-revision">
+          <div class="result-icon">🔄</div>
+          <div class="result-content">
+            <p class="revision-title">需要返工</p>
+            <p class="revision-reason">{{ task.result }}</p>
+          </div>
+        </div>
+
+        <!-- 需要人工检查 -->
+        <div v-else-if="task.status === 'needs_review'" class="result-review">
+          <div class="result-icon">⚠️</div>
+          <div class="result-content">
+            <p class="review-title">无法解析 Agent 响应</p>
+            <p class="review-desc">Agent 返回的数据格式不符合预期，需要人工检查</p>
+            <div class="raw-response">
+              <label>原始响应内容:</label>
+              <pre>{{ task.result }}</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 未找到 -->
+    <div v-else class="not-found">
+      <div class="not-found-icon">🔍</div>
+      <h2>任务未找到</h2>
+      <p>该任务可能已被删除或不存在</p>
+      <router-link to="/tasks" class="btn btn-primary">
+        返回任务列表
+      </router-link>
+    </div>
+
+    <!-- 分配弹窗 -->
+    <TaskAssignModal
+      v-if="showAssignModal"
+      :task="task"
+      @close="showAssignModal = false"
+      @assigned="onTaskAssigned"
+    />
+
+    <!-- Toast 通知 -->
+    <div class="toast-container">
+      <div
+        v-for="toast in notifications"
+        :key="toast.id"
+        :class="['toast', `toast-${toast.type}`]"
+      >
+        {{ toast.message }}
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useTaskStore } from '@/stores/tasks'
+import { useEmployeeStore } from '@/stores/employees'
+import TaskStatusBadge from '@/components/tasks/TaskStatusBadge.vue'
+import TaskAssignModal from '@/components/tasks/TaskAssignModal.vue'
 
 const route = useRoute()
+const router = useRouter()
 const taskStore = useTaskStore()
+const employeeStore = useEmployeeStore()
 
+// 状态
+const showAssignModal = ref(false)
+const elapsedTime = ref('00:00')
+let timeInterval = null
+
+// 从 store 获取
 const task = computed(() => taskStore.currentTask)
 const loading = computed(() => taskStore.loading)
+const notifications = computed(() => taskStore.notifications)
 
-function getStatusClass(status) {
-  const map = {
-    pending: 'badge-info',
-    assigned: 'badge-warning',
-    in_progress: 'badge-warning',
-    completed: 'badge-success',
-    failed: 'badge-danger',
-  }
-  return map[status] || 'badge-info'
+const employee = computed(() => {
+  if (!task.value?.assigned_to) return null
+  return employeeStore.employees.find(e => e.id === task.value.assigned_to)
+})
+
+const isRunning = computed(() => 
+  ['assigned', 'in_progress'].includes(task.value?.status)
+)
+
+// 方法
+function formatDateTime(dateStr) {
+  if (!dateStr) return '-'
+  const date = new Date(dateStr)
+  return date.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  })
 }
 
-function getPriorityClass(priority) {
-  const map = {
-    low: 'badge-info',
-    normal: 'badge-success',
-    high: 'badge-danger',
+function updateElapsedTime() {
+  if (!task.value?.started_at) {
+    elapsedTime.value = '00:00'
+    return
   }
-  return map[priority] || 'badge-info'
+  
+  const start = new Date(task.value.started_at).getTime()
+  const now = Date.now()
+  const elapsed = Math.floor((now - start) / 1000)
+  
+  const minutes = Math.floor(elapsed / 60)
+  const seconds = elapsed % 60
+  
+  elapsedTime.value = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
 }
 
-onMounted(() => {
-  taskStore.fetchTask(route.params.id)
+function onTaskAssigned() {
+  showAssignModal.value = false
+  // 开始轮询
+  taskStore.startPolling(route.params.id)
+}
+
+async function retryTask() {
+  if (!confirm('确定要重新执行此任务吗？')) return
+  try {
+    await taskStore.retryTask(route.params.id)
+    // 重试后开始轮询
+    taskStore.startPolling(route.params.id)
+  } catch (err) {
+    alert('重试失败: ' + err.message)
+  }
+}
+
+// 生命周期
+onMounted(async () => {
+  const taskId = route.params.id
+  
+  // 加载任务详情
+  await taskStore.fetchTask(taskId)
+  
+  // 加载员工列表
+  await employeeStore.fetchEmployees()
+  
+  // 如果任务在执行中，开始轮询和时间更新
+  if (isRunning.value) {
+    taskStore.startPolling(taskId)
+    timeInterval = setInterval(updateElapsedTime, 1000)
+    updateElapsedTime()
+  }
+})
+
+onUnmounted(() => {
+  // 停止轮询
+  taskStore.stopPolling(route.params.id)
+  
+  // 停止时间更新
+  if (timeInterval) {
+    clearInterval(timeInterval)
+  }
 })
 </script>
 
 <style scoped>
-.page-header {
-  margin-bottom: 24px;
-}
-
 .back-link {
-  display: inline-block;
-  margin-bottom: 16px;
-  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-secondary, #666);
   text-decoration: none;
+  font-size: 14px;
+  margin-bottom: 16px;
 }
 
 .back-link:hover {
-  color: var(--color-primary);
+  color: var(--color-primary, #1976d2);
 }
 
-.task-detail {
-  max-width: 800px;
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  gap: 16px;
 }
 
-.detail-card {
-  background: var(--bg-secondary);
-  border-radius: var(--radius-lg);
-  padding: 24px;
-  border: 1px solid var(--border-color);
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border-color, #e0e0e0);
+  border-top-color: var(--color-primary, #1976d2);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }
 
-.task-header {
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* 详情头部 */
+.detail-header {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  gap: 16px;
+}
+
+.header-main {
+  display: flex;
   align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.header-main h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+/* 执行中面板 */
+.running-panel {
+  background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+  border: 1px solid #ffb74d;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.running-indicator {
+  display: flex;
+  align-items: center;
+  gap: 20px;
   margin-bottom: 16px;
 }
 
-.task-header h2 {
-  font-size: 20px;
+.spinner-lg {
+  width: 48px;
+  height: 48px;
+  border: 4px solid rgba(245, 124, 0, 0.2);
+  border-top-color: #f57c00;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }
 
-.task-description {
-  color: var(--text-secondary);
+.running-info h3 {
+  margin: 0 0 8px 0;
+  color: #e65100;
+}
+
+.running-info p {
+  margin: 0 0 4px 0;
+  font-size: 18px;
+  font-weight: 500;
+  font-family: monospace;
+}
+
+.hint {
+  font-size: 13px;
+  color: #f57c00;
+  opacity: 0.8;
+}
+
+.progress-bar {
+  height: 6px;
+  background: rgba(245, 124, 0, 0.2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #f57c00;
+  border-radius: 3px;
+}
+
+.indeterminate {
+  width: 50%;
+  animation: indeterminate 1.5s infinite ease-in-out;
+}
+
+@keyframes indeterminate {
+  0% { transform: translateX(-100%); }
+  50% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+
+/* 卡片样式 */
+.detail-card,
+.result-card {
+  background: var(--bg-primary, #fff);
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 12px;
+  padding: 24px;
   margin-bottom: 24px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid var(--border-color);
+}
+
+.detail-card h3,
+.result-card h3 {
+  margin: 0 0 20px 0;
+  font-size: 18px;
+  font-weight: 600;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
 }
 
 .detail-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 24px;
-  margin-bottom: 24px;
-}
-
-.detail-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
 }
 
 .detail-item label {
-  font-size: 12px;
-  color: var(--text-secondary);
+  display: block;
+  font-size: 13px;
+  color: var(--text-secondary, #666);
+  margin-bottom: 6px;
   text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.detail-item value {
-  font-size: 16px;
-  font-weight: 500;
+.detail-item p {
+  margin: 0;
+  font-size: 15px;
+  color: var(--text-primary, #333);
 }
 
-.result-section {
-  margin-top: 24px;
-  padding-top: 24px;
-  border-top: 1px solid var(--border-color);
-}
-
-.result-section h3 {
-  font-size: 16px;
-  margin-bottom: 12px;
-}
-
-.result-section p {
-  color: var(--text-secondary);
+.detail-item .description {
+  line-height: 1.6;
   white-space: pre-wrap;
+}
+
+.text-muted {
+  color: var(--text-secondary, #999);
+}
+
+.text-success {
+  color: var(--color-success, #388e3c);
+}
+
+/* 结果展示 */
+.result-success,
+.result-failed,
+.result-revision,
+.result-review {
+  display: flex;
+  gap: 16px;
+}
+
+.result-icon {
+  font-size: 32px;
+  flex-shrink: 0;
+}
+
+.result-content {
+  flex: 1;
+}
+
+.result-summary {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.result-meta {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color, #e0e0e0);
+  font-size: 13px;
+  color: var(--text-secondary, #666);
+}
+
+.error-title,
+.revision-title,
+.review-title {
+  margin: 0 0 8px 0;
+  font-weight: 600;
+  color: var(--color-danger, #d32f2f);
+}
+
+.revision-title {
+  color: var(--color-warning, #f57c00);
+}
+
+.review-title {
+  color: var(--color-warning, #f57c00);
+}
+
+.error-detail,
+.revision-reason {
+  margin: 0;
+  padding: 12px;
+  background: var(--bg-secondary, #f5f5f5);
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+.review-desc {
+  margin: 0 0 16px 0;
+  color: var(--text-secondary, #666);
+}
+
+.raw-response {
+  margin-top: 16px;
+}
+
+.raw-response label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-secondary, #666);
+  margin-bottom: 8px;
+}
+
+.raw-response pre {
+  margin: 0;
+  padding: 16px;
+  background: var(--bg-secondary, #f5f5f5);
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-x: auto;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* 未找到 */
+.not-found {
+  text-align: center;
+  padding: 80px 20px;
+}
+
+.not-found-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
+.not-found h2 {
+  margin: 0 0 8px 0;
+  font-size: 24px;
+}
+
+.not-found p {
+  color: var(--text-secondary, #666);
+  margin-bottom: 24px;
+}
+
+/* Toast 容器 */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.toast {
+  padding: 12px 20px;
+  border-radius: 6px;
+  color: white;
+  font-size: 14px;
+  animation: slideIn 0.3s ease;
+  max-width: 300px;
+}
+
+.toast-info {
+  background: var(--color-info, #1976d2);
+}
+
+.toast-success {
+  background: var(--color-success, #388e3c);
+}
+
+.toast-warning {
+  background: var(--color-warning, #f57c00);
+}
+
+.toast-error {
+  background: var(--color-danger, #d32f2f);
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* 按钮样式 */
+.btn {
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background: var(--color-primary, #1976d2);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--color-primary-dark, #1565c0);
+}
+
+.btn-warning {
+  background: var(--color-warning, #f57c00);
+  color: white;
+}
+
+.btn-warning:hover {
+  background: #e65100;
 }
 </style>

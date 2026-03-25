@@ -1,6 +1,6 @@
 # opc-ui
 
-**OpenClaw OPC v0.4.0 - Vue3 Frontend**
+**OpenClaw OPC v0.4.1 - Vue3 Frontend**
 
 基于 Vue 3 + Vite + Pinia + Vue I18n 的前端应用。
 

@@ -1,6 +1,8 @@
-# Contributing to OpenClaw OPC
+# Contributing to OpenClaw OPC v0.4.1
 
 感谢您对 OpenClaw OPC 的兴趣！我们欢迎各种形式的贡献。
+
+**当前版本**: v0.4.1 (端到端任务流程已跑通)
 
 ---
 
@@ -12,8 +14,7 @@
 
 1. 先搜索是否已有相关 Issue
 2. 如果没有，创建新 Issue
-3. 使用 Bug 报告模板
-4. 提供详细的信息：
+3. 提供详细的信息：
    - 复现步骤
    - 期望行为 vs 实际行为
    - 环境信息（OS、Python版本等）
@@ -36,17 +37,22 @@
 git clone https://github.com/YOUR_USERNAME/openclaw-opc.git
 cd openclaw-opc
 
-# 2. 创建虚拟环境
-cd backend
-python3 -m venv venv
-source venv/bin/activate  # Linux/Mac
-# 或 venv\Scripts\activate  # Windows
+# 2. 安装后端依赖 (opc-database)
+cd packages/opc-database
+pip install -e ".[dev]"
 
-# 3. 安装依赖
-pip install -r requirements.txt
+# 3. 安装 OpenClaw 依赖
+cd ../opc-openclaw
+pip install -e ".[dev]"
 
-# 4. 安装开发依赖
-pip install pytest pytest-asyncio black flake8 mypy
+# 4. 安装 Core 依赖
+cd ../opc-core
+pip install -e ".[dev]"
+
+# 5. 安装前端依赖
+cd ../opc-ui
+npm install
+```
 
 # 5. 启动服务
 python3 -m uvicorn src.main:app --reload
@@ -60,14 +66,20 @@ python3 -m uvicorn src.main:app --reload
 - **导入排序**: 使用 `isort`
 
 ```bash
-# 格式化代码
-black backend/src
+# 格式化代码 (在对应包目录下)
+cd packages/opc-core
+black src
 
 # 类型检查
-mypy backend/src
+mypy src
 
 # 运行测试
-pytest backend/tests
+pytest tests
+
+# UI 测试
+cd packages/opc-ui
+npm run lint
+npm run test
 ```
 
 #### 提交规范
@@ -134,17 +146,41 @@ Closes #123
 
 ---
 
-## 📁 项目结构
+## 📁 项目结构 (v0.4.1)
 
 ```
 openclaw-opc/
-├── backend/           # FastAPI Core Service
-│   ├── src/
-│   │   ├── models/    # 数据库模型
-│   │   ├── routers/   # API路由
-│   │   ├── services/  # 业务逻辑
-│   │   └── utils/     # 工具函数
-│   └── tests/         # 测试
+├── packages/
+│   ├── opc-database/     # 数据库层 (SQLAlchemy 2.0)
+│   │   ├── src/opc_database/
+│   │   │   ├── models/      # 数据库模型
+│   │   │   └── repositories/# 数据访问层
+│   │   └── tests/
+│   │
+│   ├── opc-openclaw/     # OpenClaw 集成层
+│   │   ├── src/opc_openclaw/
+│   │   │   ├── client/      # HTTP 客户端
+│   │   │   └── skills/      # Skill 定义
+│   │   └── tests/
+│   │
+│   ├── opc-core/         # 业务 API (FastAPI)
+│   │   ├── src/opc_core/
+│   │   │   ├── api/         # API 路由
+│   │   │   ├── services/    # 业务逻辑
+│   │   │   └── core/        # 核心模块
+│   │   └── tests/
+│   │
+│   └── opc-ui/           # 前端 (Vue3 + Vite)
+│       ├── src/
+│       │   ├── views/       # 页面
+│       │   ├── components/  # 组件
+│       │   └── stores/      # Pinia 状态管理
+│       └── tests/
+│
+├── docs/                # 项目文档
+├── archive/             # 归档文档和代码
+└── data/                # 数据文件
+```
 ├── web/               # 前端页面
 ├── docs/              # 文档
 ├── skill/             # OPC Bridge Skill

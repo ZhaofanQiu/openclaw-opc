@@ -1,6 +1,6 @@
 # opc-core
 
-**OpenClaw OPC v0.4.0 - 核心业务模块**
+**OpenClaw OPC v0.4.1 - 核心业务模块**
 
 FastAPI 实现的 OPC 业务逻辑层，提供完整的 RESTful API。
 

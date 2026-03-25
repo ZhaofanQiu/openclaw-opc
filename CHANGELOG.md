@@ -1,39 +1,58 @@
 # OpenClaw OPC Changelog
 
-## [0.4.1] - 2026-03-25 (Phase 3 完成)
+## [0.4.1] - 2026-03-25 - v0.4.1 完成
 
-### Core 层架构升级
+### 端到端任务流程跑通
 
-- **同步任务分配** - 从异步回调改为同步返回
-  - `TaskService.assign_task()` 改为同步流程
-  - 使用 `ResponseParser` 解析 Agent 回复
-  - 移除对 HTTP 回调的依赖
-  - 新增 `NEEDS_REVIEW` 状态处理解析失败
+**核心成就**: Dashboard 创建任务 → Core 分配 → OpenClaw 调用 Agent → Agent 执行 → 状态更新 → Dashboard 显示完成
 
-- **API 路由更新**
-  - `POST /api/v1/tasks/{id}/assign` - 同步返回任务结果
-  - `POST /api/v1/tasks/{id}/retry` - 新增重试任务接口
-  - `POST /api/v1/tasks/{id}/complete` - 已移除
-  - `POST /api/v1/tasks/{id}/fail` - 已移除
-  - `POST /api/v1/tasks/{id}/rework` - 已移除
-  - Skill API 标记为废弃 (deprecated=True)
+### Core 层 - 异步架构
+
+- **异步任务执行**
+  - `assign_task()` 立即返回 assigned 状态
+  - 后台任务使用独立数据库 session
+  - 员工状态同步更新为 working（前端立即可见）
+  - 前端轮询获取最终状态
 
 - **ResponseParser 集成**
   - 解析 `OPC-REPORT` 格式响应
-  - 支持状态: completed, failed, needs_revision
+  - 支持状态: completed, failed, needs_revision, needs_review
   - 自动提取 tokens_used 和 result_files
 
-### 测试
+- **预算结算**
+  - 任务完成后自动结算预算
+  - 更新员工 used_budget 和 completed_tasks
 
-- **新增测试** (82 个全部通过)
-  - `tests/api/test_tasks_api.py` - 18 个 API 测试
-  - `tests/integration/test_phase3_new_architecture.py` - 12 个集成测试
-  - 更新 `tests/unit/test_task_api.py` - 适配新架构
-  - 修复 `tests/unit/test_employee_api.py` - AgentManager mock
+### UI 层
 
-- **文档**
-  - `packages/opc-core/API.md` - Core API 完整文档
-  - `PLAN_v0.4.1_Phase3_Core.md` - Phase 3 详细规划
+- **任务管理**
+  - 新增 TaskCreateModal 组件
+  - 自动分配流程（创建任务后立即分配）
+  - 任务列表轮询状态更新
+  - 单位显示修复（tokens → OC币）
+  - 时间戳格式修复（添加 Z 后缀）
+
+### 测试 (47 个全部通过)
+
+- **Phase 3 Core 集成测试**: 12 个
+  - `tests/integration/test_phase3_new_architecture.py`
+  - ResponseParser 解析测试
+  - 异步任务分配测试
+  - 任务重试测试
+  - 错误处理测试
+
+- **Phase 4 UI 单元测试**: 35 个
+  - stores/auth.spec.js (5)
+  - stores/employees.spec.js (12)
+  - composables/useStatus.spec.js (9)
+  - utils/api.spec.js (9)
+
+### 文档
+
+- `PLAN_v0.4.1.md` - 开发计划（已归档）
+- 更新 `API.md` - API 接口文档
+
+---
 
 ## [0.4.0] - 2026-03-24
 

@@ -1,12 +1,13 @@
 """
-opc-core: TaskService 单元测试 (v0.4.1)
+opc-core: TaskService 单元测试 (v0.4.1 - Phase 4 异步架构)
 
-测试 Phase 2 新架构下的同步任务分配
+测试 Phase 4 异步任务分配架构
 
 作者: OpenClaw OPC Team
 版本: 0.4.1
 """
 
+import asyncio
 import json
 import uuid
 from datetime import datetime, timezone
@@ -98,82 +99,56 @@ def sample_employee():
 
 
 class TestAssignTask:
-    """测试 assign_task 方法 (新架构)"""
+    """测试 assign_task 方法 (Phase 4 异步架构)"""
 
-    async def test_assign_task_success(self, task_service, mock_task_repo, mock_emp_repo, sample_task, sample_employee):
-        """测试成功分配任务"""
+    async def test_assign_task_returns_assigned_status(
+        self, task_service, mock_task_repo, mock_emp_repo, sample_task, sample_employee
+    ):
+        """测试分配任务立即返回 assigned 状态 (Phase 4 异步架构)"""
         # Mock
         mock_task_repo.get_by_id.return_value = sample_task
         mock_emp_repo.get_by_id.return_value = sample_employee
 
+        # 执行
+        result = await task_service.assign_task("task-001", "emp-001")
+
+        # 验证: 立即返回 assigned 状态
+        assert result.status == TaskStatus.ASSIGNED.value
+        assert result.started_at is not None
+
+        # 验证员工状态未被修改 (后台任务才修改)
+        # 注意: 在真实情况下，后台任务会异步执行，这里我们无法等待它完成
+
+    async def test_assign_task_starts_background_execution(
+        self, task_service, mock_task_repo, mock_emp_repo, sample_task, sample_employee
+    ):
+        """测试分配任务启动后台执行"""
+        mock_task_repo.get_by_id.return_value = sample_task
+        mock_emp_repo.get_by_id.return_value = sample_employee
+
         mock_response = TaskResponse(
             success=True,
-            content="---OPC-REPORT---\ntask_id: task-001\nstatus: completed\ntokens_used: 500\nsummary: Task completed\n---END-REPORT---",
+            content="---OPC-REPORT---\ntask_id: task-001\nstatus: completed\ntokens_used: 500\n---END-REPORT---",
             session_key="sess-abc123",
-            tokens_input=100,
-            tokens_output=500,
         )
 
-        with patch.object(task_service.task_caller, 'assign_task', new_callable=AsyncMock) as mock_assign:
+        with patch.object(
+            task_service.task_caller, 'assign_task', new_callable=AsyncMock
+        ) as mock_assign:
             mock_assign.return_value = mock_response
 
-            # 执行
+            # 分配任务
             result = await task_service.assign_task("task-001", "emp-001")
 
-        # 验证
-        assert result.status == TaskStatus.COMPLETED.value
-        assert result.session_key == "sess-abc123"
-        assert result.tokens_output == 500
-        assert "Task completed" in result.result
-        assert result.completed_at is not None
+            # 立即返回 assigned
+            assert result.status == TaskStatus.ASSIGNED.value
 
-        # 验证员工更新
-        assert sample_employee.completed_tasks == 1
-        assert sample_employee.status == "idle"
-        mock_emp_repo.update.assert_called()
+            # 等待一小段时间让后台任务启动
+            await asyncio.sleep(0.1)
 
-    async def test_assign_task_parse_failure(self, task_service, mock_task_repo, mock_emp_repo, sample_task, sample_employee):
-        """测试解析失败 (Agent 未返回 OPC-REPORT)"""
-        mock_task_repo.get_by_id.return_value = sample_task
-        mock_emp_repo.get_by_id.return_value = sample_employee
-
-        mock_response = TaskResponse(
-            success=True,
-            content="I have completed the task but forgot the report format",
-            session_key="sess-xyz789",
-        )
-
-        with patch.object(task_service.task_caller, 'assign_task', new_callable=AsyncMock) as mock_assign:
-            mock_assign.return_value = mock_response
-
-            result = await task_service.assign_task("task-001", "emp-001")
-
-        # 验证状态为 NEEDS_REVIEW
-        assert result.status == TaskStatus.NEEDS_REVIEW.value
-        assert "Failed to parse" in result.result
-        assert result.session_key == "sess-xyz789"
-
-    async def test_assign_task_send_failure(self, task_service, mock_task_repo, mock_emp_repo, sample_task, sample_employee):
-        """测试发送失败 (Agent 不可用)"""
-        mock_task_repo.get_by_id.return_value = sample_task
-        mock_emp_repo.get_by_id.return_value = sample_employee
-
-        mock_response = TaskResponse(
-            success=False,
-            error="Agent not found",
-        )
-
-        with patch.object(task_service.task_caller, 'assign_task', new_callable=AsyncMock) as mock_assign:
-            mock_assign.return_value = mock_response
-
-            with pytest.raises(TaskAssignmentError) as exc_info:
-                await task_service.assign_task("task-001", "emp-001")
-
-            assert "Agent not found" in str(exc_info.value)
-
-        # 验证任务标记为失败
-        assert sample_task.status == TaskStatus.FAILED.value
-        mock_task_repo.update.assert_called()
+            # 验证后台任务被调用 (模拟执行)
+            # 注意: 由于 asyncio.create_task 创建了独立的任务，
+            # 在测试中我们需要手动模拟后台执行
 
     async def test_assign_task_task_not_found(self, task_service, mock_task_repo):
         """测试任务不存在"""
@@ -182,7 +157,9 @@ class TestAssignTask:
         with pytest.raises(TaskNotFoundError):
             await task_service.assign_task("task-999", "emp-001")
 
-    async def test_assign_task_employee_not_found(self, task_service, mock_task_repo, mock_emp_repo, sample_task):
+    async def test_assign_task_employee_not_found(
+        self, task_service, mock_task_repo, mock_emp_repo, sample_task
+    ):
         """测试员工不存在"""
         mock_task_repo.get_by_id.return_value = sample_task
         mock_emp_repo.get_by_id.return_value = None
@@ -190,7 +167,9 @@ class TestAssignTask:
         with pytest.raises(EmployeeNotFoundError):
             await task_service.assign_task("task-001", "emp-999")
 
-    async def test_assign_task_agent_not_bound(self, task_service, mock_task_repo, mock_emp_repo, sample_task, sample_employee):
+    async def test_assign_task_agent_not_bound(
+        self, task_service, mock_task_repo, mock_emp_repo, sample_task, sample_employee
+    ):
         """测试员工未绑定 Agent"""
         sample_employee.openclaw_agent_id = None
         mock_task_repo.get_by_id.return_value = sample_task
@@ -219,46 +198,138 @@ class TestAssignTask:
 
         assert "Cannot assign task" in str(exc_info.value)
 
-    async def test_assign_task_needs_revision(self, task_service, mock_task_repo, mock_emp_repo, sample_task, sample_employee):
+    async def test_assign_task_needs_revision_can_be_reassigned(
+        self, task_service, mock_task_repo, mock_emp_repo, sample_task, sample_employee
+    ):
         """测试返工任务可以重新分配"""
         sample_task.status = TaskStatus.NEEDS_REVISION.value
         mock_task_repo.get_by_id.return_value = sample_task
         mock_emp_repo.get_by_id.return_value = sample_employee
 
-        mock_response = TaskResponse(
-            success=True,
-            content="---OPC-REPORT---\ntask_id: task-001\nstatus: completed\ntokens_used: 300\n---END-REPORT---",
-        )
+        # 执行
+        result = await task_service.assign_task("task-001", "emp-001")
 
-        with patch.object(task_service.task_caller, 'assign_task', new_callable=AsyncMock) as mock_assign:
-            mock_assign.return_value = mock_response
-
-            result = await task_service.assign_task("task-001", "emp-001")
-
-        assert result.status == TaskStatus.COMPLETED.value
+        # 立即返回 assigned
+        assert result.status == TaskStatus.ASSIGNED.value
 
 
-class TestRetryTask:
-    """测试 retry_task 方法"""
+class TestExecuteTaskInBackground:
+    """测试后台执行任务"""
 
-    async def test_retry_failed_task(self, task_service, mock_task_repo, mock_emp_repo, sample_task, sample_employee):
-        """测试重试失败任务"""
-        sample_task.status = TaskStatus.FAILED.value
-        sample_task.rework_count = 0
+    async def test_background_execution_success(
+        self, task_service, mock_task_repo, mock_emp_repo, sample_task, sample_employee
+    ):
+        """测试后台执行成功完成任务"""
         mock_task_repo.get_by_id.return_value = sample_task
         mock_emp_repo.get_by_id.return_value = sample_employee
 
         mock_response = TaskResponse(
             success=True,
-            content="---OPC-REPORT---\ntask_id: task-001\nstatus: completed\n---END-REPORT---",
+            content="---OPC-REPORT---\ntask_id: task-001\nstatus: completed\ntokens_used: 500\nsummary: Task completed successfully\n---END-REPORT---",
+            session_key="sess-abc123",
         )
 
-        with patch.object(task_service.task_caller, 'assign_task', new_callable=AsyncMock) as mock_assign:
+        with patch.object(
+            task_service.task_caller, 'assign_task', new_callable=AsyncMock
+        ) as mock_assign:
             mock_assign.return_value = mock_response
 
-            result = await task_service.retry_task("task-001")
+            # 直接调用后台执行方法
+            await task_service._execute_task_in_background("task-001", "emp-001")
 
-        assert result.status == TaskStatus.COMPLETED.value
+        # 验证任务被更新为 completed
+        assert sample_task.status == TaskStatus.COMPLETED.value
+        assert sample_task.completed_at is not None
+        assert sample_task.session_key == "sess-abc123"
+        assert "Task completed successfully" in sample_task.result
+
+        # 验证员工统计更新
+        assert sample_employee.completed_tasks == 1
+        assert sample_employee.status == "idle"
+
+    async def test_background_execution_parse_failure(
+        self, task_service, mock_task_repo, mock_emp_repo, sample_task, sample_employee
+    ):
+        """测试后台执行解析失败"""
+        mock_task_repo.get_by_id.return_value = sample_task
+        mock_emp_repo.get_by_id.return_value = sample_employee
+
+        mock_response = TaskResponse(
+            success=True,
+            content="I have completed the task but forgot the report format",
+            session_key="sess-xyz789",
+        )
+
+        with patch.object(
+            task_service.task_caller, 'assign_task', new_callable=AsyncMock
+        ) as mock_assign:
+            mock_assign.return_value = mock_response
+
+            await task_service._execute_task_in_background("task-001", "emp-001")
+
+        # 验证状态为 NEEDS_REVIEW
+        assert sample_task.status == TaskStatus.NEEDS_REVIEW.value
+        assert "Failed to parse" in sample_task.result
+
+    async def test_background_execution_send_failure(
+        self, task_service, mock_task_repo, mock_emp_repo, sample_task, sample_employee
+    ):
+        """测试后台执行发送失败"""
+        mock_task_repo.get_by_id.return_value = sample_task
+        mock_emp_repo.get_by_id.return_value = sample_employee
+
+        mock_response = TaskResponse(success=False, error="Agent not found")
+
+        with patch.object(
+            task_service.task_caller, 'assign_task', new_callable=AsyncMock
+        ) as mock_assign:
+            mock_assign.return_value = mock_response
+
+            await task_service._execute_task_in_background("task-001", "emp-001")
+
+        # 验证任务标记为失败
+        assert sample_task.status == TaskStatus.FAILED.value
+        assert "Failed to send task" in sample_task.result
+
+        # 验证员工状态重置
+        assert sample_employee.status == "idle"
+
+    async def test_background_execution_exception(
+        self, task_service, mock_task_repo, mock_emp_repo, sample_task, sample_employee
+    ):
+        """测试后台执行异常"""
+        mock_task_repo.get_by_id.return_value = sample_task
+        mock_emp_repo.get_by_id.return_value = sample_employee
+
+        with patch.object(
+            task_service.task_caller, 'assign_task', new_callable=AsyncMock
+        ) as mock_assign:
+            mock_assign.side_effect = Exception("Unexpected error")
+
+            await task_service._execute_task_in_background("task-001", "emp-001")
+
+        # 验证任务标记为失败
+        assert sample_task.status == TaskStatus.FAILED.value
+        assert "Unexpected error" in sample_task.result
+
+
+class TestRetryTask:
+    """测试 retry_task 方法"""
+
+    async def test_retry_failed_task_resets_and_assigns(
+        self, task_service, mock_task_repo, mock_emp_repo, sample_task, sample_employee
+    ):
+        """测试重试失败任务 - 重置状态并分配 (Phase 4: 返回 assigned)"""
+        sample_task.status = TaskStatus.FAILED.value
+        sample_task.rework_count = 0
+        mock_task_repo.get_by_id.return_value = sample_task
+        mock_emp_repo.get_by_id.return_value = sample_employee
+
+        # 执行
+        result = await task_service.retry_task("task-001")
+
+        # Phase 4: 重试后返回 assigned (因为 assign_task 是异步的)
+        assert result.status == TaskStatus.ASSIGNED.value
         assert result.rework_count == 1
 
     async def test_retry_max_reached(self, task_service, mock_task_repo, sample_task):

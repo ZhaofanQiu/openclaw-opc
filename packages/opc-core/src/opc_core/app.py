@@ -64,6 +64,12 @@ def create_app(
     # 注册 API 路由
     app.include_router(api_router)
 
+    # 健康检查 (API 版本)
+    @app.get("/api/v1/health")
+    async def api_health_check():
+        """API 健康检查端点"""
+        return {"status": "ok", "version": version}
+
     # 健康检查
     @app.get("/health")
     async def health_check():

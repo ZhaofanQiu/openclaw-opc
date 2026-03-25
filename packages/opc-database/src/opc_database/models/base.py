@@ -38,8 +38,8 @@ class Base(DeclarativeBase):
             包含模型数据的字典
         """
         return {
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "created_at": self.created_at.isoformat() + 'Z' if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() + 'Z' if self.updated_at else None,
         }
 
     def __repr__(self) -> str:

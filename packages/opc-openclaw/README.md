@@ -164,7 +164,7 @@ pytest tests/unit/ -v
 - 98 个单元测试
 - 2 个跳过（需要 HTTP 服务）
 
-### v0.4.0
+### v0.4.1
 
 - HTTP API 客户端实现
 - Agent 生命周期管理

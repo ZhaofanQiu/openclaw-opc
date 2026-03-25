@@ -1,12 +1,12 @@
 """
 opc-core: 任务服务 (v0.4.1)
 
-任务业务逻辑服务 - 适配 Phase 2 新架构
+任务业务逻辑服务 - 适配 Phase 4 异步架构
 
 核心变更:
-- assign_task() 改为同步流程
-- 使用 ResponseParser 解析 Agent 回复
-- 移除对 HTTP 回调的依赖
+- assign_task() 改为异步流程，立即返回
+- 后台执行 Agent 任务
+- 前端轮询获取状态
 
 作者: OpenClaw OPC Team
 创建日期: 2026-03-24
@@ -14,6 +14,7 @@ opc-core: 任务服务 (v0.4.1)
 版本: 0.4.1
 """
 
+import asyncio
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -68,7 +69,7 @@ class TaskService:
         self.response_parser = ResponseParser()
 
     # ============================================================
-    # 核心方法: 任务分配 (新架构 - 同步解析)
+    # 核心方法: 任务分配 (Phase 4 - 异步架构)
     # ============================================================
 
     async def assign_task(
@@ -77,24 +78,21 @@ class TaskService:
         employee_id: str,
     ) -> Task:
         """
-        分配任务给员工 (新架构: 同步解析)
+        分配任务给员工 (Phase 4: 异步架构)
 
         流程:
         1. 验证员工存在并绑定 Agent
         2. 验证任务存在且属于该员工
-        3. 更新任务状态为 IN_PROGRESS
-        4. 构建任务分配消息 (含预算)
-        5. 调用 TaskCaller 发送任务 (同步等待 Agent 回复)
-        6. 使用 ResponseParser 解析回复
-        7. 根据解析结果更新任务
-        8. 结算预算
+        3. 更新任务状态为 ASSIGNED
+        4. 启动后台任务执行
+        5. 立即返回任务 (前端轮询跟踪状态)
 
         Args:
             task_id: 任务ID
             employee_id: 员工ID
 
         Returns:
-            Task: 更新后的任务对象
+            Task: 更新后的任务对象 (status=assigned)
 
         Raises:
             TaskNotFoundError: 任务不存在
@@ -114,64 +112,122 @@ class TaskService:
         # Step 3: 验证任务存在且属于该员工
         task = await self._validate_and_get_task(task_id, employee_id)
 
-        # Step 4: 更新状态为 IN_PROGRESS
-        task.status = TaskStatus.IN_PROGRESS.value
+        # Step 4: 更新状态为 ASSIGNED (已分配，等待执行)
+        task.status = TaskStatus.ASSIGNED.value
         task.started_at = datetime.now(timezone.utc)
         await self.task_repo.update(task)
 
-        # 更新员工状态
+        # Step 5: 立即更新员工状态为 working（前端可立即看到）
         employee.status = "working"
         employee.current_task_id = task.id
         await self.emp_repo.update(employee)
+        print(f"[DEBUG] Employee status updated to WORKING (sync)", flush=True)
 
+        # Step 6: 启动后台异步执行任务
+        print(f"[DEBUG] Creating background task for task_id={task_id}, employee_id={employee_id}", flush=True)
+        
         try:
-            # Step 5: 构建任务分配
-            assignment = self._build_task_assignment(task, employee)
-
-            # Step 6: 发送任务 (同步等待 Agent 回复)
-            response = await self.task_caller.assign_task(assignment)
-
-            if not response.success:
-                # 发送失败 (Agent 不可用等)
-                task.status = TaskStatus.FAILED.value
-                task.completed_at = datetime.now(timezone.utc)
-                task.result = f"Failed to send task to agent: {response.error}"
-                await self.task_repo.update(task)
-                raise TaskAssignmentError(
-                    f"Failed to assign task: {response.error}"
-                )
-
-            # Step 7: 解析 Agent 回复
-            report = self.response_parser.parse(response.content)
-
-            # Step 8: 根据解析结果更新任务
-            self._update_task_from_report(task, report, response)
-
-            # Step 9: 结算预算
-            self._settle_budget(task, employee, report)
-
-            # 更新员工统计
-            employee.status = "idle"
-            employee.current_task_id = None
-            if report.is_valid and report.status == "completed":
-                employee.completed_tasks += 1
-            await self.emp_repo.update(employee)
-
-            return task
-
+            asyncio.create_task(
+                self._execute_task_in_background(task_id, employee_id)
+            )
+            print(f"[DEBUG] Background task created successfully", flush=True)
         except Exception as e:
-            # 意外错误，标记为失败
-            task.status = TaskStatus.FAILED.value
-            task.completed_at = datetime.now(timezone.utc)
-            task.result = f"Unexpected error during task assignment: {str(e)}"
-            await self.task_repo.update(task)
+            print(f"[DEBUG] Failed to create background task: {e}", flush=True)
 
-            # 重置员工状态
-            employee.status = "idle"
-            employee.current_task_id = None
-            await self.emp_repo.update(employee)
+        return task
 
-            raise TaskAssignmentError(f"Task assignment failed: {e}") from e
+    async def _execute_task_in_background(
+        self,
+        task_id: str,
+        employee_id: str,
+    ) -> None:
+        """
+        后台执行任务 (异步)
+
+        此方法在后台运行，不影响 assign_task 的立即返回
+        """
+        print(f"[DEBUG] Background task STARTED: task_id={task_id}, employee_id={employee_id}", flush=True)
+        
+        # 使用新的数据库 session 执行后台任务
+        from opc_database import get_session
+        from opc_database.repositories import TaskRepository, EmployeeRepository
+
+        async with get_session() as session:
+            task_repo = TaskRepository(session)
+            emp_repo = EmployeeRepository(session)
+
+            try:
+                # 重新获取任务和员工 (新的 session)
+                task = await task_repo.get_by_id(task_id)
+                employee = await emp_repo.get_by_id(employee_id)
+
+                if not task or not employee:
+                    print(f"[DEBUG] Task or employee not found", flush=True)
+                    return
+
+                print(f"[DEBUG] Found task={task.id}, employee={employee.name}", flush=True)
+
+                # 更新为 IN_PROGRESS (执行中)
+                task.status = TaskStatus.IN_PROGRESS.value
+                await task_repo.update(task)
+                print(f"[DEBUG] Task status updated to IN_PROGRESS", flush=True)
+
+                # 更新员工状态
+                employee.status = "working"
+                employee.current_task_id = task.id
+                await emp_repo.update(employee)
+                print(f"[DEBUG] Employee status updated to WORKING", flush=True)
+
+                # 构建任务分配
+                assignment = self._build_task_assignment(task, employee)
+
+                # 发送任务 (等待 Agent 回复)
+                response = await self.task_caller.assign_task(assignment)
+
+                if not response.success:
+                    # 发送失败
+                    task.status = TaskStatus.FAILED.value
+                    task.completed_at = datetime.now(timezone.utc)
+                    task.result = f"Failed to send task to agent: {response.error}"
+                    await task_repo.update(task)
+
+                    # 重置员工状态
+                    employee.status = "idle"
+                    employee.current_task_id = None
+                    await emp_repo.update(employee)
+                    return
+
+                # 解析 Agent 回复
+                report = self.response_parser.parse(response.content)
+
+                # 根据解析结果更新任务
+                self._update_task_from_report(task, report, response)
+
+                # 结算预算
+                self._settle_budget(task, employee, report)
+
+                # 更新员工统计
+                employee.status = "idle"
+                employee.current_task_id = None
+                if report.is_valid and report.status == "completed":
+                    employee.completed_tasks += 1
+                await emp_repo.update(employee)
+
+            except Exception as e:
+                # 意外错误，标记为失败
+                task = await task_repo.get_by_id(task_id)
+                employee = await emp_repo.get_by_id(employee_id)
+
+                if task:
+                    task.status = TaskStatus.FAILED.value
+                    task.completed_at = datetime.now(timezone.utc)
+                    task.result = f"Unexpected error: {str(e)}"
+                    await task_repo.update(task)
+
+                if employee:
+                    employee.status = "idle"
+                    employee.current_task_id = None
+                    await emp_repo.update(employee)
 
     # ============================================================
     # 辅助方法

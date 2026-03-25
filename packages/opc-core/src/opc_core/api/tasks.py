@@ -47,6 +47,7 @@ class TaskCreate(BaseModel):
     description: str = Field(default="", description="任务描述")
     priority: str = Field(default="normal", description="优先级: low/normal/high")
     estimated_cost: float = Field(default=100.0, ge=0, description="预估成本")
+    employee_id: Optional[str] = Field(default=None, description="预分配员工ID")
 
 
 class TaskUpdate(BaseModel):
@@ -122,9 +123,10 @@ async def list_tasks(
 async def create_task(
     data: TaskCreate,
     repo: TaskRepository = Depends(get_task_repo),
+    emp_repo: EmployeeRepository = Depends(get_employee_repo),
     api_key: str = Depends(verify_api_key),
 ):
-    """创建任务"""
+    """创建任务 (如果指定了员工，自动分配并执行)"""
     from opc_database.models import Task
 
     task = Task(
@@ -134,9 +136,30 @@ async def create_task(
         priority=data.priority,
         estimated_cost=data.estimated_cost,
         status=TaskStatus.PENDING.value,
+        assigned_to=data.employee_id,
     )
 
     await repo.create(task)
+
+    # 如果指定了员工，自动分配并执行
+    if data.employee_id:
+        task_service = TaskService(repo, emp_repo)
+        try:
+            task = await task_service.assign_task(task.id, data.employee_id)
+            return {
+                "id": task.id,
+                "title": task.title,
+                "message": "Task created and assigned",
+                "status": task.status
+            }
+        except Exception as e:
+            # 分配失败但任务已创建，返回警告
+            return {
+                "id": task.id,
+                "title": task.title,
+                "message": f"Task created but assignment failed: {str(e)}",
+                "status": task.status
+            }
 
     return {"id": task.id, "title": task.title, "message": "Task created"}
 
