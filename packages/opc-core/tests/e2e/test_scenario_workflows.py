@@ -233,7 +233,8 @@ class TestContentCreationWorkflow:
         assert len(rework_tasks) == 2
         
         # 验证有返工任务关联到原任务
-        assert step2_rework_task.parent_task_id == "task-step2"
+        rework_output = json.loads(step2_rework_task.output_data)
+        assert rework_output.get("parent_task_id") == "task-step2"
     
     @pytest.mark.asyncio
     async def test_content_workflow_budget_tracking(self):

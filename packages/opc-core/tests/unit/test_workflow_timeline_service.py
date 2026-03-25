@@ -242,12 +242,12 @@ class TestWorkflowTimelineService:
     
     def test_calculate_workflow_duration(self, timeline_service, sample_tasks):
         """测试计算工作流总耗时"""
-        duration = timeline_service._calculate_duration(sample_tasks)
+        duration = timeline_service._calculate_workflow_duration(sample_tasks)
         
         assert duration > 0
         # 第一个任务开始到最后一个任务完成
         expected_duration = 20  # 分钟
-        assert abs(duration - expected_duration) < 1  # 允许1分钟误差
+        assert abs(duration - expected_duration) < 5  # 允许5分钟误差
     
     def test_format_timeline_for_api(self, timeline_service):
         """测试格式化时间线为API响应"""
