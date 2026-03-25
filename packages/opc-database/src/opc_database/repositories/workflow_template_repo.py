@@ -22,6 +22,9 @@ class WorkflowTemplateRepository(BaseRepository[WorkflowTemplate]):
     
     model = WorkflowTemplate
     
+    def __init__(self, session):
+        super().__init__(session, WorkflowTemplate)
+    
     async def get_by_category(self, category: str) -> List[WorkflowTemplate]:
         """按分类获取模板"""
         result = await self.session.execute(
@@ -153,6 +156,9 @@ class WorkflowTemplateRatingRepository(BaseRepository[WorkflowTemplateRating]):
     """模板评分仓库"""
     
     model = WorkflowTemplateRating
+    
+    def __init__(self, session):
+        super().__init__(session, WorkflowTemplateRating)
     
     async def get_by_template(
         self, 

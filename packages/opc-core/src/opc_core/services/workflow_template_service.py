@@ -184,11 +184,11 @@ class WorkflowTemplateService:
         
         # 排序
         if sort_by == "usage_count":
-            templates.sort(key=lambda x: x.usage_count, reverse=True)
+            templates.sort(key=lambda x: x.usage_count or 0, reverse=True)
         elif sort_by == "created_at":
-            templates.sort(key=lambda x: x.created_at, reverse=True)
+            templates.sort(key=lambda x: x.created_at or datetime.min, reverse=True)
         elif sort_by == "rating":
-            templates.sort(key=lambda x: x.avg_rating, reverse=True)
+            templates.sort(key=lambda x: x.avg_rating or 0, reverse=True)
         
         # 获取分类列表
         categories = await self.template_repo.get_categories()

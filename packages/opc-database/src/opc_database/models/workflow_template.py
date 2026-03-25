@@ -191,6 +191,8 @@ class WorkflowTemplate(Base):
     
     def increment_usage(self) -> None:
         """增加使用次数"""
+        if self.usage_count is None:
+            self.usage_count = 0
         self.usage_count += 1
         self.last_used_at = datetime.utcnow()
     
@@ -210,7 +212,7 @@ class WorkflowTemplate(Base):
             "category": self.category,
             "tags": self.get_tags(),
             "usage_count": self.usage_count,
-            "avg_rating": round(self.avg_rating, 1),
+            "avg_rating": round(self.avg_rating, 1) if self.avg_rating is not None else 0.0,
             "rating_count": self.rating_count,
             "version": self.version,
             "parent_template_id": self.parent_template_id,
