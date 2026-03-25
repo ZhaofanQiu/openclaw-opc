@@ -42,12 +42,16 @@ jobs:
     
     - name: Install dependencies
       run: |
+        # 安装基础依赖（避免 --no-deps 时缺少依赖）
+        pip install sqlalchemy asyncio asyncpg alembic pydantic httpx pyyaml pydantic-settings
+        
         if [ "${{ matrix.package }}" = "opc-openclaw" ]; then
           pip install -e "packages/opc-database"
         elif [ "${{ matrix.package }}" = "opc-core" ]; then
           pip install -e "packages/opc-database"
           pip install -e "packages/opc-openclaw"
         fi
+        
         cd packages/${{ matrix.package }}
         pip install -e ".[dev]" --no-deps
         # 手动安装测试依赖
@@ -127,9 +131,13 @@ jobs:
     
     - name: Install all packages
       run: |
+        # 安装基础依赖
+        pip install sqlalchemy asyncio asyncpg alembic pydantic httpx pyyaml pydantic-settings fastapi uvicorn
+        
         pip install -e "packages/opc-database"
-        pip install -e "packages/opc-openclaw" --no-deps
-        pip install -e "packages/opc-core" --no-deps
+        pip install -e "packages/opc-openclaw"
+        pip install -e "packages/opc-core"
+        
         # 安装测试依赖
         pip install pytest pytest-asyncio pytest-cov httpx aiosqlite respx
         
