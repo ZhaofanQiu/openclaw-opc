@@ -49,7 +49,9 @@ jobs:
           pip install -e "packages/opc-openclaw"
         fi
         cd packages/${{ matrix.package }}
-        pip install -e ".[dev]"
+        pip install -e ".[dev]" --no-deps
+        # 手动安装测试依赖
+        pip install pytest pytest-asyncio pytest-cov httpx aiosqlite respx
     
     - name: Run tests with coverage
       run: |
@@ -125,9 +127,17 @@ jobs:
     
     - name: Install all packages
       run: |
-        pip install -e "packages/opc-database[dev]"
-        pip install -e "packages/opc-openclaw[dev]"
-        pip install -e "packages/opc-core[dev]"
+        pip install -e "packages/opc-database"
+        pip install -e "packages/opc-openclaw" --no-deps
+        pip install -e "packages/opc-core" --no-deps
+        # 安装测试依赖
+        pip install pytest pytest-asyncio pytest-cov httpx aiosqlite respx
+        
+    - name: Verify imports
+      run: |
+        python -c "from opc_database import get_session; print('opc_database OK')"
+        python -c "from opc_openclaw import AgentManager; print('opc_openclaw OK')"
+        python -c "from opc_core.services import TaskService; print('opc_core OK')"
     
     - name: Run integration tests
       run: |
