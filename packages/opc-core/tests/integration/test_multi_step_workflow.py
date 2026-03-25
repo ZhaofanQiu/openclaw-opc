@@ -273,14 +273,14 @@ async def test_execution_simulation(workflow_id):
 
         # 设置输出数据
         first_task.status = TaskStatus.COMPLETED.value
-        first_task.set_output_data(
-            summary="完成了资料收集，找到50篇相关论文",
-            structured_output={
+        first_task.set_output_data({
+            "summary": "完成了资料收集，找到50篇相关论文",
+            "structured_output": {
                 "papers_found": 50,
                 "key_themes": ["deep learning", "diagnosis", "imaging"],
                 "data_quality": "high",
             }
-        )
+        })
         await task_repo.update(first_task)
         print("  ✅ Step 1 标记为完成")
 
