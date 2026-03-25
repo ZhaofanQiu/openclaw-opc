@@ -34,6 +34,21 @@ const routes = [
     component: () => import('@/views/TaskDetailView.vue'),
   },
   {
+    path: '/workflows',
+    name: 'workflows',
+    component: () => import('@/views/WorkflowsView.vue'),
+  },
+  {
+    path: '/workflows/create',
+    name: 'workflow-create',
+    component: () => import('@/views/WorkflowCreateView.vue'),
+  },
+  {
+    path: '/workflows/:id',
+    name: 'workflow-detail',
+    component: () => import('@/views/WorkflowDetailView.vue'),
+  },
+  {
     path: '/budget',
     name: 'budget',
     component: () => import('@/views/BudgetView.vue'),
