@@ -13,7 +13,7 @@ on:
 
 jobs:
   # ============================================
-  # Python 包测试 - 简化版
+  # Python 包测试
   # ============================================
   test-python-packages:
     runs-on: ubuntu-latest
@@ -31,33 +31,33 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     
-    - name: Install dependencies
+    - name: Install base dependencies
       run: |
         pip install --upgrade pip
-        # 安装所有运行时依赖
+        # 安装所有第三方依赖
         pip install sqlalchemy asyncpg alembic pydantic httpx pyyaml pydantic-settings fastapi uvicorn aiosqlite
-        # 安装测试依赖
         pip install pytest pytest-asyncio pytest-cov respx
     
-    - name: Set PYTHONPATH
+    - name: Create __init__.py files
       run: |
-        echo "PYTHONPATH=$(pwd)/packages/opc-database/src:$(pwd)/packages/opc-openclaw/src:$(pwd)/packages/opc-core/src:$PYTHONPATH" >> $GITHUB_ENV
+        # 确保所有包目录都有 __init__.py
+        touch packages/opc-database/src/opc_database/__init__.py
+        touch packages/opc-openclaw/src/opc_openclaw/__init__.py
+        touch packages/opc-core/src/opc_core/__init__.py
     
-    - name: Verify imports
+    - name: Set PYTHONPATH and run tests
       run: |
-        python -c "from opc_database import get_session; print('✓ opc_database')"
-        python -c "from opc_openclaw import AgentManager; print('✓ opc_openclaw')"
-        python -c "from opc_core.services import TaskService; print('✓ opc_core')"
-    
-    - name: Run tests
-      run: |
+        export PYTHONPATH="${{ github.workspace }}/packages/opc-database/src:${{ github.workspace }}/packages/opc-openclaw/src:${{ github.workspace }}/packages/opc-core/src:$PYTHONPATH"
+        echo "PYTHONPATH=$PYTHONPATH"
+        
         cd packages/${{ matrix.package }}
+        
         if [ "${{ matrix.package }}" = "opc-database" ]; then
-          PYTHONPATH=src pytest tests/ -v --tb=short
+          python -m pytest tests/ -v --tb=short
         elif [ "${{ matrix.package }}" = "opc-openclaw" ]; then
-          PYTHONPATH=src:../opc-database/src pytest tests/ -v --tb=short
+          python -m pytest tests/ -v --tb=short
         elif [ "${{ matrix.package }}" = "opc-core" ]; then
-          PYTHONPATH=src:../opc-database/src:../opc-openclaw/src pytest tests/unit/ -v --tb=short
+          python -m pytest tests/unit/ -v --tb=short --timeout=60
         fi
 
   # ============================================
@@ -114,12 +114,18 @@ jobs:
       run: |
         pip install --upgrade pip
         pip install sqlalchemy asyncpg alembic pydantic httpx pyyaml pydantic-settings fastapi uvicorn aiosqlite
-        pip install pytest pytest-asyncio pytest-cov respx
+        pip install pytest pytest-asyncio pytest-cov respx pytest-timeout
+    
+    - name: Create __init__.py files
+      run: |
+        touch packages/opc-database/src/opc_database/__init__.py
+        touch packages/opc-openclaw/src/opc_openclaw/__init__.py
+        touch packages/opc-core/src/opc_core/__init__.py
     
     - name: Run integration tests
       run: |
-        PYTHONPATH=packages/opc-database/src:packages/opc-openclaw/src:packages/opc-core/src \
-          pytest packages/opc-core/tests/integration/ -v --tb=short
+        export PYTHONPATH="${{ github.workspace }}/packages/opc-database/src:${{ github.workspace }}/packages/opc-openclaw/src:${{ github.workspace }}/packages/opc-core/src:$PYTHONPATH"
+        python -m pytest packages/opc-core/tests/integration/ -v --tb=short --timeout=60
 
   # ============================================
   # 测试总结
