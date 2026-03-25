@@ -31,34 +31,25 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     
-    - name: Install base dependencies
+    - name: Install all packages in order
       run: |
         pip install --upgrade pip
         # 安装所有第三方依赖
         pip install sqlalchemy asyncpg alembic pydantic httpx pyyaml pydantic-settings fastapi uvicorn aiosqlite
         pip install pytest pytest-asyncio pytest-cov respx
-    
-    - name: Create __init__.py files
-      run: |
-        # 确保所有包目录都有 __init__.py
-        touch packages/opc-database/src/opc_database/__init__.py
-        touch packages/opc-openclaw/src/opc_openclaw/__init__.py
-        touch packages/opc-core/src/opc_core/__init__.py
-    
-    - name: Set PYTHONPATH and run tests
-      run: |
-        export PYTHONPATH="${{ github.workspace }}/packages/opc-database/src:${{ github.workspace }}/packages/opc-openclaw/src:${{ github.workspace }}/packages/opc-core/src:$PYTHONPATH"
-        echo "PYTHONPATH=$PYTHONPATH"
         
+        # 按顺序安装本地包（不使用依赖检查）
+        cd packages/opc-database
+        pip install -e . --no-deps
+        cd ../opc-openclaw
+        pip install -e . --no-deps
+        cd ../opc-core
+        pip install -e . --no-deps
+    
+    - name: Run tests
+      run: |
         cd packages/${{ matrix.package }}
-        
-        if [ "${{ matrix.package }}" = "opc-database" ]; then
-          python -m pytest tests/ -v --tb=short
-        elif [ "${{ matrix.package }}" = "opc-openclaw" ]; then
-          python -m pytest tests/ -v --tb=short
-        elif [ "${{ matrix.package }}" = "opc-core" ]; then
-          python -m pytest tests/unit/ -v --tb=short --timeout=60
-        fi
+        python -m pytest tests/ -v --tb=short
 
   # ============================================
   # Node.js 前端测试
@@ -110,22 +101,19 @@ jobs:
       with:
         python-version: '3.12'
     
-    - name: Install dependencies
+    - name: Install all packages
       run: |
         pip install --upgrade pip
         pip install sqlalchemy asyncpg alembic pydantic httpx pyyaml pydantic-settings fastapi uvicorn aiosqlite
-        pip install pytest pytest-asyncio pytest-cov respx pytest-timeout
-    
-    - name: Create __init__.py files
-      run: |
-        touch packages/opc-database/src/opc_database/__init__.py
-        touch packages/opc-openclaw/src/opc_openclaw/__init__.py
-        touch packages/opc-core/src/opc_core/__init__.py
+        pip install pytest pytest-asyncio pytest-cov respx
+        
+        cd packages/opc-database && pip install -e . --no-deps && cd ../..
+        cd packages/opc-openclaw && pip install -e . --no-deps && cd ../..
+        cd packages/opc-core && pip install -e . --no-deps && cd ../..
     
     - name: Run integration tests
       run: |
-        export PYTHONPATH="${{ github.workspace }}/packages/opc-database/src:${{ github.workspace }}/packages/opc-openclaw/src:${{ github.workspace }}/packages/opc-core/src:$PYTHONPATH"
-        python -m pytest packages/opc-core/tests/integration/ -v --tb=short --timeout=60
+        python -m pytest packages/opc-core/tests/integration/ -v --tb=short
 
   # ============================================
   # 测试总结
