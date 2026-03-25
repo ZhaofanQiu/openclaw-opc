@@ -92,41 +92,42 @@
         <span>{{ $t('analytics.stepAnalysis') }}</span>
       </template>
       
-      <el-table :data="stepStats" v-loading="loading">
+      <el-table :data="stepStats" v-loading="loading" empty-text="暂无数据">
         <el-table-column type="index" :label="$t('analytics.step')" width="80" />
         <el-table-column prop="title" :label="$t('analytics.stepTitle')" />
         <el-table-column prop="completed_count" :label="$t('analytics.completedCount')" width="100">
-          <template #default="{ row }">
-            <el-tag type="success">{{ row.completed_count }}</el-tag>
+          <template #default="scope">
+            <el-tag type="success" v-if="scope?.row">{{ scope.row.completed_count || 0 }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="rework_count" :label="$t('analytics.reworkCount')" width="100">
-          <template #default="{ row }">
-            <el-tag :type="row.rework_count > 0 ? 'warning' : 'info'">{{ row.rework_count }}</el-tag>
+          <template #default="scope">
+            <el-tag :type="(scope?.row?.rework_count || 0) > 0 ? 'warning' : 'info'" v-if="scope?.row">{{ scope.row.rework_count || 0 }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="rework_rate" :label="$t('analytics.reworkRate')" width="120">
-          <template #default="{ row }">
+          <template #default="scope">
             <el-progress
-              :percentage="row.rework_rate"
-              :color="row.rework_rate > 20 ? '#f56c6c' : row.rework_rate > 10 ? '#e6a23c' : '#67c23a'"
+              v-if="scope?.row"
+              :percentage="scope.row.rework_rate || 0"
+              :color="(scope.row.rework_rate || 0) > 20 ? '#f56c6c' : (scope.row.rework_rate || 0) > 10 ? '#e6a23c' : '#67c23a'"
               :stroke-width="8"
             />
           </template>
         </el-table-column>
         <el-table-column prop="avg_duration_minutes" :label="$t('analytics.avgDuration')" width="120">
-          <template #default="{ row }">
-            {{ formatDuration(row.avg_duration_minutes) }}
+          <template #default="scope">
+            <span v-if="scope?.row">{{ formatDuration(scope.row.avg_duration_minutes) }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="min_duration_minutes" :label="$t('analytics.minDuration')" width="120">
-          <template #default="{ row }">
-            {{ formatDuration(row.min_duration_minutes) }}
+          <template #default="scope">
+            <span v-if="scope?.row">{{ formatDuration(scope.row.min_duration_minutes) }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="max_duration_minutes" :label="$t('analytics.maxDuration')" width="120">
-          <template #default="{ row }">
-            {{ formatDuration(row.max_duration_minutes) }}
+          <template #default="scope">
+            <span v-if="scope?.row">{{ formatDuration(scope.row.max_duration_minutes) }}</span>
           </template>
         </el-table-column>
       </el-table>

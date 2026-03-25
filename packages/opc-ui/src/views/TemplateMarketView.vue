@@ -388,6 +388,7 @@ onMounted(() => {
 .page-header h1 {
   margin: 0;
   font-size: 24px;
+  flex-shrink: 0;
 }
 
 .header-actions {
@@ -400,6 +401,13 @@ onMounted(() => {
   width: 300px;
 }
 
+/* 强制按钮正常大小 */
+.header-actions .el-button {
+  height: 32px;
+  padding: 8px 16px;
+  font-size: 14px;
+}
+
 .category-tabs {
   display: flex;
   justify-content: space-between;
@@ -407,6 +415,20 @@ onMounted(() => {
   margin-bottom: 24px;
   gap: 16px;
   flex-wrap: wrap;
+}
+
+/* 强制 radio 按钮间距 */
+.category-tabs :deep(.el-radio-group) {
+  display: flex;
+  gap: 8px;
+}
+
+.category-tabs :deep(.el-radio-button) {
+  margin-right: 8px;
+}
+
+.category-tabs :deep(.el-radio-button:last-child) {
+  margin-right: 0;
 }
 
 .template-grid {

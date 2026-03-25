@@ -53,9 +53,9 @@ async def get_company_budget(
     return {
         "total_budget": stats["total_budget"],
         "total_used": stats["total_used"],
-        "total_remaining": stats["total_remaining"],
-        "employee_count": stats["employee_count"],
-        "avg_budget": stats["avg_budget"],
+        "total_remaining": stats["total_budget"] - stats["total_used"],
+        "employee_count": stats["total_employees"],
+        "avg_budget": stats["total_budget"] / max(stats["total_employees"], 1),
         "avg_remaining": stats["avg_remaining"],
     }
 
