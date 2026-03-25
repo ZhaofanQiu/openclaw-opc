@@ -5,16 +5,23 @@ opc-database: 仓库包
 
 作者: OpenClaw OPC Team
 创建日期: 2026-03-24
-版本: 0.4.0
+版本: 0.4.2
 """
 
 from .base import BaseRepository
 from .employee_repo import EmployeeRepository
 from .task_repo import TaskMessageRepository, TaskRepository
+from .workflow_template_repo import (
+    WorkflowTemplateRatingRepository,
+    WorkflowTemplateRepository,
+)
 
 __all__ = [
     "BaseRepository",
     "EmployeeRepository",
     "TaskRepository",
     "TaskMessageRepository",
+    # Workflow Template (v0.4.2-P2)
+    "WorkflowTemplateRepository",
+    "WorkflowTemplateRatingRepository",
 ]
