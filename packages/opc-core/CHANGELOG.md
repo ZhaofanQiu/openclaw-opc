@@ -2,6 +2,45 @@
 
 所有 opc-core 模块的变更记录。
 
+## [0.4.2] - 2026-03-25
+
+### Workflow 系统
+
+- **工作流服务 (WorkflowService)**
+  - `create_workflow()` - 创建多步骤工作流
+  - `on_task_completed()` - 任务完成回调，自动触发下一步
+  - `request_rework()` - 请求返工机制
+  - `_trigger_next_step()` - 触发下一步执行
+
+### 模板系统 (P2)
+
+- **WorkflowTemplateService** - 模板管理
+  - CRUD 操作
+  - 从模板创建工作流
+  - Fork 功能
+  - 评分系统
+
+- **WorkflowTimelineService** - 执行时间线
+  - 构建完整时间线事件
+  - 从日志提取事件
+  - 从状态推断事件
+  - 摘要统计
+
+- **WorkflowAnalyticsService** - 分析统计
+  - 工作流整体统计
+  - 步骤耗时分析
+  - 趋势分析
+  - 员工效率排名
+
+### API 端点 (27个)
+
+- 模板管理: 8个端点
+- 时间线: 2个端点
+- 分析统计: 5个端点
+- 工作流: 12个端点
+
+---
+
 ## [0.4.1] - 2026-03-25
 
 ### 异步任务架构

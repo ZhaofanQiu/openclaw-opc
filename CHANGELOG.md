@@ -1,5 +1,116 @@
 # OpenClaw OPC Changelog
 
+## [0.4.2] - 2026-03-25 - Workflow System Complete
+
+### v0.4.2-P2: Workflow Template System
+
+**核心特性**: 工作流模板市场、时间线、分析统计
+
+#### Database 层
+- **WorkflowTemplate 模型** - 16个字段支持完整模板功能
+  - 基础信息: id, name, description, steps_config
+  - 分类标签: category, tags
+  - 统计信息: usage_count, avg_rating, rating_count
+  - 版本管理: version, parent_template_id, is_system
+  - 权限控制: created_by, is_public
+
+- **WorkflowTemplateRating 模型** - 用户评分和评论
+
+- **Repository 层** - 15+ 查询方法
+  - 按分类、标签查询
+  - 搜索、热门、高评分排序
+  - Fork 关系追踪
+
+#### Core 服务层
+- **WorkflowTemplateService** - 模板管理
+  - CRUD 操作
+  - 从模板创建工作流
+  - Fork 功能
+  - 评分系统
+
+- **WorkflowTimelineService** - 执行时间线
+  - 构建完整时间线事件
+  - 从日志提取事件
+  - 从状态推断事件
+  - 摘要统计
+
+- **WorkflowAnalyticsService** - 分析统计
+  - 工作流整体统计
+  - 步骤耗时分析
+  - 趋势分析
+  - 员工效率排名
+
+#### UI 层
+- **TemplateMarketView** - 模板市场
+  - 模板浏览和搜索
+  - 评分和评论
+  - Fork 功能
+
+- **WorkflowTimelineView** - 执行时间线
+  - 可视化时间线
+  - 步骤详情
+
+- **WorkflowAnalyticsView** - 分析看板
+  - 统计图表
+  - 趋势分析
+
+#### API 端点 (27个)
+- 模板管理: 8个端点
+- 时间线: 2个端点
+- 分析统计: 5个端点
+- 其他: 12个端点
+
+### v0.4.2-P0/P1: 基础工作流系统
+
+#### Database 层
+- **Task 模型扩展** - 14个新字段
+  - 工作流关联: workflow_id, step_index
+  - 步骤配置: step_title, step_description, estimated_cost
+  - 执行状态: workflow_status, started_at, completed_at
+  - 返工支持: is_rework, rework_count, parent_task_id, requested_rework_by
+  - 数据传递: input_data, output_data
+  - 执行日志: execution_log
+
+#### OpenClaw 层
+- **ResponseParser** - 解析 Agent 响应
+  - `OPC-OUTPUT` 块解析
+  - `OPC-REWORK` 返工请求解析
+  - 状态识别: completed, failed, needs_revision, needs_review
+
+#### Core 服务层
+- **WorkflowService** - 工作流核心
+  - `create_workflow()` - 创建工作流
+  - `on_task_completed()` - 任务完成回调，自动触发下一步
+  - `request_rework()` - 请求返工
+  - `_trigger_next_step()` - 触发下一步执行
+
+#### UI 层
+- **WorkflowsView** - 工作流列表
+- **WorkflowCreateView** - 创建工作流
+- **WorkflowDetailView** - 工作流详情（流程图+状态）
+
+### 测试 (77个全部通过)
+
+- **Database 模型测试**: 12个
+- **Database 仓库测试**: 20个
+- **Core 服务测试**: 14个
+- **Core 时间线测试**: 11个
+- **E2E 场景测试**: 20个
+
+### 场景测试
+- ✅ 内容创作流水线
+- ✅ 代码审查流水线
+- ✅ 客户服务响应
+- ✅ 数据报告生成
+
+### 文档
+- `TEST_SCENARIOS_v0.4.2.md` - 测试场景设计
+- `TEST_REPORT_v0.4.2.md` - 测试执行报告
+- `PLAN_v0.4.2.md` - 开发计划（已归档）
+- `PLAN_v0.4.2-P2.md` - P2 开发计划（已归档）
+
+---
+
 ## [0.4.1] - 2026-03-25 - v0.4.1 完成
 
 ### 端到端任务流程跑通

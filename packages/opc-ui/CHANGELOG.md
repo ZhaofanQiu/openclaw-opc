@@ -2,6 +2,50 @@
 
 所有 opc-ui 模块的变更记录。
 
+## [0.4.2] - 2026-03-25
+
+### Workflow UI
+
+- **WorkflowsView** - 工作流列表
+  - 显示所有工作流
+  - 状态可视化
+  - 进度条显示
+
+- **WorkflowCreateView** - 创建工作流
+  - 可视化步骤配置
+  - 员工选择
+  - 预算估算
+
+- **WorkflowDetailView** - 工作流详情
+  - 流程图展示
+  - 实时状态更新
+  - 步骤详情
+
+### 模板系统 UI (P2)
+
+- **TemplateMarketView** - 模板市场
+  - 模板浏览和搜索
+  - 评分和评论
+  - Fork 功能
+  - 从模板创建工作流
+
+- **WorkflowTimelineView** - 执行时间线
+  - 可视化时间线
+  - 步骤详情
+  - 事件过滤
+
+- **WorkflowAnalyticsView** - 分析看板
+  - 统计图表 (Chart.js)
+  - 趋势分析
+  - 员工效率排名
+
+### Store 扩展
+
+- **templateStore** - 模板状态管理
+- **analyticsStore** - 分析数据管理
+
+---
+
 ## [0.4.1] - 2026-03-25
 
 ### 任务管理增强

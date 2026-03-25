@@ -2,7 +2,7 @@
 
 OpenClaw OPC - OpenClaw Integration Module
 
-**版本**: v0.4.1
+**版本**: v0.4.2
 
 ## 职责
 

@@ -1,6 +1,6 @@
-# Docs 文档目录 v0.4.1
+# Docs 文档目录 v0.4.2
 
-OpenClaw OPC v0.4.1 项目文档中心。
+OpenClaw OPC v0.4.2 项目文档中心。
 
 ## 文档列表
 
@@ -29,18 +29,18 @@ OpenClaw OPC v0.4.1 项目文档中心。
 
 ## 各模块文档
 
-- `packages/opc-database/README.md` - 数据库模块 (v0.4.1)
+- `packages/opc-database/README.md` - 数据库模块 (v0.4.2)
 - `packages/opc-database/API.md` - 数据库 API 文档
 - `packages/opc-database/CHANGELOG.md` - 数据库变更记录
 
-- `packages/opc-openclaw/README.md` - OpenClaw 集成模块 (v0.4.1)
+- `packages/opc-openclaw/README.md` - OpenClaw 集成模块 (v0.4.2)
 - `packages/opc-openclaw/API.md` - OpenClaw API 文档
 - `packages/opc-openclaw/CHANGELOG.md` - OpenClaw 变更记录
 
-- `packages/opc-core/README.md` - 核心 API 模块 (v0.4.1)
+- `packages/opc-core/README.md` - 核心 API 模块 (v0.4.2)
 - `packages/opc-core/API.md` - Core API 文档
 - `packages/opc-core/CHANGELOG.md` - Core 变更记录
 - `packages/opc-core/ARCHITECTURE.md` - Core 架构设计
 
-- `packages/opc-ui/README.md` - 前端模块 (v0.4.1)
+- `packages/opc-ui/README.md` - 前端模块 (v0.4.2)
 - `packages/opc-ui/CHANGELOG.md` - UI 变更记录

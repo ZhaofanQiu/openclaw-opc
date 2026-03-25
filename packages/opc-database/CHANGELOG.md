@@ -2,6 +2,44 @@
 
 所有 opc-database 模块的变更记录。
 
+## [0.4.2] - 2026-03-25
+
+### Workflow 模型扩展
+
+- **Task 模型** - 14个新字段
+  - 工作流关联: workflow_id, step_index
+  - 步骤配置: step_title, step_description, estimated_cost
+  - 执行状态: workflow_status, started_at, completed_at
+  - 返工支持: is_rework, rework_count, parent_task_id, requested_rework_by
+  - 数据传递: input_data, output_data
+  - 执行日志: execution_log
+
+### 模板模型 (P2)
+
+- **WorkflowTemplate 模型**
+  - 16个字段: id, name, description, steps_config
+  - 分类标签: category, tags
+  - 统计信息: usage_count, avg_rating, rating_count
+  - 版本管理: version, parent_template_id, is_system
+  - 权限控制: created_by, is_public, is_archived
+
+- **WorkflowTemplateRating 模型**
+  - 用户评分和评论
+
+### Repository 层
+
+- **WorkflowTemplateRepository**
+  - 15+ 查询方法
+  - 按分类、标签查询
+  - 搜索、热门、高评分排序
+  - Fork 关系追踪
+
+- **WorkflowTemplateRatingRepository**
+  - 评分 CRUD
+  - 统计查询
+
+---
+
 ## [0.4.1] - 2026-03-25
 
 ### 模型更新
