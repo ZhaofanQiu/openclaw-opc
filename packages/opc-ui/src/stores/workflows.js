@@ -91,6 +91,27 @@ export const useWorkflowStore = defineStore('workflows', () => {
     }
   }
 
+  // v0.4.2-P2: 时间线功能
+  async function getTimeline(workflowId) {
+    try {
+      const response = await api.get(`/workflows/${workflowId}/timeline`)
+      return response
+    } catch (err) {
+      error.value = err.message
+      throw err
+    }
+  }
+
+  async function getTimelineSummary(workflowId) {
+    try {
+      const response = await api.get(`/workflows/${workflowId}/timeline/summary`)
+      return response
+    } catch (err) {
+      error.value = err.message
+      throw err
+    }
+  }
+
   return {
     // State
     workflows,
@@ -108,5 +129,8 @@ export const useWorkflowStore = defineStore('workflows', () => {
     createWorkflow,
     deleteWorkflow,
     requestRework,
+    // v0.4.2-P2
+    getTimeline,
+    getTimelineSummary,
   }
 })

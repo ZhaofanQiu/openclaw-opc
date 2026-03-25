@@ -48,6 +48,22 @@ const routes = [
     name: 'workflow-detail',
     component: () => import('@/views/WorkflowDetailView.vue'),
   },
+  // v0.4.2-P2 新增
+  {
+    path: '/workflow-templates',
+    name: 'workflow-templates',
+    component: () => import('@/views/TemplateMarketView.vue'),
+  },
+  {
+    path: '/workflows/:id/timeline',
+    name: 'workflow-timeline',
+    component: () => import('@/views/WorkflowTimelineView.vue'),
+  },
+  {
+    path: '/workflow-analytics',
+    name: 'workflow-analytics',
+    component: () => import('@/views/WorkflowAnalyticsView.vue'),
+  },
   {
     path: '/budget',
     name: 'budget',

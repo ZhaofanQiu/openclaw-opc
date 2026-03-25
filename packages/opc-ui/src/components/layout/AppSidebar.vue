@@ -6,7 +6,7 @@
         :key="item.name"
         :to="item.path"
         class="nav-item"
-        :class="{ active: $route.path === item.path }"
+        :class="{ active: $route.path.startsWith(item.path) && item.path !== '/' }"
       >
         <span class="nav-icon">{{ item.icon }}</span>
         <span class="nav-text">{{ $t(item.labelKey) }}</span>
@@ -20,6 +20,10 @@ const navItems = [
   { name: 'dashboard', path: '/', icon: '📊', labelKey: 'nav.dashboard' },
   { name: 'employees', path: '/employees', icon: '👥', labelKey: 'nav.employees' },
   { name: 'tasks', path: '/tasks', icon: '📋', labelKey: 'nav.tasks' },
+  { name: 'workflows', path: '/workflows', icon: '🔄', labelKey: 'nav.workflows' },
+  // v0.4.2-P2 新增
+  { name: 'templates', path: '/workflow-templates', icon: '📑', labelKey: 'nav.templates' },
+  { name: 'analytics', path: '/workflow-analytics', icon: '📉', labelKey: 'nav.analytics' },
   { name: 'budget', path: '/budget', icon: '💰', labelKey: 'nav.budget' },
   { name: 'reports', path: '/reports', icon: '📈', labelKey: 'nav.reports' },
   { name: 'settings', path: '/settings', icon: '⚙️', labelKey: 'nav.settings' },
