@@ -10,25 +10,45 @@
           class="search-input"
           @input="debouncedSearch"
         />
-        <el-button type="primary" @click="showCreateDialog = true">
-          <el-icon><Plus /></el-icon>
-          {{ $t('templateMarket.create') }}
+        <el-button
+          type="primary"
+          size="default"
+          style="height: 32px; padding: 8px 16px; font-size: 14px; display: inline-flex; align-items: center; gap: 4px;"
+          @click="showCreateDialog = true"
+        >
+          <el-icon style="font-size: 14px; width: 14px; height: 14px;"><Plus /></el-icon>
+          <span>{{ $t('templateMarket.create') }}</span>
         </el-button>
       </div>
     </div>
 
     <!-- 分类标签 -->
-    <div class="category-tabs">
-      <el-radio-group v-model="selectedCategory" @change="filterTemplates">
-        <el-radio-button label="">{{ $t('templateMarket.all') }}</el-radio-button>
-        <el-radio-button v-for="cat in categories" :key="cat" :label="cat">
+    <div class="category-tabs" style="display: flex; gap: 16px; margin-bottom: 24px;">
+      <el-radio-group
+        v-model="selectedCategory"
+        size="default"
+        style="display: flex; flex-wrap: wrap; gap: 8px;"
+        @change="filterTemplates"
+      >
+        <el-radio-button label="" style="margin-right: 8px;">{{ $t('templateMarket.all') }}</el-radio-button>
+        <el-radio-button
+          v-for="cat in categories"
+          :key="cat"
+          :label="cat"
+          style="margin-right: 8px;"
+        >
           {{ cat }}
         </el-radio-button>
       </el-radio-group>
       
-      <el-radio-group v-model="sortBy" @change="sortTemplates">
-        <el-radio-button label="usage_count">{{ $t('templateMarket.popular') }}</el-radio-button>
-        <el-radio-button label="rating">{{ $t('templateMarket.topRated') }}</el-radio-button>
+      <el-radio-group
+        v-model="sortBy"
+        size="default"
+        style="display: flex; flex-wrap: wrap; gap: 8px;"
+        @change="sortTemplates"
+      >
+        <el-radio-button label="usage_count" style="margin-right: 8px;">{{ $t('templateMarket.popular') }}</el-radio-button>
+        <el-radio-button label="rating" style="margin-right: 8px;">{{ $t('templateMarket.topRated') }}</el-radio-button>
         <el-radio-button label="created_at">{{ $t('templateMarket.newest') }}</el-radio-button>
       </el-radio-group>
     </div>
@@ -401,11 +421,18 @@ onMounted(() => {
   width: 300px;
 }
 
-/* 强制按钮正常大小 */
-.header-actions .el-button {
-  height: 32px;
-  padding: 8px 16px;
-  font-size: 14px;
+/* ===== 强制按钮正常大小 ===== */
+.header-actions .el-button--primary {
+  height: 32px !important;
+  padding: 8px 16px !important;
+  font-size: 14px !important;
+  line-height: 1 !important;
+}
+
+.header-actions .el-button--primary .el-icon {
+  font-size: 14px !important;
+  width: 14px !important;
+  height: 14px !important;
 }
 
 .category-tabs {
@@ -417,18 +444,27 @@ onMounted(() => {
   flex-wrap: wrap;
 }
 
-/* 强制 radio 按钮间距 */
+/* ===== 强制 radio 按钮间距 ===== */
 .category-tabs :deep(.el-radio-group) {
-  display: flex;
-  gap: 8px;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
 }
 
 .category-tabs :deep(.el-radio-button) {
-  margin-right: 8px;
+  margin-right: 8px !important;
 }
 
-.category-tabs :deep(.el-radio-button:last-child) {
-  margin-right: 0;
+.category-tabs :deep(.el-radio-button__inner) {
+  padding: 8px 16px !important;
+  font-size: 14px !important;
+}
+
+/* 暗黑模式适配 */
+.category-tabs :deep(.el-radio-button__original-radio:checked + .el-radio-button__inner) {
+  background-color: var(--el-color-primary) !important;
+  border-color: var(--el-color-primary) !important;
+  color: white !important;
 }
 
 .template-grid {
