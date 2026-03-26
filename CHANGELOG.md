@@ -2,6 +2,43 @@
 
 ## [0.4.4] - 2026-03-27 - Partner Agent (In Progress)
 
+### Phase 2: Intelligent Assistance (Completed)
+
+**核心特性**: 4 个智能辅助功能
+
+#### 1. 辅助创建员工 (assist_create_employee)
+- **API**: `POST /api/v1/partner/assist/create-employee`
+- **功能**: Partner 智能设计员工形象
+- **返回**: 背景故事、性格特点、行事风格、技能列表、推荐预算、员工手册
+
+#### 2. 辅助创建任务 (assist_create_task)
+- **API**: `POST /api/v1/partner/assist/create-task`
+- **功能**: 细化任务需求，推荐员工，预估成本
+- **返回**: 优化标题、详细描述、执行步骤、成本估算、推荐员工、任务手册
+
+#### 3. 一句话创建工作流 (assist_create_workflow)
+- **API**: `POST /api/v1/partner/assist/create-workflow`
+- **功能**: 自然语言描述 → 完整工作流配置
+- **返回**: 工作流名称、描述、3-5个步骤、每步成本和员工分配
+
+#### 4. 智能修改公司手册 (assist_update_company_manual)
+- **API**: `POST /api/v1/partner/assist/update-manual`
+- **功能**: 根据用户请求修改公司手册内容
+- **返回**: 更新后的完整手册内容
+
+#### PartnerService 增强
+- 新增 4 个 assist 方法
+- 智能提示词构建（包含员工列表、OC币策略）
+- JSON 响应解析和错误处理
+
+#### UI Store 更新
+- `assistCreateEmployee()` - 调用员工辅助 API
+- `assistCreateTask()` - 调用任务辅助 API
+- `assistCreateWorkflow()` - 调用工作流辅助 API
+- `assistUpdateManual()` - 调用手册更新 API
+
+---
+
 ### Phase 1: Foundation (Completed)
 
 **核心特性**: Partner 员工作为智能管理助手

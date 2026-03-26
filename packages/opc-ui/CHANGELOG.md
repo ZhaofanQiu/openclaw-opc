@@ -4,7 +4,15 @@
 
 ## [0.4.4] - 2026-03-27
 
-### Partner Agent (Phase 1)
+### Partner Agent - Phase 2: 智能辅助
+
+- **Partner Store 扩展** - 4 个智能辅助方法
+  - `assistCreateEmployee()` - 辅助创建员工
+  - `assistCreateTask()` - 辅助创建任务
+  - `assistCreateWorkflow()` - 一句话创建工作流
+  - `assistUpdateManual()` - 修改公司手册
+
+### Partner Agent - Phase 1
 
 - **PartnerWidget 悬浮框** - 全局存在的 Partner 交互组件
   - 可展开/收起的聊天窗口

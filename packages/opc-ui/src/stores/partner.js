@@ -101,21 +101,42 @@ export const usePartnerStore = defineStore('partner', () => {
     }
   }
 
-  // 智能辅助方法（Phase 2 实现）
+  // ===== Phase 2: 智能辅助方法 =====
+  
+  /**
+   * 智能辅助创建员工
+   * @param {Object} data - { name, job_type, user_intent }
+   * @returns {Promise} 员工设计方案
+   */
   async function assistCreateEmployee(data) {
     return await api.post('/partner/assist/create-employee', data)
   }
 
+  /**
+   * 智能辅助创建任务
+   * @param {Object} data - { title, description, employee_id }
+   * @returns {Promise} 任务细化方案
+   */
   async function assistCreateTask(data) {
     return await api.post('/partner/assist/create-task', data)
   }
 
+  /**
+   * 一句话创建工作流
+   * @param {Object} data - { description }
+   * @returns {Promise} 工作流配置
+   */
   async function assistCreateWorkflow(data) {
     return await api.post('/partner/assist/create-workflow', data)
   }
 
+  /**
+   * 智能修改公司手册
+   * @param {Object} data - { current_content, user_request }
+   * @returns {Promise} 更新后的手册
+   */
   async function assistUpdateManual(data) {
-    return await api.post('/partner/assist/update-company-manual', data)
+    return await api.post('/partner/assist/update-manual', data)
   }
 
   return {
@@ -132,6 +153,7 @@ export const usePartnerStore = defineStore('partner', () => {
     loadHistory,
     sendMessage,
     clearHistory,
+    // Phase 2: 智能辅助
     assistCreateEmployee,
     assistCreateTask,
     assistCreateWorkflow,

@@ -11,9 +11,14 @@ opc-core: 服务层
 from .employee_service import EmployeeService
 from .partner_service import (
     ChatResult,
+    EmployeeAssistResult,
     PartnerChatError,
     PartnerNotFoundError,
     PartnerService,
+    TaskAssistResult,
+    UpdateManualResult,
+    WorkflowAssistResult,
+    WorkflowStepAssist,
 )
 from .task_service import (
     AgentNotBoundError,
@@ -65,6 +70,12 @@ __all__ = [
     "ChatResult",
     "PartnerNotFoundError",
     "PartnerChatError",
+    # Phase 2: 智能辅助结果类型
+    "EmployeeAssistResult",
+    "TaskAssistResult",
+    "WorkflowAssistResult",
+    "WorkflowStepAssist",
+    "UpdateManualResult",
     # Workflow Service (v0.4.2)
     "WorkflowService",
     "WorkflowStepConfig",

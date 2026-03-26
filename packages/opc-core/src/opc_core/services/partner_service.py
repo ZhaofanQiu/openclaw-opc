@@ -46,6 +46,62 @@ class ParsedAction:
     raw_text: str
 
 
+@dataclass
+class EmployeeAssistResult:
+    """辅助创建员工结果"""
+    name: str
+    job_type: str
+    background: str
+    personality: str
+    working_style: str
+    skills: List[str]
+    suggested_avatar_emoji: str
+    manual_content: str
+    suggested_budget: float
+
+
+@dataclass
+class TaskAssistResult:
+    """辅助创建任务结果"""
+    refined_title: str
+    refined_description: str
+    execution_steps: List[str]
+    estimated_cost: float
+    cost_reasoning: str
+    suggested_employee_id: str
+    suggested_employee_name: str
+    employee_reasoning: str
+    manual_content: str
+
+
+@dataclass
+class WorkflowStepAssist:
+    """工作流步骤辅助结果"""
+    title: str
+    description: str
+    assigned_to: str
+    employee_name: str
+    estimated_cost: float
+    cost_reasoning: str
+
+
+@dataclass
+class WorkflowAssistResult:
+    """辅助创建工作流结果"""
+    name: str
+    description: str
+    steps: List[WorkflowStepAssist]
+    total_estimated_cost: float
+    workflow_reasoning: str
+
+
+@dataclass
+class UpdateManualResult:
+    """更新手册结果"""
+    updated_content: str
+    changes_summary: str
+
+
 class PartnerService:
     """
     Partner 业务逻辑服务
@@ -389,3 +445,377 @@ class PartnerService:
                 'remaining': total_budget - total_used
             }
         }
+
+    # ========== Phase 2: 智能辅助功能 ==========
+
+    async def assist_create_employee(
+        self,
+        name: str,
+        job_type: str,
+        user_intent: str
+    ) -> EmployeeAssistResult:
+        """
+        智能辅助创建员工
+
+        Partner 会阅读手册后设计员工形象
+        """
+        partner = await self._get_partner_employee()
+        if not partner:
+            raise PartnerNotFoundError("未找到 Partner 员工，请先创建")
+        
+        if not partner.openclaw_agent_id:
+            raise PartnerChatError("Partner 员工未绑定 OpenClaw Agent")
+        
+        # 构建提示词
+        prompt = self._build_employee_assist_prompt(name, job_type, user_intent)
+        
+        # 发送给 Agent
+        try:
+            response = await self.messenger.send(
+                agent_id=partner.openclaw_agent_id,
+                message=prompt,
+                timeout=90
+            )
+            
+            if not response.success:
+                raise PartnerChatError(f"Agent 响应失败: {response.error}")
+        except Exception as e:
+            raise PartnerChatError(f"发送消息失败: {str(e)}")
+        
+        # 解析 JSON 响应
+        design = self._parse_json_response(response.content)
+        
+        return EmployeeAssistResult(
+            name=name,
+            job_type=job_type,
+            background=design.get("background", ""),
+            personality=design.get("personality", ""),
+            working_style=design.get("working_style", ""),
+            skills=design.get("skills", []),
+            suggested_avatar_emoji=design.get("suggested_avatar_emoji", "👤"),
+            manual_content=design.get("manual_content", ""),
+            suggested_budget=design.get("suggested_budget", 1000.0)
+        )
+
+    async def assist_create_task(
+        self,
+        title: str,
+        description: str,
+        employee_id: Optional[str] = None
+    ) -> TaskAssistResult:
+        """
+        智能辅助创建任务
+
+        Partner 阅读手册后细化任务需求
+        """
+        partner = await self._get_partner_employee()
+        if not partner:
+            raise PartnerNotFoundError("未找到 Partner 员工，请先创建")
+        
+        if not partner.openclaw_agent_id:
+            raise PartnerChatError("Partner 员工未绑定 OpenClaw Agent")
+        
+        # 构建提示词
+        prompt = await self._build_task_assist_prompt(title, description, employee_id)
+        
+        # 发送给 Agent
+        try:
+            response = await self.messenger.send(
+                agent_id=partner.openclaw_agent_id,
+                message=prompt,
+                timeout=90
+            )
+            
+            if not response.success:
+                raise PartnerChatError(f"Agent 响应失败: {response.error}")
+        except Exception as e:
+            raise PartnerChatError(f"发送消息失败: {str(e)}")
+        
+        # 解析 JSON 响应
+        result = self._parse_json_response(response.content)
+        
+        return TaskAssistResult(
+            refined_title=result.get("refined_title", title),
+            refined_description=result.get("refined_description", description),
+            execution_steps=result.get("execution_steps", []),
+            estimated_cost=result.get("estimated_cost", 100.0),
+            cost_reasoning=result.get("cost_reasoning", ""),
+            suggested_employee_id=result.get("suggested_employee_id", ""),
+            suggested_employee_name=result.get("suggested_employee_name", ""),
+            employee_reasoning=result.get("employee_reasoning", ""),
+            manual_content=result.get("manual_content", "")
+        )
+
+    async def assist_create_workflow(
+        self,
+        natural_language_description: str
+    ) -> WorkflowAssistResult:
+        """
+        一句话创建工作流
+
+        示例输入："帮我做一个内容创作流程，从选题到发布"
+        """
+        partner = await self._get_partner_employee()
+        if not partner:
+            raise PartnerNotFoundError("未找到 Partner 员工，请先创建")
+        
+        if not partner.openclaw_agent_id:
+            raise PartnerChatError("Partner 员工未绑定 OpenClaw Agent")
+        
+        # 构建提示词
+        prompt = await self._build_workflow_assist_prompt(natural_language_description)
+        
+        # 发送给 Agent
+        try:
+            response = await self.messenger.send(
+                agent_id=partner.openclaw_agent_id,
+                message=prompt,
+                timeout=120
+            )
+            
+            if not response.success:
+                raise PartnerChatError(f"Agent 响应失败: {response.error}")
+        except Exception as e:
+            raise PartnerChatError(f"发送消息失败: {str(e)}")
+        
+        # 解析 JSON 响应
+        result = self._parse_json_response(response.content)
+        
+        steps_data = result.get("steps", [])
+        steps = [
+            WorkflowStepAssist(
+                title=step.get("title", ""),
+                description=step.get("description", ""),
+                assigned_to=step.get("assigned_to", ""),
+                employee_name=step.get("employee_name", ""),
+                estimated_cost=step.get("estimated_cost", 100.0),
+                cost_reasoning=step.get("cost_reasoning", "")
+            )
+            for step in steps_data
+        ]
+        
+        return WorkflowAssistResult(
+            name=result.get("name", ""),
+            description=result.get("description", ""),
+            steps=steps,
+            total_estimated_cost=result.get("total_estimated_cost", 0.0),
+            workflow_reasoning=result.get("workflow_reasoning", "")
+        )
+
+    async def assist_update_company_manual(
+        self,
+        current_content: str,
+        user_request: str
+    ) -> UpdateManualResult:
+        """
+        智能修改公司手册
+        """
+        partner = await self._get_partner_employee()
+        if not partner:
+            raise PartnerNotFoundError("未找到 Partner 员工，请先创建")
+        
+        if not partner.openclaw_agent_id:
+            raise PartnerChatError("Partner 员工未绑定 OpenClaw Agent")
+        
+        # 构建提示词
+        prompt = self._build_manual_update_prompt(current_content, user_request)
+        
+        # 发送给 Agent
+        try:
+            response = await self.messenger.send(
+                agent_id=partner.openclaw_agent_id,
+                message=prompt,
+                timeout=90
+            )
+            
+            if not response.success:
+                raise PartnerChatError(f"Agent 响应失败: {response.error}")
+        except Exception as e:
+            raise PartnerChatError(f"发送消息失败: {str(e)}")
+        
+        return UpdateManualResult(
+            updated_content=response.content,
+            changes_summary="根据用户请求更新了手册"
+        )
+
+    def _build_employee_assist_prompt(self, name: str, job_type: str, user_intent: str) -> str:
+        """构建员工辅助提示词"""
+        return f"""你是 OpenClaw OPC 的 Partner（合伙人），正在帮助用户设计新员工。
+
+## 设计任务
+用户想要创建一名新员工：
+- 姓名: {name}
+- 岗位: {job_type}
+- 意图/需求: {user_intent}
+
+## OC 币与 Token 换算策略
+- 1 OC币 ≈ 1000 Tokens
+- 员工月度预算建议：
+  * 初级员工：500-1000 OC币
+  * 中级员工：1000-3000 OC币
+  * 高级员工：3000-8000 OC币
+  * 专家/Partner：8000+ OC币
+
+## 请提供设计方案
+请以 JSON 格式返回：
+{{
+    "background": "员工背景故事（200字左右）",
+    "personality": "性格特点（100字左右）",
+    "working_style": "行事风格和工作习惯（100字左右）",
+    "skills": ["技能1", "技能2", "技能3", "技能4"],
+    "suggested_avatar_emoji": "推荐头像emoji",
+    "suggested_budget": 1500,
+    "manual_content": "完整的员工手册内容（Markdown格式，包含：背景、性格、技能、行事风格、沟通方式等）"
+}}
+
+注意：suggested_budget 请基于岗位类型给出合理建议。"""
+
+    async def _build_task_assist_prompt(
+        self,
+        title: str,
+        description: str,
+        employee_id: Optional[str]
+    ) -> str:
+        """构建任务辅助提示词"""
+        # 获取可用员工列表
+        employees = await self.employee_repo.get_all(limit=100)
+        employees_list = "\n".join([
+            f"- {e.id}: {e.name} (岗位: {e.job_type}, 预算: {e.monthly_budget} OC币)"
+            for e in employees
+        ])
+        
+        employee_info = ""
+        if employee_id:
+            employee = await self.employee_repo.get_by_id(employee_id)
+            if employee:
+                employee_info = f"\n### 指定执行员工\n{employee.name} (ID: {employee.id})"
+
+        return f"""你是 OpenClaw OPC 的 Partner（合伙人），正在帮助用户细化任务需求。
+
+## 当前任务
+用户想要创建任务：
+- 标题: {title}
+- 描述: {description}
+{employee_info}
+
+## 可用员工列表
+{employees_list}
+
+## OC 币与 Token 换算策略
+- 1 OC币 ≈ 1000 Tokens
+- 任务成本预估参考：
+  * 简单任务（研究、查询）：50-100 OC币 ≈ 5万-10万 Tokens
+  * 中等任务（分析、写作）：100-300 OC币 ≈ 10万-30万 Tokens
+  * 复杂任务（代码开发、多步骤分析）：300-800 OC币 ≈ 30万-80万 Tokens
+
+## 请提供
+请以 JSON 格式返回：
+{{
+    "refined_title": "优化后的标题",
+    "refined_description": "细化后的详细描述（包含验收标准）",
+    "execution_steps": ["步骤1", "步骤2", "步骤3"],
+    "estimated_cost": 150,
+    "cost_reasoning": "成本估算理由",
+    "suggested_employee_id": "推荐员工ID",
+    "suggested_employee_name": "推荐员工姓名",
+    "employee_reasoning": "推荐理由",
+    "manual_content": "任务手册内容（Markdown格式）"
+}}"""
+
+    async def _build_workflow_assist_prompt(self, description: str) -> str:
+        """构建工作流辅助提示词"""
+        # 获取可用员工列表
+        employees = await self.employee_repo.get_all(limit=100)
+        employees_list = "\n".join([
+            f"- {e.id}: {e.name} (岗位: {e.job_type})"
+            for e in employees
+        ])
+        
+        return f"""你是 OpenClaw OPC 的 Partner（合伙人），正在帮助用户设计工作流。
+
+## 用户需求
+用户用自然语言描述：
+"{description}"
+
+## 可用员工列表（为每步选择最合适的）
+{employees_list}
+
+## OC 币与 Token 换算策略
+- 1 OC币 ≈ 1000 Tokens
+- 任务成本预估参考：
+  * 简单任务（研究、查询）：50-100 OC币
+  * 中等任务（分析、写作）：100-300 OC币
+  * 复杂任务（代码开发、多步骤分析）：300-800 OC币
+  * 工作流任务：每个步骤按上述标准累加
+
+## 请提供
+请以 JSON 格式返回：
+{{
+    "name": "工作流名称（简洁，不超过20字）",
+    "description": "工作流描述",
+    "steps": [
+        {{
+            "title": "步骤标题",
+            "description": "详细描述",
+            "assigned_to": "员工ID",
+            "employee_name": "员工姓名",
+            "estimated_cost": 100,
+            "cost_reasoning": "成本理由"
+        }}
+    ],
+    "total_estimated_cost": 500,
+    "workflow_reasoning": "整体设计思路"
+}}
+
+注意：
+1. 拆分为 3-5 个合理步骤
+2. 为每步选择最适合的员工（尽量不同员工）
+3. 每步成本基于 OC币/Token 换算策略
+4. 总成本为各步骤之和"""
+
+    def _build_manual_update_prompt(self, current_content: str, user_request: str) -> str:
+        """构建手册更新提示词"""
+        return f"""你是 OpenClaw OPC 的 Partner（合伙人），正在帮助用户修改公司手册。
+
+### 现有公司手册
+{current_content}
+
+### 用户修改请求
+{user_request}
+
+### 任务要求
+请根据用户请求修改公司手册，返回完整的更新后内容（Markdown格式）。
+
+注意事项：
+1. 如果用户请求是添加新章节，请保持在合适的位置
+2. 如果是修改现有内容，请保持其他部分不变
+3. 保持手册结构清晰，使用 Markdown 标题层次
+4. 直接返回完整的手册内容，不需要 JSON 格式
+
+请直接返回完整的更新后手册内容。"""
+
+    def _parse_json_response(self, text: str) -> dict:
+        """从文本中提取 JSON 并解析"""
+        # 尝试直接解析
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            pass
+        
+        # 尝试从 Markdown 代码块中提取
+        patterns = [
+            r'```json\n(.*?)\n```',
+            r'```\n(.*?)\n```',
+            r'\{[\s\S]*?\}'
+        ]
+        
+        for pattern in patterns:
+            matches = re.findall(pattern, text, re.DOTALL)
+            for match in matches:
+                try:
+                    return json.loads(match)
+                except json.JSONDecodeError:
+                    continue
+        
+        # 如果都失败，返回空对象
+        return {}
