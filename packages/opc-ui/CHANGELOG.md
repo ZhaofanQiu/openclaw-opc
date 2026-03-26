@@ -4,6 +4,31 @@
 
 ## [0.4.4] - 2026-03-27
 
+### Partner Agent - Phase 3: UI Dialogs
+
+- **EmployeeCreateModal** - 增强版员工创建对话框
+  - ✨ Partner 智能设计区域
+  - AI 设计按钮与加载状态
+  - 设计方案预览面板（背景/性格/风格/技能/预算）
+  - 一键应用设计方案
+
+- **WorkflowAssistModal** - 一句话创建工作流对话框
+  - 自然语言输入
+  - 4个示例提示词
+  - 生成动画
+  - 完整工作流预览（步骤/成本/员工）
+  - 设计思路展示
+
+- **PartnerWidget** - 集成对话框触发
+  - `@openCreateEmployee` 事件
+  - `@openCreateWorkflow` 事件
+  - 快捷按钮直接打开对应对话框
+
+- **App.vue** - 全局对话框管理
+  - EmployeeCreateModal 全局挂载
+  - WorkflowAssistModal 全局挂载
+  - 统一的事件处理
+
 ### Partner Agent - Phase 2: 智能辅助
 
 - **Partner Store 扩展** - 4 个智能辅助方法

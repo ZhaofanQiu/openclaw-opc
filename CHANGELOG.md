@@ -1,6 +1,45 @@
 # OpenClaw OPC Changelog
 
-## [0.4.4] - 2026-03-27 - Partner Agent (In Progress)
+## [0.4.4] - 2026-03-27 - Partner Agent (Complete) ✅
+
+### Phase 3: UI Dialogs (Completed)
+
+**核心特性**: 无缝的 Partner 辅助创建体验
+
+#### EmployeeCreateModal (增强)
+- ✨ **Partner 智能设计** 区域
+- 输入框描述员工期望
+- AI 设计按钮（渐变样式）
+- 设计方案预览面板：
+  - 背景故事
+  - 性格特点
+  - 行事风格
+  - 技能列表（标签展示）
+  - 推荐预算（含 Token 换算）
+- 一键应用设计
+
+#### WorkflowAssistModal (新增)
+- 🪄 一句话创建工作流
+- 自然语言输入框
+- 4 个示例提示词（可点击）
+- 生成动画（"✨ Partner 正在设计..."）
+- 完整预览：
+  - 工作流名称/描述
+  - 预估总成本
+  - 步骤列表（含序号、成本、员工）
+  - 设计思路说明
+- 重新设计 / 确认创建
+
+#### PartnerWidget 集成
+- 快捷操作按钮触发全局对话框
+- 发送事件：`@openCreateEmployee`, `@openCreateWorkflow`
+- 打开对话框时自动收起
+
+#### App.vue 全局状态
+- 管理 EmployeeCreateModal 和 WorkflowAssistModal
+- 创建成功后自动刷新/导航
+
+---
 
 ### Phase 2: Intelligent Assistance (Completed)
 
