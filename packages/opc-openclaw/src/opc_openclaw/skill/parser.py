@@ -25,6 +25,7 @@ class ParsedReport:
     raw_content: str  # 原始报告文本
     is_valid: bool  # 是否解析成功
     errors: List[str]  # 解析错误信息
+    human_readable: str  # 人类可读内容（非结构化部分）
 
 
 class ResponseParser:
@@ -47,7 +48,7 @@ class ResponseParser:
             ParsedReport: 解析结果（即使失败也返回，is_valid=False）
         """
         if not response_text:
-            return cls._create_empty_report("Empty response")
+            return cls._create_empty_report("Empty response", response_text="")
         
         # 提取报告部分
         report_section, errors = cls._extract_report_section(response_text)
@@ -56,7 +57,8 @@ class ResponseParser:
             return cls._create_empty_report(
                 "Report section not found",
                 raw_content="",
-                errors=errors
+                errors=errors,
+                response_text=response_text
             )
         
         # 解析报告字段
@@ -70,6 +72,9 @@ class ResponseParser:
         # 解析结果文件（逗号分隔或列表格式）
         result_files = cls._parse_result_files(data.get("result_files", ""))
         
+        # 提取人类可读内容
+        human_readable = cls.extract_human_readable(response_text)
+        
         return ParsedReport(
             task_id=data.get("task_id", ""),
             status=data.get("status", "").lower().strip(),
@@ -78,7 +83,8 @@ class ResponseParser:
             result_files=result_files,
             raw_content=report_section,
             is_valid=len(errors) == 0 and bool(data.get("task_id")),
-            errors=errors
+            errors=errors,
+            human_readable=human_readable
         )
     
     @classmethod
@@ -249,12 +255,15 @@ class ResponseParser:
         return files
     
     @classmethod
-    def _create_empty_report(cls, error_msg: str, raw_content: str = "", errors: List[str] = None) -> ParsedReport:
+    def _create_empty_report(cls, error_msg: str, raw_content: str = "", errors: List[str] = None, response_text: str = "") -> ParsedReport:
         """创建空的解析报告"""
         if errors is None:
             errors = []
         if error_msg:
             errors.append(error_msg)
+        
+        # 提取人类可读内容（如果提供了完整响应）
+        human_readable = cls.extract_human_readable(response_text) if response_text else ""
         
         return ParsedReport(
             task_id="",
@@ -264,7 +273,8 @@ class ResponseParser:
             result_files=[],
             raw_content=raw_content,
             is_valid=False,
-            errors=errors
+            errors=errors,
+            human_readable=human_readable
         )
     
     @classmethod

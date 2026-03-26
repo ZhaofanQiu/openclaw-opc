@@ -308,14 +308,14 @@ onMounted(() => {
 .page-header {
   display: flex;
   align-items: center;
-  gap: var(--space-md);
-  margin-bottom: var(--space-lg);
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
 }
 
 .header-content {
   display: flex;
   align-items: center;
-  gap: var(--space-md);
+  gap: var(--spacing-md);
 }
 
 .header-content h1 {
@@ -324,9 +324,9 @@ onMounted(() => {
 
 .progress-overview {
   background: var(--bg-secondary);
-  border-radius: var(--radius-md);
-  padding: var(--space-lg);
-  margin-bottom: var(--space-lg);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
 }
 
 .progress-bar-large {
@@ -334,7 +334,7 @@ onMounted(() => {
   background: var(--bg-tertiary);
   border-radius: var(--radius-md);
   overflow: hidden;
-  margin-bottom: var(--space-sm);
+  margin-bottom: var(--spacing-sm);
 }
 
 .progress-bar-large .progress-fill {
@@ -353,22 +353,22 @@ onMounted(() => {
 
 .steps-timeline {
   background: var(--bg-secondary);
-  border-radius: var(--radius-md);
-  padding: var(--space-lg);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
 }
 
 .steps-timeline h3 {
   margin-top: 0;
-  margin-bottom: var(--space-lg);
+  margin-bottom: var(--spacing-lg);
 }
 
 .timeline-item {
   display: flex;
-  gap: var(--space-md);
-  padding: var(--space-md) 0;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) 0;
   border-left: 2px solid var(--border-color);
   margin-left: 15px;
-  padding-left: var(--space-lg);
+  padding-left: var(--spacing-lg);
   position: relative;
 }
 
@@ -411,14 +411,14 @@ onMounted(() => {
 
 .timeline-content {
   flex: 1;
-  padding-bottom: var(--space-md);
+  padding-bottom: var(--spacing-md);
 }
 
 .task-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--space-sm);
+  margin-bottom: var(--spacing-sm);
 }
 
 .task-header h4 {
@@ -429,13 +429,13 @@ onMounted(() => {
 .task-description {
   color: var(--text-muted);
   font-size: 0.875rem;
-  margin-bottom: var(--space-sm);
+  margin-bottom: var(--spacing-sm);
 }
 
 .task-meta {
   display: flex;
-  gap: var(--space-md);
-  margin-bottom: var(--space-sm);
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
   font-size: 0.875rem;
   color: var(--text-muted);
 }
@@ -446,7 +446,7 @@ onMounted(() => {
 
 .task-actions {
   display: flex;
-  gap: var(--space-sm);
+  gap: var(--spacing-sm);
 }
 
 .modal-overlay {
@@ -464,7 +464,7 @@ onMounted(() => {
 
 .modal {
   background: var(--bg-secondary);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   width: 100%;
   max-width: 500px;
   max-height: 90vh;
@@ -475,7 +475,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--space-md);
+  padding: var(--spacing-md);
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -484,31 +484,31 @@ onMounted(() => {
 }
 
 .modal-body {
-  padding: var(--space-md);
+  padding: var(--spacing-md);
 }
 
 .modal-footer {
   display: flex;
   justify-content: flex-end;
-  gap: var(--space-sm);
-  padding: var(--space-md);
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
   border-top: 1px solid var(--border-color);
 }
 
 .form-group {
-  margin-bottom: var(--space-md);
+  margin-bottom: var(--spacing-md);
 }
 
 .form-group label {
   display: block;
-  margin-bottom: var(--space-xs);
+  margin-bottom: var(--spacing-xs);
   font-weight: 500;
 }
 
 .form-group textarea,
 .form-group select {
   width: 100%;
-  padding: var(--space-sm);
+  padding: var(--spacing-sm);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   background: var(--bg-primary);
@@ -522,7 +522,7 @@ onMounted(() => {
 
 .error-state {
   text-align: center;
-  padding: var(--space-xl);
+  padding: var(--spacing-xl);
   color: var(--danger);
 }
 </style>

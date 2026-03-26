@@ -36,6 +36,12 @@
           >
             重新执行
           </button>
+          <button
+            class="btn btn-danger"
+            @click="deleteTask"
+          >
+            删除任务
+          </button>
         </div>
       </div>
 
@@ -103,6 +109,23 @@
             <p class="result-summary">{{ task.result || '任务已完成' }}</p>
             <div v-if="task.tokens_output" class="result-meta">
               <span>Token 消耗: {{ task.tokens_output }}</span>
+            </div>
+            <!-- 结果文件列表 -->
+            <div v-if="task.result_files && task.result_files.length > 0" class="result-files">
+              <label>📎 输出文件:</label>
+              <ul class="file-list">
+                <li v-for="(file, index) in task.result_files" :key="index" class="file-item">
+                  <a v-if="isUrl(file)" :href="file" target="_blank" class="file-link">
+                    {{ formatFileName(file) }}
+                  </a>
+                  <span v-else class="file-name">{{ file }}</span>
+                </li>
+              </ul>
+            </div>
+            <!-- 员工反馈（非结构化内容） -->
+            <div v-if="task.feedback" class="feedback-section">
+              <label>📝 员工反馈:</label>
+              <div class="feedback-content markdown-body" v-html="renderMarkdown(task.feedback)"></div>
             </div>
           </div>
         </div>
@@ -174,6 +197,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { marked } from 'marked'
 import { useTaskStore } from '@/stores/tasks'
 import { useEmployeeStore } from '@/stores/employees'
 import TaskStatusBadge from '@/components/tasks/TaskStatusBadge.vue'
@@ -217,6 +241,35 @@ function formatDateTime(dateStr) {
   })
 }
 
+function isUrl(str) {
+  if (!str) return false
+  return str.startsWith('http://') || str.startsWith('https://') || str.startsWith('/')
+}
+
+function formatFileName(file) {
+  if (!file) return ''
+  if (isUrl(file)) {
+    try {
+      const url = new URL(file)
+      return url.pathname.split('/').pop() || file
+    } catch {
+      return file.split('/').pop()
+    }
+  }
+  return file
+}
+
+// 使用 marked 渲染 Markdown
+function renderMarkdown(text) {
+  if (!text) return ''
+  return marked.parse(text, {
+    gfm: true,        // GitHub Flavored Markdown
+    breaks: true,     // 换行符转为 <br>
+    headerIds: false, // 不自动生成标题 ID
+    mangle: false     // 不转义邮件地址
+  })
+}
+
 function updateElapsedTime() {
   if (!task.value?.started_at) {
     elapsedTime.value = '00:00'
@@ -247,6 +300,17 @@ async function retryTask() {
     taskStore.startPolling(route.params.id)
   } catch (err) {
     alert('重试失败: ' + err.message)
+  }
+}
+
+async function deleteTask() {
+  if (!confirm('确定要删除此任务吗？删除后无法恢复。')) return
+  try {
+    await taskStore.deleteTask(route.params.id)
+    // 删除后返回任务列表
+    router.push('/tasks')
+  } catch (err) {
+    alert('删除失败: ' + err.message)
   }
 }
 
@@ -496,6 +560,49 @@ onUnmounted(() => {
   color: var(--text-secondary, #666);
 }
 
+/* 结果文件列表 */
+.result-files {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color, #e0e0e0);
+}
+
+.result-files label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary, #333);
+  margin-bottom: 8px;
+}
+
+.file-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.file-item {
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  background: var(--bg-secondary, #f5f5f5);
+  border-radius: 6px;
+}
+
+.file-link {
+  color: var(--color-primary, #1976d2);
+  text-decoration: none;
+}
+
+.file-link:hover {
+  text-decoration: underline;
+}
+
+.file-name {
+  color: var(--text-primary, #333);
+  font-family: monospace;
+  font-size: 13px;
+}
+
 .error-title,
 .revision-title,
 .review-title {
@@ -551,6 +658,128 @@ onUnmounted(() => {
   overflow-x: auto;
   max-height: 400px;
   overflow-y: auto;
+}
+
+/* 员工反馈区域 */
+.feedback-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color, #e0e0e0);
+}
+
+.feedback-section label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary, #333);
+  margin-bottom: 12px;
+}
+
+.feedback-content {
+  padding: 16px;
+  background: var(--bg-secondary, #f8f9fa);
+  border-radius: 8px;
+  border-left: 4px solid var(--color-primary, #1976d2);
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.feedback-content :deep(pre) {
+  background: #f5f5f5;
+  padding: 12px 16px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 12px 0;
+}
+
+.feedback-content :deep(pre code) {
+  font-family: 'Fira Code', 'Consolas', monospace;
+  font-size: 13px;
+  background: transparent;
+  padding: 0;
+}
+
+.feedback-content :deep(code) {
+  background: #f0f0f0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Fira Code', 'Consolas', monospace;
+  font-size: 13px;
+}
+
+.feedback-content :deep(h1) {
+  font-size: 1.5em;
+  font-weight: 600;
+  margin: 1em 0 0.5em;
+  color: var(--text-primary, #333);
+}
+
+.feedback-content :deep(h2) {
+  font-size: 1.3em;
+  font-weight: 600;
+  margin: 1em 0 0.5em;
+  color: var(--text-primary, #333);
+}
+
+.feedback-content :deep(h3) {
+  font-size: 1.1em;
+  font-weight: 600;
+  margin: 1em 0 0.5em;
+  color: var(--text-primary, #333);
+}
+
+.feedback-content :deep(hr) {
+  border: none;
+  border-top: 1px solid #e0e0e0;
+  margin: 16px 0;
+}
+
+.feedback-content :deep(ul),
+.feedback-content :deep(ol) {
+  margin: 0.5em 0;
+  padding-left: 1.5em;
+}
+
+.feedback-content :deep(li) {
+  margin: 0.25em 0;
+}
+
+.feedback-content :deep(blockquote) {
+  border-left: 4px solid #ddd;
+  padding-left: 1em;
+  margin: 1em 0;
+  color: #666;
+}
+
+.feedback-content :deep(a) {
+  color: var(--color-primary, #1976d2);
+  text-decoration: none;
+}
+
+.feedback-content :deep(a:hover) {
+  text-decoration: underline;
+}
+
+.feedback-content :deep(p) {
+  margin: 0.5em 0;
+}
+
+.feedback-content :deep(table) {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+}
+
+.feedback-content :deep(th),
+.feedback-content :deep(td) {
+  border: 1px solid #e0e0e0;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.feedback-content :deep(th) {
+  background: #f5f5f5;
+  font-weight: 600;
 }
 
 /* 未找到 */

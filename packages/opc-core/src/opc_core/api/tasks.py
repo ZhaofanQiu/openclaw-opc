@@ -83,6 +83,7 @@ class TaskResponse(BaseModel):
     started_at: Optional[str]
     completed_at: Optional[str]
     result: Optional[str]
+    feedback: Optional[str]  # 员工反馈（人类可读内容）
     rework_count: int
     max_rework: int
 

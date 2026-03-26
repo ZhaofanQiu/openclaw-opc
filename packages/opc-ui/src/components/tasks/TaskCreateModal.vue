@@ -1,5 +1,5 @@
 <template>
-  <div class="modal-overlay" @click="$emit('close')">
+  <div class="modal-overlay" @click.self="handleOverlayClick">
     <div class="modal-content" @click.stop>
       <div class="modal-header">
         <h3>创建新任务</h3>
@@ -89,8 +89,15 @@ const form = ref({
   title: '',
   description: '',
   employee_id: '',
-  estimated_cost: 0
+  estimated_cost: 100
 })
+
+function handleOverlayClick() {
+  // 只在非提交状态下允许点击外部关闭
+  if (!props.submitting) {
+    emit('close')
+  }
+}
 
 function handleSubmit() {
   emit('submit', { ...form.value })

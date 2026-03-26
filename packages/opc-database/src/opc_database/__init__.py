@@ -1,7 +1,7 @@
 """
 opc-database: 数据库管理模块
 
-OpenClaw OPC v0.4.2-P2 - 数据库管理模块
+OpenClaw OPC v0.4.3 - 数据库管理模块
 
 提供异步数据库连接、ORM模型和Repository数据访问层。
 
@@ -14,10 +14,10 @@ OpenClaw OPC v0.4.2-P2 - 数据库管理模块
         employee = await repo.get_by_id("emp_xxx")
 
 作者: OpenClaw OPC Team
-版本: 0.4.2-P2
+版本: 0.4.3
 """
 
-__version__ = "0.4.2-P2"
+__version__ = "0.4.3"
 
 from .connection import (
     check_connection,

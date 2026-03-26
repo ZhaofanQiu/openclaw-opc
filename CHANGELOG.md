@@ -1,5 +1,59 @@
 # OpenClaw OPC Changelog
 
+## [0.4.3] - 2026-03-27 - Production Ready
+
+### 核心改进
+
+**稳定性修复** - WAL 模式 + 事务隔离修复，解决数据库锁问题
+
+#### Database 层
+- **WAL 模式支持** - 启用 Write-Ahead Logging
+  - `PRAGMA journal_mode=WAL` - 提升并发性能
+  - `PRAGMA synchronous=NORMAL` - 平衡性能与安全
+  - `PRAGMA wal_autocheckpoint=1000` - 自动检查点
+  - 读不阻塞写，写不阻塞读
+
+#### Core 服务层
+- **事务隔离修复** - 修复 `database is locked` 错误
+  - `assign_task()` - 创建任务前显式提交事务
+  - `_execute_task_in_background()` - session 关闭后再触发工作流回调
+  - 避免嵌套 session 导致的锁竞争
+
+- **任务反馈系统** - 完整支持 Agent 人类可读反馈
+  - `ParsedReport.human_readable` - 提取非结构化内容
+  - `Task.feedback` 字段存储员工反馈
+  - API 返回反馈数据
+  - 前端 Markdown 渲染展示
+
+#### UI 层
+- **员工反馈展示** - TaskDetailView 添加反馈区域
+  - 集成 `marked` 库解析 Markdown
+  - 支持标题、代码块、列表、分隔线等格式
+  - 美观的反馈卡片样式
+
+- **工作流样式统一** - 修复 CSS 变量不一致
+  - `WorkflowCreateView` - 统一 `--spacing-*` 变量
+  - `WorkflowDetailView` - 统一 `--spacing-*` 变量
+
+- **任务管理增强**
+  - 新建任务默认预估成本改为 100 OC币
+  - 任务详情页添加删除按钮
+
+### 修复清单
+
+| 问题 | 修复方案 |
+|------|----------|
+| 工作流子任务卡住 (database is locked) | WAL 模式 + 事务隔离修复 |
+| 新建任务默认成本为 0 | 改为 100 |
+| 工作流页面样式不一致 | 统一 CSS 变量 |
+| 员工反馈 Markdown 解析错误 | 集成 marked 库 |
+| 任务详情页无删除按钮 | 添加删除功能 |
+
+### 文档
+- 更新各子模块版本号至 v0.4.3
+
+---
+
 ## [0.4.2] - 2026-03-25 - Workflow System Complete
 
 ### v0.4.2-P2: Workflow Template System

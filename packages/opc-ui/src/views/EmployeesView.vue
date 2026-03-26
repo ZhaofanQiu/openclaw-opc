@@ -78,16 +78,26 @@
             <span>📝 {{ emp.completed_tasks || 0 }} 任务</span>
           </div>
           
-          <button
-            v-if="!emp.openclaw_agent_id"
-            class="btn btn-sm btn-primary"
-            @click.stop="openBindModal(emp)"
-          >
-            绑定 Agent
-          </button>
-          <span v-else class="agent-badge">
-            🤖 已绑定
-          </span>
+          <div class="actions">
+            <button
+              v-if="!emp.openclaw_agent_id"
+              class="btn btn-sm btn-primary"
+              @click.stop="openBindModal(emp)"
+            >
+              绑定 Agent
+            </button>
+            <span v-else class="agent-badge">
+              🤖 已绑定
+            </span>
+            <button
+              class="btn btn-sm btn-danger"
+              @click.stop="deleteEmployee(emp)"
+              :disabled="emp.status === 'working'"
+              title="删除员工"
+            >
+              🗑️
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -178,6 +188,24 @@ function onAgentBound() {
   showBindModal.value = false
   selectedEmployee.value = null
   employeeStore.fetchEmployees()
+}
+
+async function deleteEmployee(emp) {
+  if (emp.status === 'working') {
+    alert('该员工正在工作中，无法删除')
+    return
+  }
+  
+  const confirmed = confirm(`确定要删除员工 "${emp.name}" 吗？\n\n删除后：\n- 该员工的所有未完成任务将恢复为未分配状态\n- 已完成的任务记录将保留`)
+  
+  if (confirmed) {
+    try {
+      await employeeStore.deleteEmployee(emp.id)
+      alert('员工已删除')
+    } catch (err) {
+      alert('删除失败: ' + err.message)
+    }
+  }
 }
 
 onMounted(() => {
@@ -408,6 +436,28 @@ onMounted(() => {
   background: var(--color-success-bg, #e8f5e9);
   padding: 4px 12px;
   border-radius: 4px;
+}
+
+.card-footer .actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-danger {
+  background: var(--color-danger-bg, #ffebee);
+  color: var(--color-danger, #d32f2f);
+  border: 1px solid var(--color-danger, #d32f2f);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--color-danger, #d32f2f);
+  color: white;
+}
+
+.btn-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* 按钮样式 */

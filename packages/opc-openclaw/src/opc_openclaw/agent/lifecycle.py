@@ -55,8 +55,8 @@ class AgentLifecycle:
     这里提供的是发现和状态管理能力
     """
 
-    # Agent ID 命名规范：必须以 opc- 开头
-    AGENT_ID_PREFIX = "opc-"
+    # Agent ID 命名规范：必须以 opc_ 或 opc- 开头
+    AGENT_ID_PREFIXES = ("opc_", "opc-")
 
     def __init__(self, agent_client=None, openclaw_bin: Optional[str] = None):
         """
@@ -78,7 +78,7 @@ class AgentLifecycle:
         检查 Agent ID 是否符合命名规范
 
         规则：
-        1. 必须以 "opc_" 开头
+        1. 必须以 "opc_" 或 "opc-" 开头
         2. 不能是 "main" 或 "default"
         3. 只能包含字母、数字、下划线、连字符
         """
@@ -89,13 +89,19 @@ class AgentLifecycle:
         if agent_id in ("main", "default"):
             return False
 
-        # 必须以 opc_ 开头
-        if not agent_id.startswith(self.AGENT_ID_PREFIX):
+        # 必须以 opc_ 或 opc- 开头
+        if not any(agent_id.startswith(prefix) for prefix in self.AGENT_ID_PREFIXES):
             return False
 
         # 检查合法字符
         valid_chars = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-.")
-        remaining = agent_id[len(self.AGENT_ID_PREFIX) :]
+        # 获取前缀之后的内容
+        remaining = agent_id
+        for prefix in self.AGENT_ID_PREFIXES:
+            if agent_id.startswith(prefix):
+                remaining = agent_id[len(prefix):]
+                break
+        
         if not remaining:
             return False
 

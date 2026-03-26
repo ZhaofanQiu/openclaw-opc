@@ -137,11 +137,27 @@ async def init_db():
     """
     初始化数据库表
 
-    创建所有定义的表结构
+    创建所有定义的表结构，并启用 SQLite WAL 模式
     """
     engine = get_engine()
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        
+        # SQLite 优化：启用 WAL 模式（Write-Ahead Logging）
+        # WAL 模式优势：读不阻塞写，写不阻塞读，支持并发访问
+        if "sqlite" in str(engine.url).lower():
+            from sqlalchemy import text
+            
+            # 启用 WAL 模式
+            await conn.execute(text("PRAGMA journal_mode=WAL"))
+            
+            # 同步模式设为 NORMAL（平衡性能与安全）
+            await conn.execute(text("PRAGMA synchronous=NORMAL"))
+            
+            # 自动 checkpoint 阈值
+            await conn.execute(text("PRAGMA wal_autocheckpoint=1000"))
+            
+            print("[Database] WAL mode enabled for SQLite")
 
 
 async def check_connection() -> bool:

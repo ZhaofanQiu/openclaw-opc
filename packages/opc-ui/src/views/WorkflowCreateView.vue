@@ -262,16 +262,16 @@ onMounted(() => {
 .form-section {
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  padding: var(--space-lg);
-  margin-bottom: var(--space-lg);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
 }
 
 .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--space-md);
+  margin-bottom: var(--spacing-md);
 }
 
 .section-header h3 {
@@ -279,7 +279,7 @@ onMounted(() => {
 }
 
 .form-group {
-  margin-bottom: var(--space-md);
+  margin-bottom: var(--spacing-md);
 }
 
 .form-group label {
@@ -292,9 +292,9 @@ onMounted(() => {
 .form-textarea,
 .form-select {
   width: 100%;
-  padding: var(--space-sm);
+  padding: var(--spacing-sm);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   background: var(--bg-primary);
   color: var(--text-primary);
   font-size: 1rem;
@@ -308,28 +308,28 @@ onMounted(() => {
 .form-row {
   display: grid;
   grid-template-columns: 2fr 1fr;
-  gap: var(--space-md);
+  gap: var(--spacing-md);
 }
 
 .steps-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
-  margin-bottom: var(--space-md);
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
 }
 
 .step-card {
   background: var(--bg-primary);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
 }
 
 .step-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--space-sm);
+  margin-bottom: var(--spacing-sm);
 }
 
 .step-number {
@@ -345,13 +345,13 @@ onMounted(() => {
 .form-actions {
   display: flex;
   justify-content: flex-end;
-  gap: var(--space-md);
-  padding-top: var(--space-lg);
+  gap: var(--spacing-md);
+  padding-top: var(--spacing-lg);
   border-top: 1px solid var(--border-color);
 }
 
 .btn-lg {
-  padding: var(--space-sm) var(--space-lg);
+  padding: var(--spacing-sm) var(--spacing-lg);
   font-size: 1rem;
 }
 </style>

@@ -97,7 +97,7 @@ class CLIAgentClient:
         """
         获取 Agent 详情
 
-        命令: openclaw agent --agent <id> --json
+        使用 list_agents 并从列表中查找（避免 CLI 需要 --message 参数的问题）
 
         Args:
             agent_id: Agent ID
@@ -105,17 +105,11 @@ class CLIAgentClient:
         Returns:
             Agent 详情，不存在返回 None
         """
-        returncode, stdout, stderr = await self._run_cli(
-            "agent", "--agent", agent_id, "--json"
-        )
-
-        if returncode != 0:
-            return None
-
-        try:
-            return json.loads(stdout)
-        except json.JSONDecodeError:
-            return None
+        agents = await self.list_agents()
+        for agent in agents:
+            if agent.get("id") == agent_id:
+                return agent
+        return None
 
     async def check_agent_health(self, agent_id: str) -> bool:
         """

@@ -123,6 +123,10 @@ class TaskService:
         await self.emp_repo.update(employee)
         print(f"[DEBUG] Employee status updated to WORKING (sync)", flush=True)
 
+        # Step 5.5: 立即提交事务，确保数据持久化（WAL模式下必须）
+        await self.task_repo.session.commit()
+        print(f"[DEBUG] Transaction committed before starting background task", flush=True)
+
         # Step 6: 启动后台异步执行任务
         print(f"[DEBUG] Creating background task for task_id={task_id}, employee_id={employee_id}", flush=True)
         
@@ -151,6 +155,9 @@ class TaskService:
         # 使用新的数据库 session 执行后台任务
         from opc_database import get_session
         from opc_database.repositories import TaskRepository, EmployeeRepository
+
+        workflow_id = None
+        task_id_for_callback = None
 
         async with get_session() as session:
             task_repo = TaskRepository(session)
@@ -213,10 +220,9 @@ class TaskService:
                     employee.completed_tasks += 1
                 await emp_repo.update(employee)
 
-                # v0.4.2: 触发工作流回调（如果这是工作流任务）
-                if task.workflow_id:
-                    print(f"[DEBUG] Task {task_id} is part of workflow {task.workflow_id}, triggering workflow callback", flush=True)
-                    await self._trigger_workflow_callback(task.id)
+                # 保存工作流信息，session 关闭后触发回调
+                workflow_id = task.workflow_id
+                task_id_for_callback = task.id
 
             except Exception as e:
                 # 意外错误，标记为失败
@@ -233,6 +239,11 @@ class TaskService:
                     employee.status = "idle"
                     employee.current_task_id = None
                     await emp_repo.update(employee)
+
+        # session 已关闭，现在安全地触发工作流回调
+        if workflow_id and task_id_for_callback:
+            print(f"[DEBUG] Task {task_id_for_callback} is part of workflow {workflow_id}, triggering workflow callback", flush=True)
+            await self._trigger_workflow_callback(task_id_for_callback)
 
     # ============================================================
     # 辅助方法
@@ -340,6 +351,9 @@ class TaskService:
             if report.result_files:
                 import json
                 task.result_files = json.dumps(report.result_files)
+            
+            # 存储人类可读反馈（非结构化内容）
+            task.feedback = report.human_readable
 
         else:
             # 解析失败 (Agent 未返回 OPC-REPORT 格式)
@@ -349,6 +363,8 @@ class TaskService:
                 f"Parse errors: {', '.join(report.errors)}\n\n"
                 f"Raw response:\n{response.content[:500]}..."
             )
+            # 解析失败时，将所有内容作为 feedback
+            task.feedback = response.content
 
     def _settle_budget(
         self,

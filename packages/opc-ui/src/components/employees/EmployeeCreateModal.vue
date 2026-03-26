@@ -42,24 +42,17 @@
           </div>
           
           <div class="form-group">
-            <label>头像 Emoji</label>
-            <div class="emoji-picker">
-              <button 
-                v-for="emoji in commonEmojis" 
-                :key="emoji"
-                type="button"
-                :class="['emoji-btn', { active: form.emoji === emoji }]"
-                @click="form.emoji = emoji"
-              >
-                {{ emoji }}
-              </button>
-              <input 
-                v-model="form.emoji" 
-                maxlength="2"
-                class="emoji-input"
-                placeholder="👤"
-              />
-            </div>
+            <label>工种 *</label>
+            <select v-model="form.job_type" required>
+              <option value="researcher">研究员</option>
+              <option value="analyst">分析师</option>
+              <option value="reviewer">审查员</option>
+              <option value="developer">开发工程师</option>
+              <option value="designer">设计师</option>
+              <option value="writer">内容创作</option>
+              <option value="general">通用型</option>
+            </select>
+            <p class="hint">工种决定员工的专长领域和默认技能</p>
           </div>
         </form>
       </div>
@@ -89,13 +82,11 @@ const emit = defineEmits(['close', 'created'])
 
 const employeeStore = useEmployeeStore()
 
-const commonEmojis = ['👤', '👨‍💻', '👩‍💻', '🧑‍💼', '👨‍💼', '👩‍💼', '🤖', '👾', '🦄', '🦁', '🦊', '🐼']
-
 const form = ref({
   name: '',
   position_level: 1,
-  monthly_budget: 10000,
-  emoji: '👤'
+  job_type: 'general',
+  monthly_budget: 10000
 })
 
 const submitting = ref(false)

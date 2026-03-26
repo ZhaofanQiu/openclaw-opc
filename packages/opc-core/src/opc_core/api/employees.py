@@ -32,8 +32,8 @@ class EmployeeCreate(BaseModel):
     """创建员工请求"""
 
     name: str = Field(..., min_length=1, max_length=50, description="员工姓名")
-    emoji: str = Field(default="🤖", description="表情符号")
     position_level: int = Field(default=1, ge=1, le=5, description="职位等级 1-5")
+    job_type: str = Field(default="general", description="工种/岗位类型")
     monthly_budget: float = Field(default=1000.0, ge=0, description="月度预算")
     openclaw_agent_id: Optional[str] = Field(
         default=None, description="绑定的 OpenClaw Agent ID"
@@ -44,7 +44,7 @@ class EmployeeUpdate(BaseModel):
     """更新员工请求"""
 
     name: Optional[str] = Field(default=None, min_length=1, max_length=50)
-    emoji: Optional[str] = None
+    job_type: Optional[str] = None
     monthly_budget: Optional[float] = Field(default=None, ge=0)
 
 
@@ -59,8 +59,8 @@ class EmployeeResponse(BaseModel):
 
     id: str
     name: str
-    emoji: str
     position_level: int
+    job_type: str
     status: str
     monthly_budget: float
     used_budget: float
@@ -111,8 +111,8 @@ async def create_employee(
     employee = Employee(
         id=f"emp_{uuid.uuid4().hex[:8]}",
         name=data.name,
-        emoji=data.emoji,
         position_level=data.position_level,
+        job_type=data.job_type,
         monthly_budget=data.monthly_budget,
         openclaw_agent_id=data.openclaw_agent_id,
         is_bound="true" if data.openclaw_agent_id else "false",
@@ -151,8 +151,8 @@ async def update_employee(
 
     if data.name:
         employee.name = data.name
-    if data.emoji:
-        employee.emoji = data.emoji
+    if data.job_type:
+        employee.job_type = data.job_type
     if data.monthly_budget is not None:
         employee.monthly_budget = data.monthly_budget
 
@@ -167,14 +167,42 @@ async def delete_employee(
     repo: EmployeeRepository = Depends(get_employee_repo),
     api_key: str = Depends(verify_api_key),
 ):
-    """删除员工"""
+    """删除员工
+    
+    删除员工时，会将其未完成的任务恢复为未分配状态
+    """
+    from opc_database.models import TaskStatus
+    
     employee = await repo.get_by_id(employee_id)
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
-
+    
+    # 获取当前 session
+    session = repo.session
+    
+    # 处理未完成的任务 - 将它们恢复为未分配状态
+    from opc_database.repositories import TaskRepository
+    task_repo = TaskRepository(session)
+    
+    # 获取员工的所有任务
+    all_tasks = await task_repo.get_by_employee(employee_id=employee_id, limit=1000)
+    
+    unassigned_count = 0
+    for task in all_tasks:
+        # 只处理未完成的任务（非已完成/已取消状态）
+        if task.status not in [TaskStatus.COMPLETED.value, TaskStatus.CANCELLED.value]:
+            task.status = TaskStatus.PENDING.value
+            task.assigned_to = None
+            await task_repo.update(task)
+            unassigned_count += 1
+    
+    # 删除员工
     await repo.delete(employee)
 
-    return {"message": "Employee deleted"}
+    return {
+        "message": "Employee deleted",
+        "unassigned_tasks": unassigned_count
+    }
 
 
 # ============ 绑定管理 ============
@@ -323,3 +351,150 @@ async def list_available_agents(
 
     except Exception as e:
         return {"agents": [], "total": 0, "error": str(e)}
+
+
+@router.post("/openclaw/create-agent", response_model=dict)
+async def create_openclaw_agent(
+    data: dict,
+    api_key: str = Depends(verify_api_key),
+):
+    """
+    创建新的 OpenClaw Agent
+    
+    这会：
+    1. 修改 openclaw.json 添加新 Agent 配置
+    2. 重启 OpenClaw Gateway
+    3. 等待重启完成
+    
+    请求体:
+    {
+        "agent_id": "opc_worker_1",  # 必须以 opc_ 或 opc- 开头
+        "name": "Worker 1",           # 可选，默认使用 agent_id
+        "confirm_restart": true       # 必须设置为 true 表示确认重启
+    }
+    """
+    import os
+    import json
+    import subprocess
+    import time
+    import asyncio
+    
+    agent_id = data.get("agent_id", "").strip()
+    name = data.get("name", "").strip() or agent_id
+    confirm_restart = data.get("confirm_restart", False)
+    
+    # 验证参数
+    if not agent_id:
+        raise HTTPException(status_code=400, detail="agent_id 不能为空")
+    
+    if not (agent_id.startswith("opc_") or agent_id.startswith("opc-")):
+        raise HTTPException(status_code=400, detail="agent_id 必须以 opc_ 或 opc- 开头")
+    
+    if agent_id in ("main", "default"):
+        raise HTTPException(status_code=400, detail="agent_id 不能为 main 或 default")
+    
+    if not confirm_restart:
+        raise HTTPException(status_code=400, detail="必须设置 confirm_restart: true 确认重启 OpenClaw Gateway")
+    
+    # 读取当前配置
+    config_path = os.path.expanduser("~/.openclaw/openclaw.json")
+    if not os.path.exists(config_path):
+        raise HTTPException(status_code=500, detail="找不到 OpenClaw 配置文件")
+    
+    try:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"读取配置文件失败: {str(e)}")
+    
+    # 检查是否已存在
+    agents_list = config.get("agents", {}).get("list", [])
+    for agent in agents_list:
+        if agent.get("id") == agent_id:
+            raise HTTPException(status_code=400, detail=f"Agent '{agent_id}' 已存在")
+    
+    # 创建新的 Agent 配置
+    new_agent = {
+        "id": agent_id,
+        "default": False,
+        "name": name,
+        "workspace": f"/root/.openclaw/agents/{agent_id}/agent/workspace",
+        "agentDir": f"/root/.openclaw/agents/{agent_id}/agent"
+    }
+    
+    # 添加 Agent 目录
+    agent_dir = os.path.expanduser(f"~/.openclaw/agents/{agent_id}/agent")
+    workspace_dir = os.path.join(agent_dir, "workspace")
+    memory_dir = os.path.join(agent_dir, "memory")
+    
+    try:
+        os.makedirs(workspace_dir, exist_ok=True)
+        os.makedirs(memory_dir, exist_ok=True)
+        
+        # 创建默认的 IDENTITY.md
+        identity_content = f"""# IDENTITY.md - Who Am I?
+
+- **Name:** {name}
+- **Creature:** OpenClaw Agent for OPC
+- **Vibe:** Professional assistant
+
+## Role
+
+You are an AI employee in the OpenClaw OPC (One-Person Company) system.
+Your task is to help complete assigned work efficiently and professionally.
+
+## Capabilities
+
+- Execute tasks assigned through the OPC system
+- Report progress and results
+- Communicate with the manager when needed
+"""
+        identity_path = os.path.join(agent_dir, "IDENTITY.md")
+        with open(identity_path, 'w', encoding='utf-8') as f:
+            f.write(identity_content)
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"创建 Agent 目录失败: {str(e)}")
+    
+    # 更新配置
+    agents_list.append(new_agent)
+    config["agents"]["list"] = agents_list
+    
+    # 保存配置
+    try:
+        with open(config_path, 'w', encoding='utf-8') as f:
+            json.dump(config, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"保存配置文件失败: {str(e)}")
+    
+    # 重启 OpenClaw Gateway
+    restart_result = {"success": False, "message": ""}
+    try:
+        # 使用 openclaw gateway restart 命令
+        proc = subprocess.run(
+            ["openclaw", "gateway", "restart"],
+            capture_output=True,
+            text=True,
+            timeout=60
+        )
+        if proc.returncode == 0:
+            restart_result = {"success": True, "message": "Gateway restart initiated"}
+        else:
+            restart_result = {
+                "success": False, 
+                "message": f"Restart failed: {proc.stderr or proc.stdout}"
+            }
+    except subprocess.TimeoutExpired:
+        restart_result = {"success": True, "message": "Gateway restart command sent (timeout, may still be restarting)"}
+    except Exception as e:
+        restart_result = {"success": False, "message": str(e)}
+    
+    # 等待至少 30 秒让 Gateway 重启
+    await asyncio.sleep(30)
+    
+    return {
+        "message": "Agent created and Gateway restarted",
+        "agent": new_agent,
+        "restart_status": restart_result,
+        "note": "请等待 30 秒后刷新页面查看新 Agent"
+    }

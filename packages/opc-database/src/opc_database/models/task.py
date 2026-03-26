@@ -237,6 +237,8 @@ class Task(Base):
                     self.completed_at.isoformat() + 'Z' if self.completed_at else None
                 ),
                 "result": self.result,
+                "result_files": json.loads(self.result_files) if self.result_files else [],
+                "feedback": self.feedback,
                 "score": self.score,
                 "rework_count": self.rework_count,
                 "max_rework": self.max_rework,

@@ -340,6 +340,8 @@ onUnmounted(() => {
   border: 1px solid #ffb74d;
   border-radius: 8px;
   margin-bottom: 20px;
+  color: #e65100;
+  font-weight: 500;
 }
 
 .spinner-sm {
@@ -390,6 +392,8 @@ onUnmounted(() => {
   border-radius: 6px;
   font-size: 14px;
   background: var(--bg-primary, #fff);
+  color: var(--text-primary, #333);
+  min-width: 120px;
 }
 
 /* 加载状态 */

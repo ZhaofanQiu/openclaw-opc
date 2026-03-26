@@ -40,6 +40,18 @@ class PositionLevel(int, PyEnum):
     PARTNER = 5  # 合伙人
 
 
+class JobType(str, PyEnum):
+    """工种/岗位类型枚举"""
+
+    RESEARCHER = "researcher"  # 研究员
+    ANALYST = "analyst"  # 分析师
+    REVIEWER = "reviewer"  # 审查员
+    DEVELOPER = "developer"  # 开发工程师
+    DESIGNER = "designer"  # 设计师
+    WRITER = "writer"  # 内容创作
+    GENERAL = "general"  # 通用型
+
+
 class Employee(Base):
     """
     员工模型
@@ -72,6 +84,11 @@ class Employee(Base):
     # 职位等级
     position_level: Mapped[int] = mapped_column(
         Integer, default=PositionLevel.INTERN.value
+    )
+
+    # 工种/岗位类型
+    job_type: Mapped[str] = mapped_column(
+        String, default=JobType.GENERAL.value
     )
 
     # OpenClaw 绑定
@@ -159,6 +176,8 @@ class Employee(Base):
                 "emoji": self.emoji,
                 "position_level": self.position_level,
                 "position_name": self._get_position_name(),
+                "job_type": self.job_type,
+                "job_type_name": self._get_job_type_name(),
                 "status": self.status,
                 "monthly_budget": self.monthly_budget,
                 "used_budget": self.used_budget,
@@ -172,6 +191,19 @@ class Employee(Base):
             }
         )
         return base
+
+    def _get_job_type_name(self) -> str:
+        """获取工种名称"""
+        names = {
+            JobType.RESEARCHER.value: "研究员",
+            JobType.ANALYST.value: "分析师",
+            JobType.REVIEWER.value: "审查员",
+            JobType.DEVELOPER.value: "开发工程师",
+            JobType.DESIGNER.value: "设计师",
+            JobType.WRITER.value: "内容创作",
+            JobType.GENERAL.value: "通用型",
+        }
+        return names.get(self.job_type, "未知")
 
     def _get_position_name(self) -> str:
         """获取职位名称"""
