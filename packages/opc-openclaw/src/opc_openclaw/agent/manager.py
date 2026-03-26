@@ -5,7 +5,7 @@ opc-openclaw: Agent管理器
 
 作者: OpenClaw OPC Team
 创建日期: 2026-03-24
-版本: 0.4.1
+版本: 0.4.2
 
 API文档: API.md#AgentManager
 """
@@ -34,6 +34,15 @@ class AgentManager:
             agent_client=agent_client,
             openclaw_bin=openclaw_bin,
         )
+
+    async def __aenter__(self):
+        """异步上下文管理器入口"""
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """异步上下文管理器退出"""
+        await self.lifecycle.close()
+        return False
 
     async def list_agents(self) -> List[AgentInfo]:
         """
@@ -69,5 +78,6 @@ class AgentManager:
             是否可用
         """
         return await self.lifecycle.is_agent_available(agent_id)
+
 
 __all__ = ["AgentManager"]

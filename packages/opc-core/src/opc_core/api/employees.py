@@ -285,7 +285,7 @@ async def list_available_agents(
     repo: EmployeeRepository = Depends(get_employee_repo),
     api_key: str = Depends(verify_api_key),
 ):
-    """获取可用的 OpenClaw Agent（未绑定的）"""
+    """获取可用的 OpenClaw Agent（未绑定的，且只返回 opc_ 开头的）"""
     import os
     import json
 
@@ -301,11 +301,21 @@ async def list_available_agents(
         all_employees = await repo.get_all(limit=1000)
         bound_ids = {e.openclaw_agent_id for e in all_employees if e.openclaw_agent_id}
 
-        # 过滤出未绑定的
+        # 过滤：只保留 opc_ 开头且未被绑定的
+        # 命名规范：以 "opc_" 开头，排除 main/default
+        def is_valid_opc_agent(agent_id: str) -> bool:
+            if not agent_id:
+                return False
+            if agent_id in ("main", "default"):
+                return False
+            if not agent_id.startswith("opc_"):
+                return False
+            return True
+
         available = [
             {"id": a.get("id"), "name": a.get("name", a.get("id"))}
             for a in agents
-            if a.get("id") not in bound_ids
+            if a.get("id") not in bound_ids and is_valid_opc_agent(a.get("id", ""))
         ]
 
         return {"agents": available, "total": len(available)}
