@@ -188,20 +188,52 @@ async def bind_agent(
     api_key: str = Depends(verify_api_key),
 ):
     """绑定 OpenClaw Agent"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     employee = await repo.get_by_id(employee_id)
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
 
-    # 验证 Agent 可用性
-    async with AgentManager() as manager:
-        is_available = await manager.is_available(data.openclaw_agent_id)
-        if not is_available:
-            raise HTTPException(status_code=400, detail="Agent is not available")
+    # 检查 Agent 是否已被其他员工绑定
+    existing = await repo.get_by_openclaw_id(data.openclaw_agent_id)
+    if existing and existing.id != employee_id:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Agent '{data.openclaw_agent_id}' 已被员工 '{existing.name}' 绑定"
+        )
+
+    # 验证 Agent 可用性（带错误处理）
+    try:
+        async with AgentManager() as manager:
+            is_available = await manager.is_available(data.openclaw_agent_id)
+            if not is_available:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Agent '{data.openclaw_agent_id}' 不可用，请检查 OpenClaw 配置或 Agent 状态"
+                )
+    except FileNotFoundError:
+        logger.error("OpenClaw CLI not found")
+        raise HTTPException(
+            status_code=503,
+            detail="OpenClaw CLI 未找到，请确保 OpenClaw 已正确安装"
+        )
+    except Exception as e:
+        logger.error(f"Agent availability check failed: {e}")
+        # 在测试环境中，如果 CLI 不可用，允许强制绑定
+        import os
+        if os.getenv("OPC_ALLOW_FORCE_BIND") == "true":
+            logger.warning(f"Force binding agent {data.openclaw_agent_id} due to CLI error")
+        else:
+            raise HTTPException(
+                status_code=503,
+                detail=f"无法验证 Agent 状态: {str(e)}"
+            )
 
     await repo.bind_openclaw_agent(employee_id, data.openclaw_agent_id)
 
     return {
-        "message": "Agent bound",
+        "message": "Agent bound successfully",
         "employee_id": employee_id,
         "openclaw_agent_id": data.openclaw_agent_id,
     }

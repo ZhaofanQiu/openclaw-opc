@@ -35,7 +35,10 @@
         </thead>
         <tbody>
           <tr v-for="emp in employeeReport.employees" :key="emp.id">
-            <td>{{ emp.emoji }} {{ emp.name }}</td>
+            <td class="employee-cell">
+              <EmployeeAvatar :employee="emp" size="small" />
+              <span class="employee-name">{{ emp.name }}</span>
+            </td>
             <td>
               <span :class="['badge', getStatusClass(emp.status)]">
                 {{ $t(`employees.statusTypes.${emp.status}`) }}
@@ -70,6 +73,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useReportStore } from '@/stores/reports'
+import EmployeeAvatar from '@/components/avatar/EmployeeAvatar.vue'
 
 const reportStore = useReportStore()
 const loading = computed(() => reportStore.loading)
@@ -154,5 +158,15 @@ onMounted(() => {
 .stat-value {
   font-size: 32px;
   font-weight: 700;
+}
+
+.employee-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.employee-name {
+  font-weight: 500;
 }
 </style>

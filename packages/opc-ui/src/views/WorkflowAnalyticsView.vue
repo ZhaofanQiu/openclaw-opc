@@ -149,7 +149,16 @@
             <div class="rank-header">
               <div class="rank-number">#{{ index + 1 }}</div>
               <div class="employee-info">
-                <span class="emoji">{{ employee.employee_emoji || '🤖' }}</span>
+                <EmployeeAvatar 
+                  :employee="{ 
+                    id: employee.employee_id, 
+                    name: employee.employee_name,
+                    position_level: employee.position_level || 1,
+                    position_title: employee.position_title || '',
+                    emoji: employee.employee_emoji 
+                  }" 
+                  size="small" 
+                />
                 <span class="name">{{ employee.employee_name }}</span>
               </div>
               <div class="score">{{ employee.score }}</div>
@@ -196,6 +205,7 @@ import { ElMessage } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import { useAnalyticsStore } from '@/stores/analytics'
+import EmployeeAvatar from '@/components/avatar/EmployeeAvatar.vue'
 
 const analyticsStore = useAnalyticsStore()
 

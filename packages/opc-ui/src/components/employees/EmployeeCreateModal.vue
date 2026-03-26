@@ -20,11 +20,13 @@
           
           <div class="form-group">
             <label>职位 *</label>
-            <input 
-              v-model="form.position_title" 
-              required
-              placeholder="例如：前端开发、产品经理"
-            />
+            <select v-model.number="form.position_level" required>
+              <option :value="1">实习生</option>
+              <option :value="2">专员</option>
+              <option :value="3">资深</option>
+              <option :value="4">专家</option>
+              <option :value="5">合伙人</option>
+            </select>
           </div>
           
           <div class="form-group">
@@ -91,7 +93,7 @@ const commonEmojis = ['👤', '👨‍💻', '👩‍💻', '🧑‍💼', '👨
 
 const form = ref({
   name: '',
-  position_title: '',
+  position_level: 1,
   monthly_budget: 10000,
   emoji: '👤'
 })
@@ -100,7 +102,8 @@ const submitting = ref(false)
 
 const isValid = computed(() => {
   return form.value.name.trim() && 
-         form.value.position_title.trim() && 
+         form.value.position_level >= 1 && 
+         form.value.position_level <= 5 && 
          form.value.monthly_budget >= 100
 })
 
@@ -199,14 +202,28 @@ function close() {
   color: var(--text-primary, #333);
 }
 
-.form-group input {
+.form-group input, .form-group select {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid var(--border-color, #ddd);
   border-radius: 6px;
   font-size: 14px;
   background: var(--bg-primary, #fff);
+  color: var(--text-primary, #333);
   box-sizing: border-box;
+}
+
+.form-group input::placeholder {
+  color: var(--text-secondary, #999);
+}
+
+.form-group select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
 }
 
 .form-group input:focus {

@@ -12,7 +12,7 @@
     <div v-else-if="employee" class="employee-detail">
       <div class="detail-card">
         <div class="employee-header">
-          <span class="employee-emoji">{{ employee.emoji }}</span>
+          <EmployeeAvatar :employee="employee" size="large" />
           <div class="employee-info">
             <h2>{{ employee.name }}</h2>
             <span :class="['badge', getStatusClass(employee.status)]">
@@ -50,6 +50,7 @@
 import { computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useEmployeeStore } from '@/stores/employees'
+import EmployeeAvatar from '@/components/avatar/EmployeeAvatar.vue'
 
 const route = useRoute()
 const employeeStore = useEmployeeStore()

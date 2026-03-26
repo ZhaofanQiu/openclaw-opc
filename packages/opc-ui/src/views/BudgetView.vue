@@ -45,7 +45,10 @@
           </thead>
           <tbody>
             <tr v-for="emp in employeeBudgets" :key="emp.id">
-              <td>{{ emp.emoji }} {{ emp.name }}</td>
+              <td class="employee-cell">
+                <EmployeeAvatar :employee="emp" size="small" />
+                <span class="employee-name">{{ emp.name }}</span>
+              </td>
               <td>¥{{ formatNumber(emp.monthly_budget) }}</td>
               <td>¥{{ formatNumber(emp.used_budget) }}</td>
               <td :class="{ 'text-danger': emp.remaining < 100 }">
@@ -63,6 +66,7 @@
 <script setup>
 import { computed, onMounted } from 'vue'
 import { useBudgetStore } from '@/stores/budget'
+import EmployeeAvatar from '@/components/avatar/EmployeeAvatar.vue'
 
 const budgetStore = useBudgetStore()
 const companyBudget = computed(() => budgetStore.companyBudget)
@@ -133,5 +137,15 @@ onMounted(() => {
 
 .mood {
   font-size: 20px;
+}
+
+.employee-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.employee-name {
+  font-weight: 500;
 }
 </style>

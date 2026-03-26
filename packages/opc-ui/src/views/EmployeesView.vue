@@ -50,7 +50,7 @@
         @click="viewEmployee(emp)"
       >
         <div class="card-header">
-          <span class="employee-emoji">{{ emp.emoji || '👤' }}</span>
+          <EmployeeAvatar :employee="emp" size="medium" />
           <div class="employee-status">
             <span :class="['status-dot', emp.status]"></span>
             {{ statusText(emp.status) }}
@@ -113,6 +113,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useEmployeeStore } from '@/stores/employees'
+import EmployeeAvatar from '@/components/avatar/EmployeeAvatar.vue'
 import EmployeeCreateModal from '@/components/employees/EmployeeCreateModal.vue'
 import AgentBindModal from '@/components/employees/AgentBindModal.vue'
 

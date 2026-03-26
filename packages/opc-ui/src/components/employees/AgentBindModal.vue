@@ -20,6 +20,11 @@
           <p>加载可用 Agent 列表...</p>
         </div>
         
+        <div v-else-if="error" class="error-state">
+          <p>⚠️ {{ error }}</p>
+          <p class="hint">请确保 OpenClaw 已正确安装和配置</p>
+        </div>
+
         <div v-else-if="availableAgents.length === 0" class="empty-state">
           <p>没有可用的 Agent</p>
           <p class="hint">请在 OpenClaw 配置中添加 Agent 后重试</p>
@@ -86,6 +91,7 @@ const availableAgents = ref([])
 const selectedAgent = ref('')
 const loadingAgents = ref(false)
 const binding = ref(false)
+const error = ref(null)
 
 // 获取所有员工，检查哪些 Agent 已被绑定
 const allEmployees = computed(() => employeeStore.employees)
@@ -98,21 +104,24 @@ function isBound(agentId) {
 
 async function fetchAvailableAgents() {
   loadingAgents.value = true
+  error.value = null
   try {
-    // 从 OpenClaw 配置中获取可用 Agent 列表
-    // 这里使用模拟数据，实际应从后端 API 获取
-    const response = await api.get('/config/agents').catch(() => null)
+    // 从后端 API 获取可用的 OpenClaw Agent 列表
+    const response = await api.get('/employees/openclaw/available')
     
-    if (response?.agents) {
+    if (response?.agents && response.agents.length > 0) {
       availableAgents.value = response.agents
     } else {
-      // 模拟数据
-      availableAgents.value = [
-        { id: 'opc-worker-1', name: 'Worker 1', model: 'kimi-k2' },
-        { id: 'opc-worker-2', name: 'Worker 2', model: 'kimi-k2' },
-        { id: 'opc-partner', name: 'Partner Agent', model: 'kimi-k2' },
-      ]
+      // 如果后端返回空列表，显示提示
+      availableAgents.value = []
+      if (response?.error) {
+        error.value = `获取 Agent 列表失败: ${response.error}`
+      }
     }
+  } catch (err) {
+    console.error('Failed to fetch agents:', err)
+    error.value = '获取 Agent 列表失败，请检查 OpenClaw 配置'
+    availableAgents.value = []
   } finally {
     loadingAgents.value = false
   }
@@ -264,6 +273,16 @@ onMounted(() => {
 .empty-state p {
   margin: 0 0 8px 0;
   color: var(--text-secondary, #666);
+}
+
+.error-state {
+  text-align: center;
+  padding: 40px;
+  color: var(--color-danger, #f44336);
+}
+
+.error-state p {
+  margin: 0 0 8px 0;
 }
 
 .hint {
