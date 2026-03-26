@@ -13,6 +13,7 @@
       v-if="!isLoginPage" 
       @openCreateEmployee="showEmployeeModal = true"
       @openCreateWorkflow="showWorkflowModal = true"
+      @openManualEdit="showManualModal = true"
     />
     
     <!-- 全局对话框 -->
@@ -27,6 +28,12 @@
       @close="showWorkflowModal = false"
       @created="onWorkflowCreated"
     />
+    
+    <ManualEditModal
+      v-if="showManualModal"
+      @close="showManualModal = false"
+      @saved="onManualSaved"
+    />
   </div>
 </template>
 
@@ -38,6 +45,7 @@ import AppSidebar from './components/layout/AppSidebar.vue'
 import PartnerWidget from './components/partner/PartnerWidget.vue'
 import EmployeeCreateModal from './components/employees/EmployeeCreateModal.vue'
 import WorkflowAssistModal from './components/workflows/WorkflowAssistModal.vue'
+import ManualEditModal from './components/manuals/ManualEditModal.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -46,6 +54,7 @@ const isLoginPage = computed(() => route.name === 'login')
 // 对话框状态
 const showEmployeeModal = ref(false)
 const showWorkflowModal = ref(false)
+const showManualModal = ref(false)
 
 // 创建成功回调
 const onEmployeeCreated = () => {
@@ -58,6 +67,11 @@ const onWorkflowCreated = (workflow) => {
   if (workflow && workflow.id) {
     router.push(`/workflows/${workflow.id}`)
   }
+}
+
+const onManualSaved = () => {
+  // 手册保存成功
+  alert('公司手册已保存！')
 }
 </script>
 

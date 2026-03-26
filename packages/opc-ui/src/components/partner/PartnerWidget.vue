@@ -87,7 +87,8 @@ import { marked } from 'marked'
 
 const emit = defineEmits([
   'openCreateEmployee',
-  'openCreateWorkflow'
+  'openCreateWorkflow',
+  'openManualEdit'
 ])
 
 const router = useRouter()
@@ -195,8 +196,9 @@ const openCreateEmployeeDialog = () => {
 }
 
 const openUpdateManualDialog = () => {
-  inputMessage.value = '帮我修改公司手册：'
-  inputRef.value?.focus()
+  // 发送事件给父组件打开手册编辑对话框
+  emit('openManualEdit')
+  isOpen.value = false
 }
 
 const viewCompanyStatus = async () => {
