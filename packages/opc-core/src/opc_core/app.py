@@ -38,7 +38,7 @@ async def lifespan(app: FastAPI):
 
 
 def create_app(
-    title: str = "OpenClaw OPC API", version: str = "0.4.3", **kwargs
+    title: str = "OpenClaw OPC API", version: str = "0.4.4", **kwargs
 ) -> FastAPI:
     """
     创建 FastAPI 应用

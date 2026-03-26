@@ -1,5 +1,58 @@
 # OpenClaw OPC Changelog
 
+## [0.4.4] - 2026-03-27 - Partner Agent (In Progress)
+
+### Phase 1: Foundation (Completed)
+
+**核心特性**: Partner 员工作为智能管理助手
+
+#### Database 层
+- **PartnerMessage 模型** - 存储用户与 Partner 的对话历史
+  - 字段: id, partner_id, role, content, has_action, action_type, action_params, action_result
+  - 索引: partner_id + created_at
+
+- **PartnerMessageRepository** - 数据访问层
+  - get_recent_messages: 获取最近聊天记录
+  - get_messages_with_actions: 获取包含操作的消息
+  - clear_history_before: 清理历史记录
+
+#### Core 服务层
+- **PartnerService** - Partner 业务逻辑
+  - chat(): 与 Partner 对话，解析 OPC-ACTION 指令
+  - get_chat_history(): 获取聊天历史
+  - clear_chat_history(): 清空历史
+  - 内置 OC币/Token 换算策略 (1 OC币 ≈ 1000 Tokens)
+
+#### API 端点
+- `GET /api/v1/partner/status` - 获取 Partner 状态
+- `POST /api/v1/partner/chat` - 与 Partner 对话
+- `GET /api/v1/partner/history` - 获取聊天历史
+- `DELETE /api/v1/partner/history/{partner_id}` - 清空历史
+
+#### UI 层
+- **PartnerWidget** - 全局悬浮框组件
+  - 可展开/收起的聊天窗口
+  - 快捷操作按钮 (任务/工作流/员工/手册/状态)
+  - Markdown 渲染消息内容
+  - 加载动画
+
+- **Partner Store** - Pinia 状态管理
+  - 自动检测 Partner 员工
+  - 消息历史管理
+  - 发送消息并处理回复
+
+#### 全局集成
+- PartnerWidget 挂载在 App.vue，跨所有页面存在
+- 无 Partner 时显示创建引导
+
+### Phase 2: Intelligent Assistance (Planned)
+- 辅助创建员工（自动设计背景/性格/手册）
+- 辅助创建任务（细化需求/预估成本/推荐员工）
+- 一句话创建工作流
+- 修改公司手册
+
+---
+
 ## [0.4.3] - 2026-03-27 - Production Ready
 
 ### 核心改进

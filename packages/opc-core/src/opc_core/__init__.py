@@ -10,10 +10,10 @@ FastAPI + Repository 模式实现的 OPC 业务逻辑
     # uvicorn.run(app, host="0.0.0.0", port=8000)
 
 作者: OpenClaw OPC Team
-版本: 0.4.3
+版本: 0.4.4
 """
 
-__version__ = "0.4.3"
+__version__ = "0.4.4"
 
 from .app import create_app
 from .api.dependencies import (

@@ -7,6 +7,9 @@
         <router-view />
       </main>
     </div>
+    
+    <!-- Partner Widget - 全局存在 -->
+    <PartnerWidget v-if="!isLoginPage" />
   </div>
 </template>
 
@@ -15,6 +18,7 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import AppHeader from './components/layout/AppHeader.vue'
 import AppSidebar from './components/layout/AppSidebar.vue'
+import PartnerWidget from './components/partner/PartnerWidget.vue'
 
 const route = useRoute()
 const isLoginPage = computed(() => route.name === 'login')

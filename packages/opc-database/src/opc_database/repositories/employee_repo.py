@@ -187,6 +187,23 @@ class EmployeeRepository(BaseRepository[Employee]):
         await self.session.flush()
         return employee
 
+    async def get_by_position_level(
+        self, position_level: int
+    ) -> Optional[Employee]:
+        """
+        根据职位等级获取员工
+
+        Args:
+            position_level: 职位等级 (1-5, 5=Partner)
+
+        Returns:
+            员工实例或None
+        """
+        result = await self.session.execute(
+            select(Employee).where(Employee.position_level == position_level)
+        )
+        return result.scalar_one_or_none()
+
     async def get_budget_stats(self) -> dict:
         """
         获取预算统计信息

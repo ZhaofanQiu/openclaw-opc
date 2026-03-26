@@ -5,10 +5,16 @@ opc-core: 服务层
 
 作者: OpenClaw OPC Team
 创建日期: 2026-03-24
-版本: 0.4.2-P2
+版本: 0.4.4
 """
 
 from .employee_service import EmployeeService
+from .partner_service import (
+    ChatResult,
+    PartnerChatError,
+    PartnerNotFoundError,
+    PartnerService,
+)
 from .task_service import (
     AgentNotBoundError,
     EmployeeNotFoundError,
@@ -54,6 +60,11 @@ __all__ = [
     "EmployeeNotFoundError",
     "AgentNotBoundError",
     "TaskAssignmentError",
+    # Partner Service (v0.4.4)
+    "PartnerService",
+    "ChatResult",
+    "PartnerNotFoundError",
+    "PartnerChatError",
     # Workflow Service (v0.4.2)
     "WorkflowService",
     "WorkflowStepConfig",

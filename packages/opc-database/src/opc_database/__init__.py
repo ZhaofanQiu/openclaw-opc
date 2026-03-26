@@ -17,7 +17,7 @@ OpenClaw OPC v0.4.3 - 数据库管理模块
 版本: 0.4.3
 """
 
-__version__ = "0.4.3"
+__version__ = "0.4.4"
 
 from .connection import (
     check_connection,
