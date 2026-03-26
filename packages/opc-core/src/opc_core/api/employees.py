@@ -301,14 +301,15 @@ async def list_available_agents(
         all_employees = await repo.get_all(limit=1000)
         bound_ids = {e.openclaw_agent_id for e in all_employees if e.openclaw_agent_id}
 
-        # 过滤：只保留 opc_ 开头且未被绑定的
-        # 命名规范：以 "opc_" 开头，排除 main/default
+        # 过滤：只保留 opc_ 或 opc- 开头且未被绑定的
+        # 命名规范：以 "opc_" 或 "opc-" 开头，排除 main/default
         def is_valid_opc_agent(agent_id: str) -> bool:
             if not agent_id:
                 return False
             if agent_id in ("main", "default"):
                 return False
-            if not agent_id.startswith("opc_"):
+            # 接受 opc_ 或 opc- 开头
+            if not (agent_id.startswith("opc_") or agent_id.startswith("opc-")):
                 return False
             return True
 
