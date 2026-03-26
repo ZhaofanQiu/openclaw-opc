@@ -9,19 +9,56 @@
     </div>
     
     <!-- Partner Widget - 全局存在 -->
-    <PartnerWidget v-if="!isLoginPage" />
+    <PartnerWidget 
+      v-if="!isLoginPage" 
+      @openCreateEmployee="showEmployeeModal = true"
+      @openCreateWorkflow="showWorkflowModal = true"
+    />
+    
+    <!-- 全局对话框 -->
+    <EmployeeCreateModal
+      v-if="showEmployeeModal"
+      @close="showEmployeeModal = false"
+      @created="onEmployeeCreated"
+    />
+    
+    <WorkflowAssistModal
+      v-if="showWorkflowModal"
+      @close="showWorkflowModal = false"
+      @created="onWorkflowCreated"
+    />
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import AppHeader from './components/layout/AppHeader.vue'
 import AppSidebar from './components/layout/AppSidebar.vue'
 import PartnerWidget from './components/partner/PartnerWidget.vue'
+import EmployeeCreateModal from './components/employees/EmployeeCreateModal.vue'
+import WorkflowAssistModal from './components/workflows/WorkflowAssistModal.vue'
 
 const route = useRoute()
+const router = useRouter()
 const isLoginPage = computed(() => route.name === 'login')
+
+// 对话框状态
+const showEmployeeModal = ref(false)
+const showWorkflowModal = ref(false)
+
+// 创建成功回调
+const onEmployeeCreated = () => {
+  // 刷新当前页面数据
+  window.location.reload()
+}
+
+const onWorkflowCreated = (workflow) => {
+  // 导航到新创建的工作流
+  if (workflow && workflow.id) {
+    router.push(`/workflows/${workflow.id}`)
+  }
+}
 </script>
 
 <style>

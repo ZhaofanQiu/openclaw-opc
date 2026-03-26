@@ -85,6 +85,11 @@ import { useRouter } from 'vue-router'
 import { usePartnerStore } from '@/stores/partner'
 import { marked } from 'marked'
 
+const emit = defineEmits([
+  'openCreateEmployee',
+  'openCreateWorkflow'
+])
+
 const router = useRouter()
 const partnerStore = usePartnerStore()
 
@@ -178,13 +183,15 @@ const openCreateTaskDialog = () => {
 }
 
 const openCreateWorkflowDialog = () => {
-  inputMessage.value = '帮我创建工作流：'
-  inputRef.value?.focus()
+  // 发送事件给父组件打开工作流辅助对话框
+  emit('openCreateWorkflow')
+  isOpen.value = false
 }
 
 const openCreateEmployeeDialog = () => {
-  inputMessage.value = '帮我创建员工：'
-  inputRef.value?.focus()
+  // 发送事件给父组件打开员工创建对话框
+  emit('openCreateEmployee')
+  isOpen.value = false
 }
 
 const openUpdateManualDialog = () => {
