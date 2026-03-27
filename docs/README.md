@@ -1,46 +1,31 @@
-# Docs 文档目录 v0.4.2
+# OpenClaw OPC 文档索引
 
-OpenClaw OPC v0.4.2 项目文档中心。
+## 核心文档（始终最新）
 
-## 文档列表
-
-| 文件 | 说明 |
+| 文档 | 说明 |
 |------|------|
-| `README.md` | 文档目录说明 (本文档) |
-| `INDEX.md` | 文档导航索引 ⭐ |
-| `API.md` | API 文档 (FastAPI) |
-| `ARCHITECTURE.md` | 系统架构设计 |
-| `TECHNICAL.md` | 技术规范 |
-| `REFERENCES.md` | 参考资料 |
-| `CONTRIBUTING.md` | 开发贡献指南 |
-| `operations/` | 运维操作文档 |
+| API.md | API 接口完整文档 |
+| ARCHITECTURE.md | 系统架构设计 |
+| DESIGN.md | 产品设计理念 |
+| DEVELOPMENT.md | 开发规范指南 |
+| DEPLOYMENT.md | 部署指南 |
+| TECHNICAL.md | 技术实现细节 |
+| REFERENCES.md | 参考资料 |
 
-## 快速导航
+## 版本规划文档
 
-- [文档索引](INDEX.md) - 完整的文档导航
-- [CHANGELOG](../CHANGELOG.md) - 版本变更记录
+| 文档 | 版本 | 状态 |
+|------|------|------|
+| PLAN_v0.4.4_PARTNER.md | v0.4.4 | ✅ 已完成 |
+
+## 其他文档
+
+| 文档 | 说明 |
+|------|------|
+| api_examples.py | API 调用示例（Python） |
+| api_examples.sh | API 调用示例（Shell） |
+| INDEX.md | 本文档索引 |
 
 ## 归档文档
 
-旧版本文档已归档到 `../archive/` 目录：
-- `../archive/plans/` - 历史计划文档
-- `../archive/v2-backend-full/` - V2 后端代码
-- `../archive/v2-frontend-full/` - V2 前端代码
-
-## 各模块文档
-
-- `packages/opc-database/README.md` - 数据库模块 (v0.4.2)
-- `packages/opc-database/API.md` - 数据库 API 文档
-- `packages/opc-database/CHANGELOG.md` - 数据库变更记录
-
-- `packages/opc-openclaw/README.md` - OpenClaw 集成模块 (v0.4.2)
-- `packages/opc-openclaw/API.md` - OpenClaw API 文档
-- `packages/opc-openclaw/CHANGELOG.md` - OpenClaw 变更记录
-
-- `packages/opc-core/README.md` - 核心 API 模块 (v0.4.2)
-- `packages/opc-core/API.md` - Core API 文档
-- `packages/opc-core/CHANGELOG.md` - Core 变更记录
-- `packages/opc-core/ARCHITECTURE.md` - Core 架构设计
-
-- `packages/opc-ui/README.md` - 前端模块 (v0.4.2)
-- `packages/opc-ui/CHANGELOG.md` - UI 变更记录
+已完成的版本文档存放在 `../archive/docs/` 目录，按版本号组织。

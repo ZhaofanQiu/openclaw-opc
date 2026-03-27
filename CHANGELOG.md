@@ -2,42 +2,34 @@
 
 ## [0.4.4] - 2026-03-27 - Partner Agent (Complete) ✅
 
-### Phase 3: UI Dialogs (Completed)
+### Phase 3: UI Dialogs (Completed) ✅ 100%
 
-**核心特性**: 无缝的 Partner 辅助创建体验
+**核心特性**: 所有 4 个智能辅助功能都有 UI 集成
 
-#### EmployeeCreateModal (增强)
-- ✨ **Partner 智能设计** 区域
-- 输入框描述员工期望
-- AI 设计按钮（渐变样式）
-- 设计方案预览面板：
-  - 背景故事
-  - 性格特点
-  - 行事风格
-  - 技能列表（标签展示）
-  - 推荐预算（含 Token 换算）
-- 一键应用设计
+#### TaskCreateModal (增强)
+- ✨ **Partner 智能细化** 区域
+- 输入框描述需求
+- AI 细化按钮
+- 预览面板：
+  - 优化标题
+  - 详细描述
+  - 执行步骤（有序列表）
+  - 成本估算 + 理由
+  - 推荐员工（如果未选择）
+- 一键应用方案
 
-#### WorkflowAssistModal (新增)
-- 🪄 一句话创建工作流
-- 自然语言输入框
-- 4 个示例提示词（可点击）
-- 生成动画（"✨ Partner 正在设计..."）
-- 完整预览：
-  - 工作流名称/描述
-  - 预估总成本
-  - 步骤列表（含序号、成本、员工）
-  - 设计思路说明
-- 重新设计 / 确认创建
+#### ManualEditModal (新增)
+- 📖 公司手册编辑对话框
+- 加载当前手册内容
+- ✨ **Partner 智能修改** 区域
+- 修改需求输入
+- AI 修改按钮
+- 修改预览文本框
+- 应用和保存按钮
 
 #### PartnerWidget 集成
-- 快捷操作按钮触发全局对话框
-- 发送事件：`@openCreateEmployee`, `@openCreateWorkflow`
-- 打开对话框时自动收起
-
-#### App.vue 全局状态
-- 管理 EmployeeCreateModal 和 WorkflowAssistModal
-- 创建成功后自动刷新/导航
+- 「📖 手册」按钮打开 ManualEditModal
+- 所有 4 个快捷操作都有对应对话框
 
 ---
 
