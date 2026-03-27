@@ -157,6 +157,136 @@ docker-compose up -d
 
 ---
 
+## 🌐 远程测试部署 (Cpolar)
+
+使用 cpolar 隧道进行远程测试，适用于让他人通过互联网访问本地 OPC 实例。
+
+### 前置要求
+
+- cpolar 已安装并配置 (`cpolar authtoken YOUR_TOKEN`)
+- 前端已构建 (`npm run build`)
+- 确保 `packages/opc-ui/dist/` 存在
+
+### 部署步骤
+
+#### 1. 启动 OPC 后端服务
+
+```bash
+cd packages/opc-core
+nohup python3 -c "from opc_core import create_app; import uvicorn; uvicorn.run(create_app(), host='0.0.0.0', port=8080)" > /tmp/opc.log 2>&1 &
+echo "OPC Server PID: $!"
+```
+
+**验证**:
+```bash
+curl http://localhost:8080/health
+# {"status":"ok","version":"0.4.4"}
+```
+
+#### 2. 启动 Cpolar 隧道
+
+```bash
+# 清理可能存在的旧进程
+pkill -f "cpolar http"
+
+# 启动隧道（中国大陆用户建议加 --region cn）
+nohup cpolar http 8080 --region cn > /tmp/cpolar.log 2>&1 &
+echo "Cpolar PID: $!"
+```
+
+**查看隧道地址**:
+```bash
+# 等待几秒钟让隧道建立
+sleep 5
+
+# 查看分配的公网 URL
+cat /tmp/cpolar.log | grep "Forwarding"
+# Forwarding http://xxxxx.r7.cpolar.cn -> http://localhost:8080
+# Forwarding https://xxxxx.r7.cpolar.cn -> http://localhost:8080
+```
+
+#### 3. 验证远程访问
+
+```bash
+# 替换为你的实际 cpolar 地址
+curl https://xxxxx.r7.cpolar.cn/health
+curl https://xxxxx.r7.cpolar.cn/dashboard
+```
+
+### 常见问题
+
+#### 问题 1: cpolar 连接超时/断开
+
+**症状**: 远程访问返回 404 或连接失败
+
+**原因**: cpolar 进程在后台被终止，或 session 超时
+
+**解决**:
+```bash
+# 检查 cpolar 是否运行
+ps aux | grep cpolar
+
+# 如果未运行，重新启动
+pkill -f cpolar
+nohup cpolar http 8080 --region cn > /tmp/cpolar.log 2>&1 &
+```
+
+#### 问题 2: Dashboard 404
+
+**症状**: `/dashboard` 返回 404
+
+**原因**: 前端未构建或 dist 目录不存在
+
+**解决**:
+```bash
+cd packages/opc-ui
+npm install
+npm run build
+
+# 确认 dist 存在
+ls -la dist/
+```
+
+#### 问题 3: OPC 后端停止响应
+
+**症状**: 本地 health check 失败
+
+**原因**: 后端进程意外退出
+
+**解决**:
+```bash
+# 检查进程
+ps aux | grep uvicorn
+
+# 如果未运行，重新启动
+cd packages/opc-core
+nohup python3 -c "from opc_core import create_app; import uvicorn; uvicorn.run(create_app(), host='0.0.0.0', port=8080)" > /tmp/opc.log 2>&1 &
+```
+
+### 维护命令
+
+```bash
+# 查看服务状态
+ps aux | grep -E "uvicorn|cpolar"
+
+# 查看日志
+tail -f /tmp/opc.log
+tail -f /tmp/cpolar.log
+
+# 停止服务
+pkill -f uvicorn
+pkill -f cpolar
+
+# 一键重启
+pkill -f uvicorn; pkill -f cpolar
+sleep 2
+cd packages/opc-core && nohup python3 -c "from opc_core import create_app; import uvicorn; uvicorn.run(create_app(), host='0.0.0.0', port=8080)" > /tmp/opc.log 2>&1 &
+sleep 3
+nohup cpolar http 8080 --region cn > /tmp/cpolar.log 2>&1 &
+```
+
+---
+
 ## 🔧 模块独立测试
 
 每个模块可独立测试：
