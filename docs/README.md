@@ -11,6 +11,7 @@
 | DEPLOYMENT.md | 部署指南 |
 | TECHNICAL.md | 技术实现细节 |
 | REFERENCES.md | 参考资料 |
+| CHANGELOG.md | 版本更新记录 |
 
 ## 版本规划文档
 

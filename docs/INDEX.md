@@ -1,6 +1,6 @@
-# OPC 文档索引 v0.4.1
+# OPC 文档索引 v0.4.5
 
-> OpenClaw OPC v0.4.1 文档索引
+> OpenClaw OPC v0.4.5 文档索引
 
 ---
 
@@ -10,7 +10,7 @@
 |---------|-----------|
 | 了解系统架构 | [`ARCHITECTURE.md`](ARCHITECTURE.md) |
 | 查看 API 接口 | [`API.md`](API.md) |
-| 查看变更记录 | [CHANGELOG](../CHANGELOG.md) |
+| 查看变更记录 | [`CHANGELOG.md`](CHANGELOG.md) |
 
 ---
 
@@ -25,6 +25,9 @@
 - `packages/opc-core/API.md` - Core 模块 API
 - `packages/opc-openclaw/API.md` - OpenClaw 模块 API
 - `packages/opc-database/API.md` - Database 模块 API
+
+### 功能文档
+- [`features/AGENT_LOG_SERVICE.md`](features/AGENT_LOG_SERVICE.md) - Agent 交互日志服务 (v0.4.5)
 
 ### 开发指南
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) - 开发贡献指南
@@ -61,7 +64,16 @@
 
 ## 📋 版本说明
 
-### v0.4.1 (当前版本)
+### v0.4.5 (当前版本)
+**Agent 交互日志功能完成** ✅
+
+新增功能：
+- Agent Log Service - 完整的交互日志系统
+- 日志记录（outgoing/incoming）
+- 日志查询和统计
+- SQLite 并发写入优化（asyncio.Lock）
+
+### v0.4.1
 **端到端任务流程已跑通** ✅
 
 核心功能：
@@ -108,11 +120,12 @@
 
 | 日期 | 更新内容 |
 |------|----------|
+| 2026-03-27 | 更新为 v0.4.5，添加 Agent Log Service 文档 |
 | 2026-03-25 | 更新为 v0.4.1 文档结构 |
 | 2026-03-24 | v0.4.0 模块化架构文档 |
 
 ---
 
-**版本**: v0.4.1  
-**最后更新**: 2026-03-25  
+**版本**: v0.4.5  
+**最后更新**: 2026-03-27  
 **维护者**: OPC 开发团队

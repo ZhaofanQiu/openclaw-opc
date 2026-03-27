@@ -5,9 +5,10 @@ opc-core: 服务层
 
 作者: OpenClaw OPC Team
 创建日期: 2026-03-24
-版本: 0.4.4
+版本: 0.4.5
 """
 
+from .agent_log_service import AgentLogService  # v0.4.5
 from .employee_service import EmployeeService
 from .partner_service import (
     ChatResult,
@@ -58,6 +59,8 @@ from .workflow_analytics_service import (
 )
 
 __all__ = [
+    # Agent Log Service (v0.4.5)
+    "AgentLogService",
     # Task Service
     "EmployeeService",
     "TaskService",

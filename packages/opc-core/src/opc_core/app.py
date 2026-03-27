@@ -5,7 +5,7 @@ FastAPI 应用创建和配置
 
 作者: OpenClaw OPC Team
 创建日期: 2026-03-24
-版本: 0.4.3
+版本: 0.4.5
 """
 
 from contextlib import asynccontextmanager
@@ -38,7 +38,7 @@ async def lifespan(app: FastAPI):
 
 
 def create_app(
-    title: str = "OpenClaw OPC API", version: str = "0.4.4", **kwargs
+    title: str = "OpenClaw OPC API", version: str = "0.4.5", **kwargs
 ) -> FastAPI:
     """
     创建 FastAPI 应用
