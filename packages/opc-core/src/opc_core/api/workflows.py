@@ -34,11 +34,15 @@ router = APIRouter(prefix="/workflows", tags=["Workflows"])
 
 
 class WorkflowStep(BaseModel):
-    """工作流步骤配置"""
+    """工作流步骤配置 (v0.4.6 - 支持步骤手册)"""
     employee_id: str = Field(..., description="执行员工ID")
     title: str = Field(..., min_length=1, max_length=200, description="步骤标题")
     description: str = Field(default="", description="步骤描述")
     estimated_cost: float = Field(default=100.0, ge=0, description="预估成本")
+    # v0.4.6 新增：步骤手册字段
+    manual_content: Optional[str] = Field(default=None, description="步骤执行手册（Markdown格式）")
+    input_requirements: Optional[str] = Field(default=None, description="输入要求说明")
+    output_deliverables: Optional[str] = Field(default=None, description="输出交付物说明")
 
 
 class WorkflowCreate(BaseModel):
@@ -125,13 +129,17 @@ async def create_workflow(
     ```
     """
     try:
-        # 转换步骤配置
+        # 转换步骤配置 (v0.4.6: 包含步骤手册字段)
         steps = [
             WorkflowStepConfig(
                 employee_id=s.employee_id,
                 title=s.title,
                 description=s.description,
                 estimated_cost=s.estimated_cost,
+                # v0.4.6 新增字段
+                manual_content=s.manual_content,
+                input_requirements=s.input_requirements,
+                output_deliverables=s.output_deliverables,
             )
             for s in data.steps
         ]

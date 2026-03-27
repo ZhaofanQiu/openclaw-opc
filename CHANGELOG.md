@@ -1,5 +1,100 @@
 # OpenClaw OPC Changelog
 
+## [0.4.6] - 2026-03-28 - Workflow UI Optimization
+
+### 核心特性: 工作流界面优化
+
+#### 子功能1: 后端数据模型扩展
+- **WorkflowStepConfig 增强** - 新增步骤手册字段
+  - `manual_content`: 执行手册内容（Markdown格式）
+  - `input_requirements`: 输入要求说明
+  - `output_deliverables`: 输出交付物要求
+
+- **手册存储优化** - 采用标准任务手册路径
+  - 路径: `data/manuals/tasks/{task_id}.md`
+  - 与工作流步骤和普通任务统一
+  - 完全向后兼容
+
+- **Partner Prompt 增强** - AI自动生成步骤手册
+  - 为每个步骤生成执行手册
+  - 包含输入要求和输出交付物
+  - 提升Agent执行质量
+
+#### 子功能2: 前端界面改造
+- **WorkflowCreateModal 新增** - 工作流创建弹窗
+  - 双模式支持: 手动创建 + AI辅助
+  - 动态步骤管理（2-10步）
+  - 步骤手册配置（可折叠展开）
+  - 实时成本统计
+  - 响应式设计
+
+- **WorkflowsView 集成** - 弹窗集成
+  - 创建按钮改为打开弹窗
+  - 与任务创建界面对齐
+
+#### 子功能3: 工作流执行引擎增强
+- **步骤数据传递** - 前序输出自动传递
+  - `_get_previous_output()`: 提取前序步骤输出
+  - `_get_step_context()`: 解析步骤手册信息
+  - `_build_step_description()`: 构建完整步骤描述
+  - `_build_initial_step_description()`: 构建初始描述
+
+- **Agent 任务消息增强** - 完整上下文传递
+  - 工作流上下文（步骤索引、总数）
+  - 前序步骤输出（摘要、关键数据、交付物）
+  - 当前步骤输入要求
+  - 当前步骤输出交付物要求
+  - 重要提醒：确保OPC-REPORT包含交付物
+
+#### 子功能4: 集成测试
+- **手动创建工作流测试** - 验证手册正确存储
+- **多步骤数据传递测试** - 验证步骤间数据流转
+- **返工上下文传递测试** - 验证返工信息传递
+- **端到端完整流程测试** - 验证完整工作流执行
+
+### API变更
+
+#### POST /workflows - 创建工作流
+```json
+{
+  "steps": [{
+    "employee_id": "emp-001",
+    "title": "步骤标题",
+    "manual_content": "执行手册",        // 新增
+    "input_requirements": "输入要求",    // 新增
+    "output_deliverables": "输出要求"    // 新增
+  }]
+}
+```
+
+#### POST /workflows/assist - AI辅助创建（增强）
+- 响应包含步骤手册字段
+- Partner自动生成手册内容
+
+### 文件变更
+
+| 文件 | 变更 |
+|------|------|
+| `workflow_service.py` | 手册存储 + 步骤数据传递方法 |
+| `workflows.py` | API模型扩展 |
+| `WorkflowCreateModal.vue` | **新增** - 工作流创建弹窗 |
+| `WorkflowsView.vue` | 集成弹窗 |
+
+### 测试覆盖
+
+| 测试文件 | 测试数 | 状态 |
+|----------|--------|------|
+| `test_subfeature_1.py` | 4 | ✅ 全部通过 |
+| `test_subfeature_3.py` | 5 | ✅ 全部通过 |
+| `test_subfeature_4.py` | 4 | ✅ 全部通过 |
+
+### 文档
+
+- `docs/features/WORKFLOW_UI_v0.4.6.md` - 功能详细文档
+- `memory/2026-03-28.md` - 开发过程记录
+
+---
+
 ## [0.4.4] - 2026-03-27 - Partner Agent (Complete) ✅
 
 ### Phase 3: UI Dialogs (Completed) ✅ 100%

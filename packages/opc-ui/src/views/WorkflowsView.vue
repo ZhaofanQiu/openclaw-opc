@@ -3,7 +3,8 @@
     <!-- 页面头部 -->
     <div class="page-header">
       <h1>工作流</h1>
-      <button class="btn btn-primary" @click="$router.push('/workflows/create')">
+      <!-- v0.4.6: 改为打开弹窗 -->
+      <button class="btn btn-primary" @click="showCreateModal = true">
         <span class="icon">+</span> 创建工作流
       </button>
     </div>
@@ -75,22 +76,38 @@
         </div>
       </div>
     </div>
+
+    <!-- v0.4.6: 工作流创建弹窗 (放在最后，不影响条件渲染) -->
+    <WorkflowCreateModal
+      v-if="showCreateModal"
+      @close="showCreateModal = false"
+      @created="handleWorkflowCreated"
+    />
   </div>
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useWorkflowStore } from '@/stores/workflows'
 import { formatDate } from '@/utils/api'
+import WorkflowCreateModal from '@/components/workflows/WorkflowCreateModal.vue'
 
 const router = useRouter()
 const workflowStore = useWorkflowStore()
 const { workflows, loading, workflowCount, runningCount, completedCount } = storeToRefs(workflowStore)
 
+// v0.4.6: 弹窗状态
+const showCreateModal = ref(false)
+
 function viewWorkflow(id) {
   router.push(`/workflows/${id}`)
+}
+
+function handleWorkflowCreated(result) {
+  // 可选：显示成功提示或跳转到详情页
+  // router.push(`/workflows/${result.workflow_id}`)
 }
 
 function getStatusClass(status) {

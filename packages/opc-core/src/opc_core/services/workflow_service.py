@@ -1,5 +1,5 @@
 """
-opc-core: 工作流服务 (v0.4.2)
+opc-core: 工作流服务 (v0.4.6)
 
 工作流编排服务 - 支持多 Agent 串行协作
 
@@ -7,20 +7,26 @@ opc-core: 工作流服务 (v0.4.2)
 - 创建工作流 (多步骤任务链)
 - 任务完成回调，自动触发下一步
 - 返工机制（下游→上游）
+- v0.4.6: 工作流步骤手册支持（采用标准任务手册方式）
 
 作者: OpenClaw OPC Team
 创建日期: 2026-03-25
-版本: 0.4.2
+版本: 0.4.6
 """
 
 import json
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Optional
 
 from opc_database.models import Task, TaskStatus
 from opc_database.repositories import TaskRepository, EmployeeRepository
+
+
+# v0.4.6: 标准手册存储路径（与 task_service.py 保持一致）
+MANUALS_DIR = Path("data/manuals")
 
 
 class WorkflowError(Exception):
@@ -48,13 +54,64 @@ class InvalidReworkTarget(WorkflowError):
     pass
 
 
+def _write_task_manual_file(task_id: str, step: "WorkflowStepConfig") -> str:
+    """
+    写入任务手册文件 (v0.4.6)
+    
+    采用与标准任务手册相同的路径规则: data/manuals/tasks/{task_id}.md
+    
+    Args:
+        task_id: 任务ID
+        step: 步骤配置
+        
+    Returns:
+        手册文件绝对路径
+    """
+    # 确保目录存在
+    tasks_dir = MANUALS_DIR / "tasks"
+    tasks_dir.mkdir(parents=True, exist_ok=True)
+    
+    # 构建手册文件路径（与标准任务手册相同）
+    manual_path = tasks_dir / f"{task_id}.md"
+    
+    # 构建手册内容（包含工作流步骤特定信息）
+    content = f"""# 任务手册: {step.title}
+
+## 任务信息
+- **任务ID**: {task_id}
+- **标题**: {step.title}
+- **描述**: {step.description}
+
+## 执行手册
+{step.manual_content or "无特定执行手册，请参考任务描述和员工手册。"}
+
+## 输入要求
+{step.input_requirements or "无特定输入要求。"}
+
+## 输出交付物
+{step.output_deliverables or "无特定输出要求，请按任务描述完成工作。"}
+
+---
+*此手册由 OpenClaw OPC 系统自动生成*
+"""
+    
+    # 写入文件
+    manual_path.write_text(content, encoding="utf-8")
+    
+    return str(manual_path.absolute())
+
+
 @dataclass
 class WorkflowStepConfig:
-    """工作流步骤配置"""
+    """工作流步骤配置 (v0.4.6 - 支持步骤手册)"""
     employee_id: str          # 执行员工ID
     title: str                # 步骤标题
     description: str          # 步骤描述
     estimated_cost: float = 0.0  # 预估成本
+    # v0.4.6 新增：步骤手册相关字段
+    manual_content: Optional[str] = None      # 步骤执行手册
+    input_requirements: Optional[str] = None  # 输入要求说明
+    output_deliverables: Optional[str] = None # 输出交付物说明
 
 
 @dataclass
@@ -157,9 +214,28 @@ class WorkflowService:
         prev_task_id: Optional[str] = None
 
         for i, step in enumerate(steps):
+            # 创建任务ID
+            task_id = f"task-{uuid.uuid4().hex[:8]}"
+            
+            # v0.4.6: 为步骤创建手册文件（采用标准任务手册路径）
+            if step.manual_content:
+                _write_task_manual_file(task_id, step)
+            
+            # 构建 execution_context 包含步骤手册信息 (v0.4.6)
+            execution_context = {
+                "step_manual": {
+                    "title": step.title,
+                    "description": step.description,
+                    "manual_content": step.manual_content or "",
+                    "input_requirements": step.input_requirements or "",
+                    "output_deliverables": step.output_deliverables or "",
+                    # manual_path 不需要存储，因为采用标准路径: data/manuals/tasks/{task_id}.md
+                }
+            }
+
             # 创建任务
             task = Task(
-                id=f"task-{uuid.uuid4().hex[:8]}",
+                id=task_id,
                 title=f"{name} - Step {i+1}: {step.title}",
                 description=step.description,
                 status=TaskStatus.PENDING.value,
@@ -173,10 +249,17 @@ class WorkflowService:
                 total_steps=total_steps,
                 depends_on=prev_task_id,
                 next_task_id=None,  # 稍后设置
+                # v0.4.6: 存储步骤手册到 execution_context
+                execution_context=json.dumps(execution_context, ensure_ascii=False),
             )
 
             # 设置初始输入（仅第一个任务）
             if i == 0:
+                # v0.4.6: 构建初始步骤描述
+                initial_step_description = self._build_initial_step_description(
+                    step, initial_input
+                )
+                
                 task.set_input_data({
                     "workflow_context": {
                         "workflow_id": workflow_id,
@@ -186,7 +269,13 @@ class WorkflowService:
                     },
                     "initial_input": initial_input,
                     "previous_outputs": [],
+                    "current_step_description": initial_step_description,  # v0.4.6
                 })
+                
+                # v0.4.6: 更新任务描述
+                if initial_step_description:
+                    original_desc = task.description or ""
+                    task.description = f"{original_desc}\n\n{initial_step_description}".strip()
 
             # 保存任务
             task = await self.task_repo.create(task)
@@ -399,8 +488,21 @@ class WorkflowService:
     # 内部方法
     # ============================================================
 
-    async def _trigger_next_step(self, current_task: Task) -> Task:
-        """触发下一步任务"""
+    async def _trigger_next_step(self, current_task: Task) -> Optional[Task]:
+        """
+        触发下一步任务 (v0.4.6 - 增强数据传递)
+        
+        功能：
+        1. 获取前一步的输出数据
+        2. 构建下一步的输入数据（包含前序输出汇总）
+        3. 触发任务分配
+        
+        Args:
+            current_task: 当前完成的任务
+            
+        Returns:
+            触发的下一个任务，如果没有下一步则返回 None
+        """
         if not current_task.next_task_id:
             return None
 
@@ -408,35 +510,41 @@ class WorkflowService:
         if not next_task:
             return None
 
-        # 传递输出到输入
-        output_data = json.loads(current_task.output_data) if current_task.output_data else {}
+        # v0.4.6: 获取前一步的输出数据
+        previous_output = await self._get_previous_output(current_task)
+        
+        # v0.4.6: 获取下一步的执行上下文（包含手册信息）
+        next_step_context = self._get_step_context(next_task)
+        
+        # v0.4.6: 构建步骤描述（包含输入要求和输出交付物）
+        step_description = self._build_step_description(
+            next_task, 
+            previous_output,
+            next_step_context
+        )
 
-        # 构建 previous_outputs
+        # 构建 previous_outputs 历史
         input_data = json.loads(next_task.input_data) if next_task.input_data else {}
         previous_outputs = input_data.get("previous_outputs", [])
 
-        # 添加当前步骤的输出
-        employee = await self.emp_repo.get_by_id(current_task.assigned_to)
-        previous_outputs.append({
-            "step_index": current_task.step_index,
-            "task_id": current_task.id,
-            "employee_id": current_task.assigned_to,
-            "employee_name": employee.name if employee else "Unknown",
-            "output_summary": output_data.get("summary", ""),
-            "structured_output": output_data.get("structured_output", {}),
-            "metadata": output_data.get("metadata", {}),
-        })
+        # 添加当前步骤的输出到历史
+        previous_outputs.append(previous_output)
 
-        # 更新下一步的输入数据
+        # v0.4.6: 更新下一步的输入数据
         next_task.set_input_data({
             "workflow_context": {
                 "workflow_id": next_task.workflow_id,
-                "workflow_name": "",  # 可从缓存获取
                 "total_steps": next_task.total_steps,
                 "current_step": next_task.step_index + 1,
             },
             "previous_outputs": previous_outputs,
+            "current_step_description": step_description,  # v0.4.6: 添加步骤描述
         })
+        
+        # v0.4.6: 更新任务描述（包含完整上下文）
+        if step_description:
+            original_desc = next_task.description or ""
+            next_task.description = f"{original_desc}\n\n{step_description}".strip()
 
         await self.task_repo.update(next_task)
 
@@ -444,6 +552,154 @@ class WorkflowService:
         await self.task_service.assign_task(next_task.id, next_task.assigned_to)
 
         return next_task
+
+    async def _get_previous_output(self, task: Task) -> dict:
+        """
+        获取前一步的输出数据 (v0.4.6)
+        
+        提取前一步的结构化输出，便于下一步使用
+        
+        Args:
+            task: 完成的任务
+            
+        Returns:
+            包含输出摘要和元数据的字典
+        """
+        output_data = json.loads(task.output_data) if task.output_data else {}
+        employee = await self.emp_repo.get_by_id(task.assigned_to)
+        
+        return {
+            "step_index": task.step_index,
+            "step_title": task.title,
+            "task_id": task.id,
+            "employee_id": task.assigned_to,
+            "employee_name": employee.name if employee else "Unknown",
+            "output_summary": output_data.get("summary", ""),
+            "structured_output": output_data.get("structured_output", {}),
+            "deliverables": output_data.get("deliverables", []),
+            "metadata": output_data.get("metadata", {}),
+            "completed_at": task.completed_at,
+        }
+    
+    def _get_step_context(self, task: Task) -> dict:
+        """
+        获取步骤执行上下文 (v0.4.6)
+        
+        从 execution_context 解析步骤手册信息
+        
+        Args:
+            task: 任务对象
+            
+        Returns:
+            包含步骤手册信息的字典
+        """
+        if not task.execution_context:
+            return {}
+        
+        try:
+            context = json.loads(task.execution_context)
+            return context.get("step_manual", {})
+        except (json.JSONDecodeError, AttributeError):
+            return {}
+    
+    def _build_step_description(
+        self, 
+        task: Task, 
+        previous_output: dict,
+        step_context: dict
+    ) -> str:
+        """
+        构建步骤执行描述 (v0.4.6)
+        
+        生成包含前序输出、输入要求、输出交付物的完整描述
+        
+        Args:
+            task: 当前任务
+            previous_output: 前一步的输出
+            step_context: 步骤上下文（包含手册信息）
+            
+        Returns:
+            格式化的步骤描述
+        """
+        sections = []
+        
+        # 1. 前序步骤输出摘要
+        if previous_output.get("output_summary"):
+            sections.append("## 前序步骤输出")
+            sections.append(f"**步骤 {previous_output['step_index'] + 1}**: {previous_output.get('step_title', '')}")
+            sections.append(f"**执行者**: {previous_output.get('employee_name', 'Unknown')}")
+            sections.append(f"**输出摘要**:\n{previous_output['output_summary']}")
+            
+            # 如果有结构化输出，添加关键信息
+            structured = previous_output.get("structured_output", {})
+            if structured:
+                sections.append("**关键数据**:")
+                for key, value in structured.items():
+                    if isinstance(value, (str, int, float)):
+                        sections.append(f"  - {key}: {value}")
+            
+            sections.append("")  # 空行分隔
+        
+        # 2. 当前步骤输入要求
+        input_req = step_context.get("input_requirements", "")
+        if input_req:
+            sections.append("## 输入要求")
+            sections.append(input_req)
+            sections.append("")
+        
+        # 3. 当前步骤输出交付物
+        output_del = step_context.get("output_deliverables", "")
+        if output_del:
+            sections.append("## 输出交付物要求")
+            sections.append(output_del)
+            sections.append("")
+            sections.append("**重要**: 请确保你的 OPC-REPORT 中包含上述交付物。")
+        
+        return "\n".join(sections) if sections else ""
+
+    def _build_initial_step_description(
+        self,
+        step: WorkflowStepConfig,
+        initial_input: dict
+    ) -> str:
+        """
+        构建初始步骤执行描述 (v0.4.6)
+        
+        为工作流第一个步骤生成包含初始输入、输入要求、输出交付物的描述
+        
+        Args:
+            step: 步骤配置
+            initial_input: 初始输入数据
+            
+        Returns:
+            格式化的步骤描述
+        """
+        sections = []
+        
+        # 1. 初始输入
+        if initial_input:
+            sections.append("## 初始输入")
+            if isinstance(initial_input, dict):
+                for key, value in initial_input.items():
+                    sections.append(f"**{key}**: {value}")
+            else:
+                sections.append(str(initial_input))
+            sections.append("")
+        
+        # 2. 输入要求
+        if step.input_requirements:
+            sections.append("## 输入要求")
+            sections.append(step.input_requirements)
+            sections.append("")
+        
+        # 3. 输出交付物
+        if step.output_deliverables:
+            sections.append("## 输出交付物要求")
+            sections.append(step.output_deliverables)
+            sections.append("")
+            sections.append("**重要**: 请确保你的 OPC-REPORT 中包含上述交付物。")
+        
+        return "\n".join(sections) if sections else ""
 
     async def _pause_downstream_tasks(self, from_task_id: str) -> None:
         """暂停从指定任务开始的所有下游任务"""
