@@ -11,10 +11,9 @@ opc-openclaw: CLI 消息发送器
 import asyncio
 import json
 import os
-import shlex
 from dataclasses import dataclass
 from enum import Enum as PyEnum
-from typing import Any, Dict, Optional
+from typing import Optional
 
 
 class MessageType(PyEnum):

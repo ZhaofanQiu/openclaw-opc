@@ -10,7 +10,6 @@ opc-openclaw: Agent生命周期管理
 API文档: API.md#AgentLifecycle
 """
 
-import os
 from dataclasses import dataclass
 from enum import Enum as PyEnum
 from typing import Any, Dict, List, Optional

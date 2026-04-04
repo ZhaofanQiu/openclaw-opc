@@ -121,11 +121,11 @@ class TaskService:
         employee.status = "working"
         employee.current_task_id = task.id
         await self.emp_repo.update(employee)
-        print(f"[DEBUG] Employee status updated to WORKING (sync)", flush=True)
+        print("[DEBUG] Employee status updated to WORKING (sync)", flush=True)
 
         # Step 5.5: 立即提交事务，确保数据持久化（WAL模式下必须）
         await self.task_repo.session.commit()
-        print(f"[DEBUG] Transaction committed before starting background task", flush=True)
+        print("[DEBUG] Transaction committed before starting background task", flush=True)
 
         # Step 6: 启动后台异步执行任务
         print(f"[DEBUG] Creating background task for task_id={task_id}, employee_id={employee_id}", flush=True)
@@ -134,7 +134,7 @@ class TaskService:
             asyncio.create_task(
                 self._execute_task_in_background(task_id, employee_id)
             )
-            print(f"[DEBUG] Background task created successfully", flush=True)
+            print("[DEBUG] Background task created successfully", flush=True)
         except Exception as e:
             print(f"[DEBUG] Failed to create background task: {e}", flush=True)
 
@@ -169,7 +169,7 @@ class TaskService:
                 employee = await emp_repo.get_by_id(employee_id)
 
                 if not task or not employee:
-                    print(f"[DEBUG] Task or employee not found", flush=True)
+                    print("[DEBUG] Task or employee not found", flush=True)
                     return
 
                 print(f"[DEBUG] Found task={task.id}, employee={employee.name}", flush=True)
@@ -177,13 +177,13 @@ class TaskService:
                 # 更新为 IN_PROGRESS (执行中)
                 task.status = TaskStatus.IN_PROGRESS.value
                 await task_repo.update(task)
-                print(f"[DEBUG] Task status updated to IN_PROGRESS", flush=True)
+                print("[DEBUG] Task status updated to IN_PROGRESS", flush=True)
 
                 # 更新员工状态
                 employee.status = "working"
                 employee.current_task_id = task.id
                 await emp_repo.update(employee)
-                print(f"[DEBUG] Employee status updated to WORKING", flush=True)
+                print("[DEBUG] Employee status updated to WORKING", flush=True)
 
                 # 构建任务分配
                 assignment = self._build_task_assignment(task, employee)
@@ -293,7 +293,7 @@ class TaskService:
         """构建任务分配对象"""
         # 获取手册路径 (绝对路径)
         # 注意: 这里使用占位路径，实际应从 manual_service 获取
-        company_manual = f"/home/user/opc/manuals/company.md"
+        company_manual = "/home/user/opc/manuals/company.md"
         employee_manual = f"/home/user/opc/manuals/employees/{employee.id}.md"
         task_manual = f"/home/user/opc/manuals/tasks/{task.id}.md"
 

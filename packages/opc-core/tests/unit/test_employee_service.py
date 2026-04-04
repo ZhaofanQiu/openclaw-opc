@@ -12,7 +12,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock
 
 from opc_core.services.employee_service import EmployeeService
-from opc_database.models import Employee, AgentStatus
+from opc_database.models import AgentStatus
 
 
 @pytest.fixture

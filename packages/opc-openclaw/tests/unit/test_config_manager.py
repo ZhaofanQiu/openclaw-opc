@@ -2,14 +2,13 @@
 opc-openclaw: ConfigManager 单元测试
 """
 
-import json
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 import yaml
 
-from opc_openclaw.config import AgentConfig, ConfigError, ConfigManager
+from opc_openclaw.config import ConfigManager
 
 
 class TestConfigManager:

@@ -14,20 +14,13 @@ opc-core: v0.4.2 实际应用场景端到端测试
 
 import json
 import pytest
-from datetime import datetime
-from typing import List, Dict, Any
-from unittest.mock import AsyncMock, patch, MagicMock
+from typing import List, Dict
 
 from opc_database.models import (
-    Task, TaskStatus, Employee, AgentStatus, PositionLevel
-)
-from opc_database.repositories import (
-    EmployeeRepository, TaskRepository, WorkflowTemplateRepository
+    Task, TaskStatus, PositionLevel
 )
 from opc_core.services import (
-    WorkflowService, WorkflowStepConfig, WorkflowTemplateService,
-    TemplateCreateRequest, WorkflowTimelineService,
-    WorkflowAnalyticsService
+    WorkflowStepConfig
 )
 
 
@@ -403,7 +396,7 @@ class TestCustomerServiceWorkflow:
         workflow_id = "wf-service-001"
         
         # Step 1: 分类
-        classify_task = Task(
+        _classify_task = Task(
             id="task-classify",
             workflow_id=workflow_id,
             step_index=0,
@@ -411,9 +404,9 @@ class TestCustomerServiceWorkflow:
             status=TaskStatus.COMPLETED.value,
             output_data=json.dumps({"category": "technical", "confidence": 0.95}),
         )
-        
+
         # Step 2: 技术支持回复
-        support_task = Task(
+        _support_task = Task(
             id="task-support",
             workflow_id=workflow_id,
             step_index=1,
@@ -607,8 +600,8 @@ class TestEndToEndWorkflow:
             WorkflowStepConfig("emp-editor", "编辑审核", "", 0.8),
             WorkflowStepConfig("emp-publisher", "发布", "", 0.3),
         ]
-        initial_input = TestDataFactory.content_creation_workflow_input()
-        
+        _initial_input = TestDataFactory.content_creation_workflow_input()
+
         # 2. 创建工作流（模拟）
         created_workflow = {
             "workflow_id": workflow_id,

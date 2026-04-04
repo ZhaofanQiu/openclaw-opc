@@ -8,7 +8,7 @@ opc-database: 测试工具函数
 
 import asyncio
 import uuid
-from typing import AsyncGenerator, Callable
+from typing import Callable
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from opc_database.models import Employee, CompanyBudget, Task

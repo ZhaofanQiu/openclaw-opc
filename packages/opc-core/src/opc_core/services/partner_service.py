@@ -11,7 +11,6 @@ Partner 员工业务逻辑服务
 import json
 import re
 from dataclasses import dataclass
-from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from opc_database.models import PositionLevel
@@ -295,7 +294,7 @@ class PartnerService:
         """
         # 删除该 Partner 的所有消息
         from opc_database.models import PartnerMessage
-        from sqlalchemy import delete, and_
+        from sqlalchemy import delete
         
         result = await self.message_repo.session.execute(
             delete(PartnerMessage).where(
@@ -397,8 +396,8 @@ class PartnerService:
             执行结果
         """
         action_type = action.action
-        params = action.params
-        
+        _params = action.params
+
         # 目前只支持查询类操作，创建类操作在 Phase 2 实现
         if action_type == 'get_company_status':
             return await self._get_company_status()

@@ -8,9 +8,6 @@ opc-core: TaskService 单元测试 (v0.4.1 - Phase 4 异步架构)
 """
 
 import asyncio
-import json
-import uuid
-from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -23,7 +20,7 @@ from opc_core.services import (
     TaskAssignmentError,
 )
 from opc_database.models import Task, TaskStatus, Employee
-from opc_openclaw import TaskResponse, ParsedReport
+from opc_openclaw import TaskResponse
 
 
 @pytest.fixture
@@ -35,6 +32,8 @@ def mock_task_repo():
     repo.create = AsyncMock()
     repo.get_by_status = AsyncMock(return_value=[])
     repo.get_by_employee = AsyncMock(return_value=[])
+    repo.session = MagicMock()
+    repo.session.commit = AsyncMock()
     return repo
 
 
@@ -215,6 +214,20 @@ class TestAssignTask:
 
 class TestExecuteTaskInBackground:
     """测试后台执行任务"""
+
+    @pytest.fixture(autouse=True)
+    def patch_background_deps(self, task_service, mock_task_repo, mock_emp_repo):
+        """Mock 后台执行依赖以避免未初始化数据库"""
+        mock_session = MagicMock()
+        mock_cm = MagicMock()
+        mock_cm.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_cm.__aexit__ = AsyncMock(return_value=None)
+
+        with patch.object(task_service, '_trigger_workflow_callback', new_callable=AsyncMock), \
+             patch('opc_database.get_session', return_value=mock_cm), \
+             patch('opc_database.repositories.TaskRepository', return_value=mock_task_repo), \
+             patch('opc_database.repositories.EmployeeRepository', return_value=mock_emp_repo):
+            yield
 
     async def test_background_execution_success(
         self, task_service, mock_task_repo, mock_emp_repo, sample_task, sample_employee

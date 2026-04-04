@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from opc_openclaw.agent import AgentInfo, AgentLifecycle, AgentState
+from opc_openclaw.agent import AgentInfo, AgentLifecycle
 
 
 class TestAgentLifecycle:

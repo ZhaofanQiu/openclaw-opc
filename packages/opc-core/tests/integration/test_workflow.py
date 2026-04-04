@@ -15,11 +15,10 @@ opc-core: 工作流集成测试 (v0.4.2)
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from opc_database.models import Task, TaskStatus
+from opc_database.models import TaskStatus
 from opc_core.services import (
     WorkflowService,
     WorkflowStepConfig,
-    WorkflowError,
     InvalidStepConfigError,
     ReworkLimitExceeded,
     InvalidReworkTarget,
@@ -91,7 +90,7 @@ def mock_employee2():
 class TestCreateWorkflow:
     """测试创建工作流"""
 
-    async def test_create_simple_workflow(self, workflow_service, mock_emp_repo, mock_task_repo, mock_employee, mock_employee2):
+    async def test_create_simple_workflow(self, workflow_service, mock_emp_repo, mock_task_repo, mock_task_service, mock_employee, mock_employee2):
         """测试创建简单工作流（2步骤）"""
         # 设置 mock
         mock_emp_repo.get_by_id.side_effect = [mock_employee, mock_employee2]
@@ -160,6 +159,11 @@ class TestCreateWorkflow:
                 title="Step 1",
                 description="First step",
             ),
+            WorkflowStepConfig(
+                employee_id="emp-999",
+                title="Step 2",
+                description="Second step",
+            ),
         ]
 
         with pytest.raises(InvalidStepConfigError) as exc_info:
@@ -185,6 +189,11 @@ class TestCreateWorkflow:
                 employee_id="emp-001",
                 title="Step 1",
                 description="First step",
+            ),
+            WorkflowStepConfig(
+                employee_id="emp-001",
+                title="Step 2",
+                description="Second step",
             ),
         ]
 
@@ -243,11 +252,12 @@ class TestWorkflowExecution:
         task2.workflow_id = "wf-001"
         task2.assigned_to = "emp-002"
         task2.input_data = "{}"
+        task2.execution_context = "{}"
 
         emp = MagicMock()
         emp.name = "Employee 1"
 
-        mock_task_repo.get_by_id.side_effect = [task1, task2]
+        mock_task_repo.get_by_id.return_value = task2
         mock_emp_repo.get_by_id.return_value = emp
 
         # 触发下一步
@@ -327,7 +337,10 @@ class TestRework:
         to_task.can_rework.return_value = True
         to_task.input_data = "{}"
 
-        mock_task_repo.get_by_id.side_effect = [from_task, to_task]
+        mock_task_repo.get_by_id.side_effect = lambda tid: {
+            "task-002": from_task,
+            "task-001": to_task,
+        }.get(tid)
         mock_task_repo.create = AsyncMock(return_value=MagicMock(id="task-001-rework"))
 
         emp = MagicMock()
@@ -463,7 +476,7 @@ class TestDataPassing:
             ),
         ]
 
-        await workflow_service.create_workflow(
+        result = await workflow_service.create_workflow(
             name="Test Workflow",
             description="A test workflow",
             steps=steps,
@@ -472,12 +485,12 @@ class TestDataPassing:
         )
 
         # 验证第一个任务的输入数据
-        created_task = mock_task_repo.create.call_args[0][0]
+        created_task = mock_task_repo.create.call_args_list[0][0][0]
         import json
         input_data = json.loads(created_task.input_data)
-        
+
         assert "workflow_context" in input_data
-        assert input_data["workflow_context"]["workflow_id"] == "wf-001"
+        assert input_data["workflow_context"]["workflow_id"] == result.workflow_id
         assert input_data["workflow_context"]["total_steps"] == 2
         assert input_data["initial_input"]["topic"] == "AI"
         assert "previous_outputs" in input_data

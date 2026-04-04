@@ -9,10 +9,10 @@ opc-core: Tasks API 测试 (v0.4.1)
 
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 from opc_core import create_app
-from opc_database.models import Task, TaskStatus, Employee
+from opc_database.models import Task, TaskStatus
 
 
 @pytest.fixture

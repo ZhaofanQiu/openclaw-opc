@@ -13,7 +13,6 @@ from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from opc_core import create_app
-from opc_database.models import Employee, AgentStatus, PositionLevel
 
 
 @pytest.fixture
@@ -28,6 +27,11 @@ def mock_employee_repo():
     repo.update = AsyncMock()
     repo.delete = AsyncMock()
     repo.bind_openclaw_agent = AsyncMock()
+    # delete_employee 通过 repo.session 创建 TaskRepository
+    repo.session = MagicMock()
+    repo.session.execute = AsyncMock(
+        return_value=MagicMock(scalars=MagicMock(return_value=MagicMock(all=MagicMock(return_value=[]))))
+    )
     return repo
 
 

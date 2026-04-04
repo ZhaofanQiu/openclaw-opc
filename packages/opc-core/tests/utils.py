@@ -7,11 +7,8 @@ opc-core: 测试工具函数
 """
 
 from typing import Dict, Any, Optional
-from unittest.mock import AsyncMock, MagicMock
-import pytest
+from unittest.mock import AsyncMock
 
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
 
 
 def create_mock_db_session():

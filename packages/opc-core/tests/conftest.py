@@ -6,7 +6,7 @@ opc-core: 测试配置
 版本: 0.4.6
 """
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 from fastapi.testclient import TestClient

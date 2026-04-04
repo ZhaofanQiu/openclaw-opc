@@ -3,7 +3,6 @@ import pytest_asyncio
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 import httpx
-from unittest.mock import AsyncMock, MagicMock
 import respx
 
 from opc_database.models import Base, Employee, Task, AgentStatus as EmployeeStatus

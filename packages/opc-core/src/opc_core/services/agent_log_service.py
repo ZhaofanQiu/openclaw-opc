@@ -256,7 +256,7 @@ class AgentLogService:
             
             # 成功数
             success_query = select(func.count()).where(
-                and_(*conditions, AgentLog.metadata["success"].as_boolean() == True)
+                and_(*conditions, AgentLog.metadata["success"].as_boolean().is_(True))
             )
             success_result = await session.execute(success_query)
             success_count = success_result.scalar()

@@ -10,7 +10,6 @@ opc-openclaw: Config 管理器
 
 import asyncio
 import os
-import re
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path

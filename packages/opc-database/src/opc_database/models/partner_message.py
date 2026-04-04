@@ -9,9 +9,9 @@ opc-database: Partner 消息模型
 """
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from typing import Any, Dict, Optional, TYPE_CHECKING
 
-from sqlalchemy import String, Text, Boolean, JSON, DateTime, Index, Integer
+from sqlalchemy import String, Text, Boolean, JSON, DateTime, Index
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import Base

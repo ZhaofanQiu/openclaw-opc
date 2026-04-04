@@ -6,7 +6,6 @@ opc-database: 测试配置
 版本: 0.4.6
 """
 
-from pathlib import Path
 
 import pytest
 import pytest_asyncio

@@ -4,7 +4,6 @@ opc-openclaw: 测试配置
 Pytest 配置和共享 fixtures
 """
 
-import os
 import tempfile
 from pathlib import Path
 

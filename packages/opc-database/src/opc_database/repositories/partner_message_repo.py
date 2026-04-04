@@ -114,7 +114,7 @@ class PartnerMessageRepository(BaseRepository[PartnerMessage]):
             .where(
                 and_(
                     PartnerMessage.partner_id == partner_id,
-                    PartnerMessage.has_action == True
+                    PartnerMessage.has_action.is_(True)
                 )
             )
             .order_by(desc(PartnerMessage.created_at))
@@ -190,7 +190,6 @@ class PartnerMessageRepository(BaseRepository[PartnerMessage]):
         Returns:
             匹配的消息列表
         """
-        from sqlalchemy import func
 
         result = await self.session.execute(
             select(PartnerMessage)

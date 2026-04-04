@@ -9,7 +9,7 @@ TaskRepository 测试
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from opc_database.models import Task, TaskStatus, TaskPriority
+from opc_database.models import TaskStatus
 from opc_database.repositories import TaskRepository
 from tests.utils import create_test_task, create_test_employee
 
@@ -20,7 +20,7 @@ class TestTaskRepository:
     
     async def test_create_task(self, db_session: AsyncSession):
         """测试创建任务"""
-        repo = TaskRepository(db_session)
+        _repo = TaskRepository(db_session)
         
         task = await create_test_task(db_session, title="测试任务")
         
@@ -48,8 +48,8 @@ class TestTaskRepository:
         emp = await create_test_employee(db_session)
         
         # 创建任务并分配
-        task1 = await create_test_task(db_session, assigned_to=emp.id)
-        task2 = await create_test_task(db_session, assigned_to=emp.id)
+        _task1 = await create_test_task(db_session, assigned_to=emp.id)
+        _task2 = await create_test_task(db_session, assigned_to=emp.id)
         
         # 查询
         tasks = await repo.get_by_employee(emp.id)

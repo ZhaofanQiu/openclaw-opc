@@ -213,7 +213,7 @@ class WorkflowTimelineService:
                 try:
                     output = json.loads(task.output_data) if task.output_data else {}
                     description = output.get("summary", "任务已完成")
-                except:
+                except Exception:
                     description = "任务已完成"
             elif event_type == TimelineEventType.REWORK_REQUESTED:
                 reason = log.get("reason", "")
@@ -277,7 +277,7 @@ class WorkflowTimelineService:
                 try:
                     output = json.loads(task.output_data) if task.output_data else {}
                     description = output.get("summary", description)[:100]
-                except:
+                except Exception:
                     pass
                 
                 events.append(TimelineEvent(

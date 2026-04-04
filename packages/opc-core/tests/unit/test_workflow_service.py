@@ -6,8 +6,7 @@ opc-core: WorkflowService 单元测试 (v0.4.2-stable)
 
 import pytest
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime, timezone
+from unittest.mock import MagicMock
 
 from opc_core.services import (
     WorkflowService,
@@ -20,7 +19,7 @@ from opc_core.services import (
     ReworkLimitExceeded,
     InvalidReworkTarget,
 )
-from opc_database.models import Task, TaskStatus
+from opc_database.models import Task
 
 
 class TestWorkflowStepConfig:

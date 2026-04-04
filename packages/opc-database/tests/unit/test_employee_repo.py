@@ -9,7 +9,7 @@ EmployeeRepository 测试
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from opc_database.models import Employee, AgentStatus, PositionLevel
+from opc_database.models import Employee, AgentStatus
 from opc_database.repositories import EmployeeRepository
 from tests.utils import create_test_employee
 
@@ -20,7 +20,7 @@ class TestEmployeeRepository:
     
     async def test_create_employee(self, db_session: AsyncSession):
         """测试创建员工"""
-        repo = EmployeeRepository(db_session)
+        _repo = EmployeeRepository(db_session)
         
         employee = await create_test_employee(db_session)
         

@@ -11,7 +11,6 @@ WorkflowTemplate 数据访问层
 from typing import List, Optional
 
 from sqlalchemy import desc, func, select
-from sqlalchemy.orm import selectinload
 
 from ..models.workflow_template import WorkflowTemplate, WorkflowTemplateRating
 from .base import BaseRepository
@@ -51,7 +50,7 @@ class WorkflowTemplateRepository(BaseRepository[WorkflowTemplate]):
         """获取公开模板"""
         result = await self.session.execute(
             select(self.model)
-            .where(self.model.is_public == True)
+            .where(self.model.is_public.is_(True))
             .order_by(desc(self.model.usage_count))
             .limit(limit)
         )
@@ -70,7 +69,7 @@ class WorkflowTemplateRepository(BaseRepository[WorkflowTemplate]):
         """获取系统预设模板"""
         result = await self.session.execute(
             select(self.model)
-            .where(self.model.is_system == True)
+            .where(self.model.is_system.is_(True))
             .order_by(self.model.category, desc(self.model.usage_count))
         )
         return result.scalars().all()

@@ -8,12 +8,11 @@ opc-openclaw: 任务调用器
 版本: 0.4.1
 """
 
-import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from .messenger import CLIMessenger, MessageResponse, MessageType
+from .messenger import CLIMessenger, MessageType
 
 
 @dataclass
@@ -138,7 +137,7 @@ class TaskCaller:
                 structured = prev.get("structured_output")
                 if structured:
                     import json
-                    sections.append(f"**结构化数据**:")
+                    sections.append("**结构化数据**:")
                     sections.append(f"```json\n{json.dumps(structured, ensure_ascii=False, indent=2)[:500]}...\n```" if len(json.dumps(structured)) > 500 else f"```json\n{json.dumps(structured, ensure_ascii=False, indent=2)}\n```")
 
                 # 元数据
@@ -162,7 +161,7 @@ class TaskCaller:
 
         # ========== 预算信息 ==========
         if task.monthly_budget > 0:
-            sections.append(f"\n## 💰 预算信息")
+            sections.append("\n## 💰 预算信息")
             sections.append(f"- 本月预算: {task.monthly_budget:.2f} OC币")
             sections.append(f"- 已使用: {task.used_budget:.2f} OC币")
             sections.append(f"- 剩余: {task.remaining_budget:.2f} OC币")

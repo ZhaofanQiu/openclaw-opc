@@ -24,14 +24,9 @@ from ..api.dependencies import (
     verify_api_key,
 )
 from ..services.partner_service import (
-    ChatResult,
-    EmployeeAssistResult,
     PartnerChatError,
     PartnerNotFoundError,
     PartnerService,
-    TaskAssistResult,
-    UpdateManualResult,
-    WorkflowAssistResult,
 )
 
 router = APIRouter(prefix="/partner", tags=["Partner"])

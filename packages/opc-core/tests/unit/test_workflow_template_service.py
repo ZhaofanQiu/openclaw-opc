@@ -10,7 +10,7 @@ opc-core: 工作流模板服务测试 (v0.4.2-P2)
 
 import json
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
 from opc_database.models import WorkflowTemplate, WorkflowTemplateRating
 from opc_core.services import (
