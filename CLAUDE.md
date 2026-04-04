@@ -54,7 +54,7 @@ opc-database → (底层，不依赖其他包)
 **禁止循环依赖**。如果预感会出现循环导入，使用事件总线（EventBus）或接口抽象，而不是延迟导入 hack。
 
 ### 2.4 Phase 3: 文档同步（Documentation Sync）
-- 任何 API 变更必须更新 `/docs/API.md`。
+- 任何 API 变更必须更新对应模块的 `API.md`（`packages/opc-core/API.md`、`packages/opc-openclaw/API.md`、`packages/opc-database/API.md`）。
 - 任何架构变更必须更新 `/docs/ARCHITECTURE.md`。
 - 功能完成后，必须向用户说明是否有文档需要同步，并主动执行。
 
@@ -127,11 +127,15 @@ opc-database → (底层，不依赖其他包)
 ### 5.1 文档层次结构
 ```
 /docs/
-  ├── README.md          # 文档入口索引
+  ├── INDEX.md           # 文档入口索引
   ├── ARCHITECTURE.md    # 系统架构（必须与代码一致）
-  ├── API.md             # API 接口文档
   ├── DEVELOPMENT.md     # 本地开发 setup 指南
   └── DEPLOYMENT.md      # 部署指南
+
+packages/
+  ├── opc-core/API.md    # Core 模块 API 文档
+  ├── opc-openclaw/API.md # OpenClaw 模块 API 文档
+  └── opc-database/API.md # Database 模块 API 文档
 ```
 
 ### 5.2 禁止文档繁殖
@@ -177,7 +181,7 @@ opc-database → (底层，不依赖其他包)
 - [ ] 是否有新的根目录临时文件/脚本？如果有，删除或迁移。
 - [ ] `pyproject.toml` / `package.json` 的版本号是否与 `VERSION` 文件一致？
 - [ ] 是否有硬编码的绝对路径（`/root/...`）被引入？
-- [ ] 新增/修改的 API 是否已在 `API.md` 中体现？
+- [ ] 新增/修改的 API 是否已在对应模块的 `API.md` 中体现？
 - [ ] 是否存在 `TODO` / `FIXME` / `return []` 等未完成的 stub？
 - [ ] 测试是否通过？（运行 `pytest` 或 `npm run test`）
 - [ ] `git diff` 中是否包含不应提交的生成文件/大文件？

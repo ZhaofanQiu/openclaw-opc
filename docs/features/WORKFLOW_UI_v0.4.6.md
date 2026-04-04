@@ -278,10 +278,8 @@ curl -X POST http://localhost:8080/workflows/assist \
 
 ## 相关文档
 
-- [API文档](./API.md) - 完整API参考
-- [架构文档](./ARCHITECTURE.md) - 系统架构说明
-- [CHANGELOG.md](../CHANGELOG.md) - 版本变更日志
-- [PLAN_v0.4.4_PARTNER.md](./PLAN_v0.4.4_PARTNER.md) - v0.4.4+开发计划
+- [架构文档](../ARCHITECTURE.md) - 系统架构说明
+- [CHANGELOG.md](../../CHANGELOG.md) - 版本变更日志
 
 ---
 
