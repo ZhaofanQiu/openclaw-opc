@@ -1,7 +1,7 @@
 """
 opc-openclaw: OpenClaw 功能封装模块
 
-OpenClaw OPC v0.4.1 - OpenClaw 集成模块（CLI 版本）
+OpenClaw OPC v0.4.6 - OpenClaw 集成模块（CLI 版本）
 
 提供 OpenClaw CLI 封装、Agent 生命周期管理和消息交互能力。
 
@@ -21,10 +21,10 @@ OpenClaw OPC v0.4.1 - OpenClaw 集成模块（CLI 版本）
     result = await task_caller.assign_task(task_assignment)
 
 作者: OpenClaw OPC Team
-版本: 0.4.1
+版本: 0.4.6
 """
 
-__version__ = "0.4.1"
+__version__ = "0.4.6"
 
 from .agent import (
     AgentBinding,
@@ -40,6 +40,8 @@ from .interaction import (
     MessageResponse,
     MessageType,
     Messenger,  # 向后兼容
+    ParsedReport,
+    ResponseParser,
     TaskAssignment,
     TaskCaller,
     TaskResponse,
@@ -47,8 +49,6 @@ from .interaction import (
 from .skill import (
     SKILL_DEFINITION,
     SKILL_METADATA,
-    ResponseParser,
-    ParsedReport,
     REPORT_START_MARKER,
     REPORT_END_MARKER,
     VALID_STATUSES,

@@ -1,6 +1,6 @@
 {
   "name": "opc-ui",
-  "version": "0.4.3",
+  "version": "0.4.6",
   "description": "OpenClaw OPC - Vue3 Frontend",
   "type": "module",
   "scripts": {

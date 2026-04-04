@@ -3,21 +3,10 @@ opc-core: 测试配置
 
 作者: OpenClaw OPC Team
 创建日期: 2026-03-24
-版本: 0.4.0
+版本: 0.4.6
 """
 
-import sys
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
-
-# 添加src到路径
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-
-# 添加 opc-database 到路径
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "opc-database" / "src"))
-
-# 添加 opc-openclaw 到路径
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "opc-openclaw" / "src"))
 
 import pytest
 from fastapi.testclient import TestClient

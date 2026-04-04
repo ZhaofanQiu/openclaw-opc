@@ -446,13 +446,7 @@ class WorkflowAnalyticsService:
         end_date: Optional[datetime],
     ) -> List[Task]:
         """获取时间范围内的任务"""
-        # 这里简化处理，实际应该通过 repository 查询
-        # 由于没有日期范围查询，先返回所有任务
-        # TODO: 添加日期范围查询到 TaskRepository
-        
-        # 临时方案：获取所有工作流任务
-        # 实际应该根据日期过滤
-        return []  # 需要实现具体的查询
+        return await self.task_repo.get_workflow_tasks_in_range(start_date, end_date)
     
     def _calculate_duration(self, tasks: List[Task]) -> float:
         """计算工作流总耗时（分钟）"""

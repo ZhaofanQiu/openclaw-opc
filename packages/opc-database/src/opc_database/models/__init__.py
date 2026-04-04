@@ -8,6 +8,7 @@ opc-database: 模型包
 版本: 0.4.4
 """
 
+from .agent_log import AgentLog
 from .base import Base
 from .company import CompanyBudget, CompanyConfig
 from .employee import AgentStatus, Employee, EmployeeSkill, PositionLevel
@@ -18,6 +19,8 @@ from .workflow_template import WorkflowTemplate, WorkflowTemplateRating
 __all__ = [
     # Base
     "Base",
+    # Agent Log (v0.4.5)
+    "AgentLog",
     # Company
     "CompanyBudget",
     "CompanyConfig",

@@ -2,128 +2,172 @@
 
 ## 概述
 
-OpenClaw OPC 采用分层架构，确保各组件独立演进、松耦合集成。
+OpenClaw OPC 采用**四模块单体架构**，通过清晰的包边界（`packages/*`）实现关注点分离。
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                      用户层 (User Layer)                     │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │   Web UI     │  │  Desktop App │  │   CLI Tool   │      │
-│  │  (React)     │  │  (Electron)  │  │   (Future)   │      │
-│  └──────────────┘  └──────────────┘  └──────────────┘      │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │   Web UI (Vue 3 + Vite + Pinia + Element Plus)      │   │
+│  └─────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────┘
-                              │ HTTP / WebSocket
+                              │ HTTP REST API
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                    核心服务层 (Core Service)                 │
 │  ┌─────────────────────────────────────────────────────┐   │
-│  │  FastAPI + SQLite/PostgreSQL                        │   │
-│  │  ├─ 公司管理 API (员工/项目/任务)                   │   │
-│  │  ├─ 预算追踪与熔断                                  │   │
-│  │  ├─ 实时状态推送 (WebSocket)                        │   │
-│  │  └─ 工作手册管理                                    │   │
+│  │  opc-core (FastAPI)                                 │   │
+│  │  ├─ 员工/任务/工作流/预算 API                        │   │
+│  │  ├─ Partner Agent (辅助创建任务/员工/工作流)         │   │
+│  │  ├─ Agent Log 追踪                                  │   │
+│  │  └─ 工作流统计与分析                                │   │
 │  └─────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────┘
-                              │ HTTP 轮询 / WebSocket
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                   OpenClaw 集成层 (Integration)              │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │  OpenClaw Plugin (Skill)                            │   │
-│  │  ├─ 拦截 Agent 调用                                 │   │
-│  │  ├─ 注入公司上下文 (SOUL.md + 手册)                 │   │
-│  │  ├─ 上报 Token 消耗                                 │   │
-│  │  └─ 接收 Core Service 指令                          │   │
-│  └─────────────────────────────────────────────────────┘   │
-│                         ↓                                   │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │              OpenClaw Gateway                       │   │
-│  │         ┌─────┐  ┌─────┐  ┌─────┐                  │   │
-│  │         │Agent│  │Agent│  │Agent│  ...             │   │
-│  │         └─────┘  └─────┘  └─────┘                  │   │
-│  └─────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
+                              │
+              ┌───────────────┴───────────────┐
+              ▼                               ▼
+┌─────────────────────────────┐   ┌─────────────────────────────┐
+│      数据层 (Database)      │   │   OpenClaw 集成层          │
+│  opc-database               │   │  opc-openclaw               │
+│  SQLAlchemy 2.0 (async)     │   │  ├─ HTTP/CLI 客户端         │
+│  SQLite (开发) / PostgreSQL │   │  ├─ Agent 生命周期管理      │
+│  Repository 模式            │   │  ├─ ResponseParser          │
+│                             │   │  └─ Skill 定义与安装器      │
+└─────────────────────────────┘   └─────────────────────────────┘
 ```
 
 ---
 
 ## 组件详解
 
-### 1. Core Service (packages/core)
+### 1. opc-core - 业务 API
 
 **技术栈:**
-- Python 3.10+
-- FastAPI (Web 框架)
-- SQLAlchemy (ORM)
-- SQLite (默认) / PostgreSQL (可选)
-- WebSocket (实时推送)
+- Python 3.12+
+- FastAPI + Uvicorn
+- Pydantic v2
 
 **核心职责:**
-- 公司、员工、项目、任务的 CRUD
-- 预算追踪与熔断判断
-- 手册版本管理
-- 与 Plugin 的通信
+- 员工 (Employee) CRUD 与 Agent 绑定
+- 任务 (Task) 分配、追踪、状态流转
+- 工作流 (Workflow) 多步骤编排与返工
+- 预算 (Budget) 追踪与熔断判断
+- 手册 (Manual) 管理
+- Partner Agent - 对话式辅助
+- Agent Log - Agent 交互日志查询
 
 **关键模块:**
 ```
-core/
-├── src/
-│   ├── models/          # 数据库模型
-│   ├── routers/         # API 路由
-│   ├── services/        # 业务逻辑
-│   ├── websocket/       # 实时推送
-│   └── utils/           # 工具函数
-├── tests/
-└── Dockerfile
+packages/opc-core/
+├── src/opc_core/
+│   ├── api/               # FastAPI 路由 (employees, tasks, workflows, analytics, ...)
+│   ├── services/          # 业务逻辑 (TaskService, WorkflowService, ...)
+│   ├── app.py             # FastAPI 应用工厂
+│   └── main.py            # Uvicorn 入口
+└── tests/
+    ├── unit/
+    ├── integration/
+    └── api/
 ```
 
-### 2. Web UI (packages/ui)
+> **注意:** 当前 opc-core 会直接 serve `opc-ui/dist` 静态文件（SPA fallback），方便本地开发。生产环境建议使用反向代理（nginx/Caddy）将 UI 和 API 分离。
+
+---
+
+### 2. opc-ui - 前端界面
 
 **技术栈:**
-- React 18 + TypeScript
-- Vite (构建工具)
-- PixiJS (像素办公室渲染)
-- WebSocket (实时状态)
+- Vue 3 + Vite
+- Pinia (状态管理)
+- Vue Router
+- Element Plus (UI 组件库)
+- Chart.js / ECharts (图表)
 
 **核心职责:**
-- 像素办公室可视化
-- 项目看板、员工管理界面
-- 预算仪表盘
-- 待处理收件箱
+- Dashboard - 任务/员工/预算概览
+- 任务管理 - 创建、分配、追踪
+- 工作流编辑器 - 步骤配置与执行监控
+- 员工管理 - 角色、预算、Agent 绑定
+- Analytics - 工作流统计与员工排名
+- Partner 面板 - 与 Partner Agent 对话
 
 **关键模块:**
 ```
-ui/
+packages/opc-ui/
 ├── src/
-│   ├── components/      # 通用组件
-│   ├── pages/           # 页面
-│   ├── stores/          # 状态管理 (Zustand)
-│   ├── hooks/           # 自定义 Hooks
-│   └── pixi/            # 像素办公室相关
-├── public/
-└── Dockerfile
+│   ├── views/             # 页面视图
+│   ├── components/        # 复用组件
+│   ├── stores/            # Pinia Store
+│   └── router/            # 路由配置
+├── dist/                  # 构建输出
+└── package.json
 ```
 
-### 3. OpenClaw Plugin (packages/plugin)
+---
+
+### 3. opc-database - 数据层
 
 **技术栈:**
-- JavaScript/TypeScript
-- OpenClaw Skill SDK
+- SQLAlchemy 2.0 (异步)
+- Alembic (迁移)
+- aiosqlite / asyncpg
 
 **核心职责:**
-- 拦截并增强 Agent 调用
-- 注入公司上下文
-- 上报 Token 消耗
-- 执行 Core Service 指令
+- 定义所有 ORM 模型（Employee, Task, WorkflowTemplate, AgentLog 等）
+- 提供 Repository 模式的数据访问封装
+- 管理数据库连接与事务
 
-**关键文件:**
+**关键模块:**
 ```
-plugin/
-├── src/
-│   ├── interceptor.js   # 调用拦截
-│   ├── context.js       # 上下文注入
-│   └── reporter.js      # 消耗上报
-└── SKILL.md             # OpenClaw Skill 定义
+packages/opc-database/
+├── src/opc_database/
+│   ├── models/            # ORM 模型
+│   ├── repositories/      # Repository 实现
+│   └── connection.py      # 引擎与会话管理
+└── tests/
+```
+
+---
+
+### 4. opc-openclaw - OpenClaw 集成
+
+**技术栈:**
+- httpx (HTTP 客户端)
+- pydantic / pydantic-settings
+- PyYAML
+
+**核心职责:**
+- 通过 HTTP/CLI 与 OpenClaw Gateway 通信
+- Agent 生命周期管理（列举、创建、绑定）
+- 任务分配消息构建 (`TaskCaller`)
+- Agent 响应解析 (`ResponseParser`)
+- Skill 定义 (`SKILL_DEFINITION`) 与安装器 (`SkillInstaller`)
+
+**Agent 结果协议:**
+Agent 在回复末尾必须包含 `OPC-REPORT` 格式块：
+
+```
+---OPC-REPORT---
+task_id: <任务ID>
+status: completed|failed|needs_revision
+tokens_used: <数字>
+summary: <单行总结>
+result_files: <可选的文件路径>
+---END-REPORT---
+```
+
+ additionally 支持 `OPC-OUTPUT`（结构化 JSON 输出）和 `OPC-REWORK`（返工指令）。
+
+**关键模块:**
+```
+packages/opc-openclaw/
+├── src/opc_openclaw/
+│   ├── agent/             # AgentManager, AgentLifecycle
+│   ├── client/            # HTTP/CLI 客户端
+│   ├── interaction/       # Messenger, TaskCaller, ResponseParser
+│   ├── skill/             # Skill 定义、安装器
+│   └── config.py          # Agent 配置管理
+└── tests/
 ```
 
 ---
@@ -134,118 +178,89 @@ plugin/
 
 ```
 1. 用户在 UI 创建任务
-   ↓ HTTP POST /api/tasks
-2. Core Service 保存任务，分配给 Agent
-   ↓ 记录预算预估
-3. Plugin 拦截 Agent 调用
-   ↓ 注入：SOUL.md + 工作手册 + 任务上下文
+   ↓ HTTP POST /api/v1/tasks
+2. opc-core 保存任务，更新状态为 PENDING
+   ↓ 用户/系统分配员工
+3. opc-core 调用 opc-openclaw 构建任务消息
+   ↓ HTTP/CLI 发送到 OpenClaw Gateway
 4. Agent 执行任务
-   ↓ 实时上报 Token 消耗
-5. Core Service 更新预算余额
-   ↓ 判断是否触发熔断
-6. UI 实时显示进度 (WebSocket)
+   ↓ 返回包含 OPC-REPORT 的响应
+5. opc-openclaw.ResponseParser 解析结果
+   ↓ opc-core 更新任务状态、实际成本、Token 消耗
+6. UI 通过轮询/刷新查看最新状态
    ↓
-7. 任务完成，更新员工经验/手册数据
+7. 如果是工作流任务，自动触发下一步
 ```
 
-### 熔断触发流程
+### 工作流执行流程
 
 ```
-1. Token 消耗达到预算 80%
+1. 用户创建 Workflow（多个步骤）
+   ↓ opc-core 将 Workflow 拆分为多个关联的 Task
+2. 执行第一个 Task
+   ↓ Agent 完成后解析 OPC-REPORT
+3. WorkflowService.on_task_completed() 触发
+   ↓ 自动分配下一个 Task（传递前置输出作为输入）
+4. 循环直到所有步骤完成或失败
    ↓
-2. Core Service 发送警告到 UI
+5. 支持返工：任意步骤可触发 OPC-REWORK 回到上游步骤
+```
+
+### 预算熔断流程
+
+```
+1. 分配任务时检查员工 remaining_budget
    ↓
-3. Token 消耗达到 100%
-   ↓
-4. Core Service 发送暂停指令到 Plugin
-   ↓
-5. Plugin 拦截并暂停 Agent
-   ↓
-6. UI 显示"预算耗尽"，等待用户决策
-   ↓
-7. 用户选择：追加预算 / 拆分任务 / 换人
+2. 如果预估成本超过预算的 150%
+   ↓ 拒绝分配，返回预算不足错误
+3. 任务完成后结算 actual_cost
+   ↓ 更新员工 used_budget
+4. UI 实时显示预算仪表盘
 ```
 
 ---
 
-## 通信协议
+## 模块依赖规则
 
-### Core Service ↔ Web UI
-
-**HTTP API:**
-- RESTful API (CRUD 操作)
-- WebSocket (实时状态推送)
-
-**主要事件:**
 ```
-- employee.status_changed
-- task.progress_updated
-- budget.threshold_reached
-- system.alert
+opc-ui ──HTTP──► opc-core
+                    │
+        ┌──────────┴──────────┐
+        ▼                     ▼
+  opc-database          opc-openclaw
 ```
 
-### Core Service ↔ OpenClaw Plugin
-
-**初始方案 (MVP): HTTP 轮询**
-- Plugin 每 5 秒向 Core Service 发送状态
-- Core Service 通过 HTTP 响应下发指令
-
-**进阶方案 (V1+): WebSocket 双向**
-- 建立持久连接
-- 实时双向通信
-
-**数据格式:**
-```json
-{
-  "agent_id": "agent_xxx",
-  "task_id": "task_xxx",
-  "token_consumed": 150,
-  "status": "working|paused|completed",
-  "output_preview": "..."
-}
-```
+**禁止以下依赖方向：**
+- `opc-database` 禁止依赖 `opc-core` 或 `opc-openclaw`
+- `opc-openclaw` 禁止依赖 `opc-core`
+- `opc-core` 的 API Router 禁止直接操作文件系统或调用 `subprocess`
 
 ---
 
 ## 安全设计
 
-### 五层防火墙
-
 | 层级 | 机制 | 触发条件 |
 |------|------|---------|
-| 1. 预算熔断 | 硬停止 | 消耗达到预算 150% |
-| 2. 时间沙盒 | 强制暂停 | 连续工作 > 2 小时 |
-| 3. 行为白名单 | 操作限制 | 禁止危险操作 |
-| 4. 审计日志 | 全程记录 | 所有行为可追溯 |
-| 5. 人类决策 | 确认机制 | 关键操作需确认 |
-
-### 数据安全
-
-- 本地 SQLite 存储，数据不离开用户机器 (默认)
-- 敏感配置 (API Key) 加密存储
-- 定期自动备份
+| 1. 预算熔断 | 拒绝分配 | 预估成本 > 预算 150% |
+| 2. 返工限制 | 强制结束 | 返工次数 > max_rework |
+| 3. 审计日志 | Agent Log | 记录所有 Agent 交互 |
+| 4. API Key | 本地验证 | 敏感操作需 api_key |
 
 ---
 
 ## 扩展性考虑
 
-### 未来可能的分拆点
+1. **数据库升级**
+   - 当前默认 SQLite，可通过环境变量切换至 PostgreSQL
+   - Alembic 迁移脚本已就位
 
-如果项目发展壮大，可以按以下边界分拆：
+2. **前端分离部署**
+   - 当前 opc-core 直接 serve `opc-ui/dist`
+   - 生产环境建议用 nginx 反向代理替代
 
-1. **Core Service 拆分**
-   - 公司管理服务
-   - 预算追踪服务
-   - 实时推送服务
-
-2. **多租户支持**
-   - 用户系统
-   - 数据隔离
-   - SaaS 版本
-
-3. **插件生态**
-   - 第三方集成 (n8n, GitHub, 飞书)
-   - 自定义员工模板
+3. **实时状态**
+   - 当前 UI 通过轮询获取状态
+   - 未来可引入 WebSocket 或 SSE 实现推送
 
 ---
 
@@ -253,11 +268,13 @@ plugin/
 
 | 决策 | 选择 | 原因 |
 |------|------|------|
-| 数据库 | SQLite (MVP) | 零配置，够用很久 |
-| Plugin 通信 | HTTP 轮询 → WebSocket | MVP 简单，后续升级 |
-| 像素办公室 | 静态 → 动画 | 先证明价值，再投入 |
-| 认证方式 | 本地 Token | 单机使用，后续加用户系统 |
+| 后端框架 | FastAPI + SQLAlchemy 2.0 | 现代异步 Python 栈，类型友好 |
+| 前端框架 | Vue 3 + Vite | 轻量、快速、生态成熟 |
+| 状态管理 | Pinia | Vue 3 官方推荐 |
+| UI 组件 | Element Plus | 企业级组件丰富 |
+| 数据库 | SQLite (默认) | 零配置，单机场景够用 |
+| Agent 通信 | HTTP/CLI 客户端 | 直接调用 OpenClaw Gateway，无需 Plugin |
 
 ---
 
-*Last Updated: 2026-03-21*
+*Last Updated: 2026-04-03 (v0.4.6)*

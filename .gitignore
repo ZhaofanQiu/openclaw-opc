@@ -55,3 +55,12 @@ tmp/
 temp/
 *.tmp
 venv/
+
+# Archive / backup directories (source of truth is git history)
+archive/
+backup/
+old/
+
+# Large test assets
+*_upload.png
+*.upload.png

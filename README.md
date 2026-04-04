@@ -1,17 +1,17 @@
-# OpenClaw OPC v0.4.1
+# OpenClaw OPC v0.4.6
 
-**一人公司管理系统** - v0.4.1 端到端任务流程已跑通 ✅
+**一人公司管理系统** - v0.4.6 端到端任务流程已跑通 ✅
 
 ## 项目状态
 
-**v0.4.1 已完成** - Dashboard 创建任务 → Core 分配 → OpenClaw 调用 Agent → Agent 执行 → 状态更新 → Dashboard 显示完成
+**v0.4.6 已完成** - Dashboard 创建任务 → Core 分配 → OpenClaw 调用 Agent → Agent 执行 → 状态更新 → Dashboard 显示完成
 
 | 模块 | 版本 | 状态 | 测试 |
 |------|------|------|------|
-| opc-database | v0.4.1 | ✅ 完成 | 35 个测试 |
-| opc-openclaw | v0.4.1 | ✅ 完成 | 35 个测试 |
-| opc-core | v0.4.1 | ✅ 完成 | 12 个集成测试 |
-| opc-ui | v0.4.1 | ✅ 完成 | 35 个单元测试 |
+| opc-database | v0.4.6 | ✅ 完成 | 35+ 个测试 |
+| opc-openclaw | v0.4.6 | ✅ 完成 | 35+ 个测试 |
+| opc-core | v0.4.6 | ✅ 完成 | 12+ 个集成测试 |
+| opc-ui | v0.4.6 | ✅ 完成 | 35+ 个单元测试 |
 
 ## 项目架构
 
@@ -75,7 +75,7 @@ npm run dev
 
 ## 历史版本与计划
 
-旧版本代码和计划文档已归档到 `archive/` 目录。
+旧版本代码可通过 Git 历史 (`git log` / `git checkout`) 追溯。
 
 ## 许可证
 

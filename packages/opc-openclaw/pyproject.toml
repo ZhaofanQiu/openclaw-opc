@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "opc-openclaw"
-version = "0.4.2"
+version = "0.4.6"
 description = "OpenClaw OPC - OpenClaw Integration Module"
 readme = "README.md"
 requires-python = ">=3.10"

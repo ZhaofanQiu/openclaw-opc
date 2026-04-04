@@ -3,16 +3,10 @@ opc-database: 测试配置
 
 作者: OpenClaw OPC Team
 创建日期: 2026-03-24
-版本: 0.4.0
+版本: 0.4.6
 """
 
-import sys
 from pathlib import Path
-
-# 添加src到路径
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-# 添加tests目录到路径（用于导入utils）
-sys.path.insert(0, str(Path(__file__).parent))
 
 import pytest
 import pytest_asyncio
@@ -37,11 +31,11 @@ async def db_session() -> AsyncSession:
         poolclass=NullPool,
         echo=False
     )
-    
+
     # 创建所有表
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    
+
     # 创建会话
     async_session = async_sessionmaker(
         engine,
@@ -49,10 +43,10 @@ async def db_session() -> AsyncSession:
         expire_on_commit=False,
         autoflush=False
     )
-    
+
     session = async_session()
     yield session
-    
+
     # 清理
     await session.close()
     async with engine.begin() as conn:

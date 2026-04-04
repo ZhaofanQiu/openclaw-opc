@@ -91,18 +91,15 @@ class TestCLIAgentClient:
     @pytest.mark.asyncio
     async def test_get_agent_success(self, client):
         """测试成功获取 Agent"""
-        mock_proc = AsyncMock()
-        mock_proc.returncode = 0
-        mock_proc.communicate = AsyncMock(
-            return_value=(
-                json.dumps(
+        with patch.object(
+            client,
+            "list_agents",
+            new=AsyncMock(
+                return_value=[
                     {"id": "opc-worker-1", "name": "Worker 1", "status": "online"}
-                ).encode(),
-                b"",
-            )
-        )
-
-        with patch("asyncio.create_subprocess_exec", return_value=mock_proc):
+                ]
+            ),
+        ):
             agent = await client.get_agent("opc-worker-1")
 
         assert agent is not None
@@ -141,16 +138,15 @@ class TestCLIAgentClient:
     @pytest.mark.asyncio
     async def test_check_agent_health_offline(self, client):
         """测试 Agent 离线"""
-        mock_proc = AsyncMock()
-        mock_proc.returncode = 0
-        mock_proc.communicate = AsyncMock(
-            return_value=(
-                json.dumps({"id": "opc-worker-1", "status": "offline"}).encode(),
-                b"",
-            )
-        )
-
-        with patch("asyncio.create_subprocess_exec", return_value=mock_proc):
+        with patch.object(
+            client,
+            "list_agents",
+            new=AsyncMock(
+                return_value=[
+                    {"id": "opc-worker-1", "status": "offline"}
+                ]
+            ),
+        ):
             is_healthy = await client.check_agent_health("opc-worker-1")
 
         assert is_healthy is False
@@ -179,18 +175,15 @@ class TestCLIAgentClient:
     @pytest.mark.asyncio
     async def test_get_agent_status(self, client):
         """测试获取 Agent 状态"""
-        mock_proc = AsyncMock()
-        mock_proc.returncode = 0
-        mock_proc.communicate = AsyncMock(
-            return_value=(
-                json.dumps(
+        with patch.object(
+            client,
+            "list_agents",
+            new=AsyncMock(
+                return_value=[
                     {"id": "opc-worker-1", "status": "busy", "active_sessions": 2}
-                ).encode(),
-                b"",
-            )
-        )
-
-        with patch("asyncio.create_subprocess_exec", return_value=mock_proc):
+                ]
+            ),
+        ):
             status = await client.get_agent_status("opc-worker-1")
 
         assert status["agent_id"] == "opc-worker-1"

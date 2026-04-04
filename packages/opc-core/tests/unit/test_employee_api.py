@@ -176,7 +176,7 @@ class TestEmployeeAPI:
             })
         
         assert response.status_code == 200
-        assert response.json()["message"] == "Agent bound"
+        assert response.json()["message"] == "Agent bound successfully"
     
     def test_unbind_agent(self, client, mock_employee_repo):
         """测试解绑 Agent"""

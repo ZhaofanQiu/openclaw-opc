@@ -374,6 +374,37 @@ class TaskRepository(BaseRepository[Task]):
         )
         return list(result.scalars().all())
 
+    async def get_workflow_tasks_in_range(
+        self,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+    ) -> List[Task]:
+        """
+        获取指定时间范围内的工作流任务
+
+        Args:
+            start_date: 开始时间（包含），可选
+            end_date: 结束时间（包含），可选
+
+        Returns:
+            工作流任务列表（workflow_id 不为空）
+        """
+        from sqlalchemy import and_
+
+        query = select(Task).where(Task.workflow_id.isnot(None))
+
+        conditions = []
+        if start_date is not None:
+            conditions.append(Task.created_at >= start_date)
+        if end_date is not None:
+            conditions.append(Task.created_at <= end_date)
+
+        if conditions:
+            query = query.where(and_(*conditions))
+
+        result = await self.session.execute(query)
+        return list(result.scalars().all())
+
 
 class TaskMessageRepository(BaseRepository[TaskMessage]):
     """任务消息仓库"""
